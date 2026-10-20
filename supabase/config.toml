@@ -17,7 +17,7 @@ sql_paths = ["./seed.sql"]
 [auth]
 enabled = true
 site_url = "poultryos://login-callback"
-additional_redirect_urls = ["http://localhost:3000"]
+additional_redirect_urls = ["http://localhost:3000", "http://localhost:3100"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 # Accounts are created only by the platform after an application is approved (provision-tenant).
@@ -27,6 +27,8 @@ enable_signup = false
 # CLI maps this to GOTRUE_EXTERNAL_PHONE_ENABLED (phone login on). New accounts stay blocked by [auth] enable_signup = false.
 enable_signup = true
 enable_confirmations = true
+# Local dev only (hosted project keeps its own limit): lets e2e log the same number in back-to-back.
+max_frequency = "1s"
 # provider = twilio | messagebird | textlocal | vonage  (MSG91 via custom hook)
 
 # Local only: GoTrue needs a provider configured before it accepts phone OTP.
