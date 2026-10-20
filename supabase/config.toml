@@ -20,13 +20,28 @@ site_url = "poultryos://login-callback"
 additional_redirect_urls = ["http://localhost:3000"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
+# Accounts are created only by the platform after an application is approved (provision-tenant).
+enable_signup = false
 
 [auth.sms]
-enable_signup = true
+enable_signup = false
 enable_confirmations = true
 # provider = twilio | messagebird | textlocal | vonage  (MSG91 via custom hook)
+
+# Local only: GoTrue needs a provider configured before it accepts phone OTP.
+# Test numbers below never reach Twilio.
+[auth.sms.twilio]
+enabled = true
+account_sid = "local-dev"
+message_service_sid = "local-dev"
+auth_token = "local-dev"
+
 [auth.sms.test_otp]
-919849012345 = "123456"   # demo owner (VKR) in local dev
+919849012345 = "123456"   # Venkata Krishna Reddy — VKR owner
+919000033445 = "123456"   # Mallesh — VKR shed supervisor
+919849022334 = "123456"   # Rajitha Reddy — VKR finance
+919440012121 = "123456"   # K. Srinivasulu — KS owner
+919000000000 = "123456"   # Praveen G — platform admin
 
 [storage]
 enabled = true
