@@ -1,6 +1,8 @@
 // Port of demo/index.html platformScreen (:478-490). Real numbers only — the demo padded tenants/MRR/birds for show.
 import { getLocale, getTranslations } from 'next-intl/server';
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { claimsFromUser } from '@/lib/auth/claims';
 import { SignOutButton } from '@/components/shell/SignOutButton';
 import { ActBtn } from '@/components/ui/ActBtn';
 import { Toaster } from '@/components/ui/Toast';
@@ -13,6 +15,9 @@ const PRICE: Record<string, number> = { starter: 999, growth: 2999, pro: 7999, e
 export default async function Admin() {
   const [t, locale, sb] = await Promise.all([getTranslations('admin'), getLocale(), createClient()]);
   const dmy = dateFmt(locale);
+  // defence in depth: middleware already guards /admin
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user || !claimsFromUser(user).platform) redirect('/platform/login');
   const [{ data: tenants }, { data: kpi }, { data: farms }, { data: users }, { data: rates }] = await Promise.all([
     sb.from('tenant').select('id,name,plan,status,state').order('name'),
     sb.from('v_batch_kpi').select('tenant_id,birds_alive,state'),

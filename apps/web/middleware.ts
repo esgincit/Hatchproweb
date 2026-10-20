@@ -5,10 +5,12 @@ import { redirectFor } from '@/lib/auth/route-guard';
 
 export async function middleware(request: NextRequest) {
   const { response, user } = await updateSession(request);
-  // Server actions POST to the current page; redirecting them breaks the call. Each action checks auth itself.
-  if (request.headers.has('next-action')) return response;
   const to = redirectFor(request.nextUrl.pathname, user ? claimsFromUser(user) : null);
   if (!to) return response;
+  // Server actions POST to whatever page is open (e.g. /login right after OTP) and are reachable from any page
+  // by id, so the page guard can't protect them — each action authorises itself. Don't redirect a signed-in
+  // user's action call (that breaks it); refuse anonymous ones. Page loads (GET) are always guarded.
+  if (request.method === 'POST' && request.headers.has('next-action')) return user ? response : new NextResponse(null, { status: 401 });
   const url = request.nextUrl.clone();
   const [path, query] = to.split('?');
   url.pathname = path;
