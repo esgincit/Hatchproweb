@@ -16,7 +16,7 @@ async function login(page: Page) {
   if (await limited.isVisible()) { await page.waitForTimeout(1500); await page.getByRole('button', { name: 'Send OTP' }).click(); }
   await page.getByLabel('6-digit code').fill('123456');
   await page.getByRole('button', { name: 'Verify' }).click();
-  await expect(page).toHaveURL(/\/home$/);
+  await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 }); // first hit compiles the page in dev
 }
 
 async function dropBatch(code: string) {
@@ -120,4 +120,27 @@ test('attendance: tapping H marks the worker half-day today', async ({ page }) =
     if (before) await admin.from('attendance').update({ status: before.status }).eq('worker_id', w!.id).eq('att_date', TODAY);
     else await admin.from('attendance').delete().eq('worker_id', w!.id).eq('att_date', TODAY);
   }
+});
+
+test('server refuses actions outside the role (supervisor cannot place a batch)', async ({ page }) => {
+  await page.context().addCookies([{ name: 'NEXT_LOCALE', value: 'en', url: 'http://localhost:3100' }]);
+  await admin.from('app_user').update({ active_farm_type: 'broiler' }).eq('phone', '+91 90000 33445');
+  await page.goto('/login');
+  await page.getByLabel('Mobile number').fill('9000033445');
+  await page.getByRole('button', { name: 'Send OTP' }).click();
+  const limited = page.locator('.pill[role=alert]', { hasText: 'only request this after' });
+  await expect(page.getByLabel('6-digit code').or(limited)).toBeVisible();
+  if (await limited.isVisible()) { await page.waitForTimeout(1500); await page.getByRole('button', { name: 'Send OTP' }).click(); }
+  await page.getByLabel('6-digit code').fill('123456');
+  await page.getByRole('button', { name: 'Verify' }).click();
+  await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 }); // first hit compiles the page in dev
+  await page.goto('/farm');
+  await page.getByRole('button', { name: /Shed B/ }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByLabel('Batch code').fill('E2E-FORBIDDEN');
+  await sheet.getByLabel('Chicks placed').fill('100');
+  await sheet.getByRole('button', { name: 'Place batch' }).click();
+  await expect(sheet.locator('[role=alert]')).toContainText('Your role cannot do this');
+  const { data } = await admin.from('batch').select('id').eq('code', 'E2E-FORBIDDEN');
+  expect(data).toEqual([]);
 });

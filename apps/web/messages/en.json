@@ -615,7 +615,8 @@
     },
     "log": {
       "ok": "Daily log saved"
-    }
+    },
+    "forbidden": "Your role cannot do this. Ask your farm owner."
   },
   "billCat": {
     "chick": "Chicks",

@@ -56,3 +56,24 @@ describe('redirectFor', () => {
     expect(redirectFor('/login', orphan)).toBeNull();
   });
 });
+
+import { canAct, ACT_ROLES } from '@/lib/auth/permissions';
+import { SCHEMAS } from '@/lib/schemas';
+describe('canAct', () => {
+  it('every form action has a role list', () => expect(Object.keys(SCHEMAS).filter((a) => !ACT_ROLES[a])).toEqual([]));
+  it('supervisor cannot pay or sell, can log and record mortality', () => {
+    expect(canAct(['shed_supervisor'], 'payOpen')).toBe(false);
+    expect(canAct(['shed_supervisor'], 'saleOpen')).toBe(false);
+    expect(canAct(['shed_supervisor'], 'logSave')).toBe(true);
+    expect(canAct(['shed_supervisor'], 'mort')).toBe(true);
+  });
+  it('finance handles money only', () => {
+    expect(canAct(['finance'], 'payOpen')).toBe(true);
+    expect(canAct(['finance'], 'addBatch')).toBe(false);
+  });
+  it('labour logs but cannot mark attendance', () => {
+    expect(canAct(['labour'], 'logSave')).toBe(true);
+    expect(canAct(['labour'], 'attSet')).toBe(false);
+  });
+  it('no roles, no actions', () => expect(canAct([], 'logSave')).toBe(false));
+});

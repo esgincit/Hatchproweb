@@ -6,6 +6,8 @@ import { getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { SCHEMAS, isAct, type ActKey } from '@/lib/schemas';
 import { fmtINR } from '@/lib/format';
+import { claimsFromUser } from '@/lib/auth/claims';
+import { canAct } from '@/lib/auth/permissions';
 
 export type ActResult = { ok: true; msg: string; href?: string } | { ok: false; error: string; fields?: string[] };
 
@@ -18,6 +20,7 @@ export async function runAct(act: string, input: Record<string, unknown>): Promi
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return { ok: false, error: t('signedOut') };
+  if (!canAct(claimsFromUser(user).roles, act)) return { ok: false, error: t('forbidden') };
 
   const res = await write(act, parsed.data as never, sb, t);
   if (res.ok) revalidatePath('/', 'layout');

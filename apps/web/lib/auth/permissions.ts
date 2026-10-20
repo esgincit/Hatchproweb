@@ -17,3 +17,18 @@ export function tabsFor(roles: string[]): Tab[] {
   const allowed = new Set(roles.flatMap((r) => BY_ROLE[r] ?? []));
   return TABS.filter((t) => allowed.has(t));
 }
+
+// Who may run each form action (server-enforced in runAct). Owners and managers run the farm;
+// finance handles money; supervisors / labour / vets record what happens in the sheds.
+// ponytail: RLS is still tenant-only — mirror this in role-aware policies (roadmap Phase 13).
+const OWN = ['tenant_owner', 'farm_manager'];
+const MONEY = [...OWN, 'finance'];
+const SHED = [...OWN, 'shed_supervisor', 'labour', 'veterinarian'];
+export const ACT_ROLES: Record<string, string[]> = {
+  addFarm: OWN, addShed: OWN, addBatch: OWN, addWorker: OWN,
+  saleOpen: MONEY, addBill: MONEY, payOpen: MONEY, addCustomer: MONEY, addVendor: MONEY,
+  mort: SHED, logSave: SHED,
+  vaccDone: [...OWN, 'shed_supervisor', 'veterinarian'], addVisit: [...OWN, 'shed_supervisor', 'veterinarian'],
+  attSet: [...OWN, 'shed_supervisor'],
+};
+export const canAct = (roles: string[], act: string) => (ACT_ROLES[act] ?? []).some((r) => roles.includes(r));
