@@ -1,0 +1,124 @@
+'use server';
+// One entry point for every form (act key = demo ACT key). Validate → write through RLS → refresh screens.
+// Multi-row effects live in SQL functions (supabase/migrations/0004_actions.sql) so they are one transaction.
+import { revalidatePath } from 'next/cache';
+import { getTranslations } from 'next-intl/server';
+import { createClient } from '@/lib/supabase/server';
+import { SCHEMAS, isAct, type ActKey } from '@/lib/schemas';
+import { fmtINR } from '@/lib/format';
+
+export type ActResult = { ok: true; msg: string; href?: string } | { ok: false; error: string; fields?: string[] };
+
+export async function runAct(act: string, input: Record<string, unknown>): Promise<ActResult> {
+  const t = await getTranslations('forms');
+  if (!isAct(act)) return { ok: false, error: t('unknown') };
+  const parsed = SCHEMAS[act].safeParse(input);
+  if (!parsed.success) return { ok: false, error: t('invalid'), fields: parsed.error.issues.map((i) => String(i.path[0])) };
+
+  const sb = await createClient();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return { ok: false, error: t('signedOut') };
+
+  const res = await write(act, parsed.data as never, sb, t);
+  if (res.ok) revalidatePath('/', 'layout');
+  return res;
+}
+
+type Sb = Awaited<ReturnType<typeof createClient>>;
+type T = Awaited<ReturnType<typeof getTranslations>>;
+type In<K extends ActKey> = import('zod').infer<(typeof SCHEMAS)[K]>;
+
+const fail = (e: { message: string } | null): ActResult | null => (e ? { ok: false, error: e.message } : null);
+
+async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<ActResult> {
+  switch (act) {
+    case 'addFarm': {
+      const x = v as In<'addFarm'>;
+      const { error } = await sb.from('farm').insert({ name: x.name, farm_type: x.farm_type, district: x.district, village: x.village, capacity_birds: x.capacity });
+      return fail(error) ?? { ok: true, msg: t('farm.ok', { name: x.name }) };
+    }
+    case 'addShed': {
+      const x = v as In<'addShed'>;
+      const { error } = await sb.from('shed').insert({ farm_id: x.farm_id, name: x.name, shed_type: x.shed_type, capacity_birds: x.capacity, area_sqft: x.area_sqft });
+      return fail(error) ?? { ok: true, msg: t('shed.ok', { name: x.name }) };
+    }
+    case 'addBatch': {
+      const x = v as In<'addBatch'>;
+      const { error } = await sb.rpc('place_batch', {
+        p_shed: x.shed_id, p_code: x.code, p_breed: x.breed_id ?? null, p_placed: x.placed, p_doc: x.doc, p_doc_rate: x.doc_rate, p_vendor: x.vendor_id ?? null,
+      });
+      return fail(error) ?? { ok: true, msg: t('batch.ok', { code: x.code }), href: `/farm/batch/${encodeURIComponent(x.code)}` };
+    }
+    case 'mort': {
+      const x = v as In<'mort'>;
+      const { error } = await sb.rpc('record_mortality', { p_batch: x.batch_id, p_date: x.date, p_count: x.count, p_cause: x.cause ?? null, p_notes: x.notes ?? null });
+      return fail(error) ?? { ok: true, msg: t('mort.ok', { n: x.count }) };
+    }
+    case 'vaccDone': {
+      const x = v as In<'vaccDone'>;
+      const { data: { user } } = await sb.auth.getUser();
+      const { error } = await sb.from('vaccination_schedule').update({ done_on: x.date, done_by: user?.id }).eq('id', x.vacc_id);
+      return fail(error) ?? { ok: true, msg: t('vacc.ok') };
+    }
+    case 'addVisit': {
+      const x = v as In<'addVisit'>;
+      const { data: b } = await sb.from('batch').select('farm_id').eq('id', x.batch_id).maybeSingle();
+      if (!b) return { ok: false, error: t('notFound') };
+      const { error } = await sb.from('vet_visit').insert({ farm_id: b.farm_id, batch_id: x.batch_id, visit_date: x.date, vet_name: x.vet, findings: x.findings, prescription: x.prescription });
+      return fail(error) ?? { ok: true, msg: t('visit.ok') };
+    }
+    case 'saleOpen': {
+      const x = v as In<'saleOpen'>;
+      const { data, error } = await sb.rpc('create_sale', {
+        p_customer: x.customer_id, p_product: x.product, p_qty: x.qty, p_unit: x.unit, p_rate: x.rate, p_date: x.date, p_batch: x.batch_id ?? null,
+      });
+      return fail(error) ?? { ok: true, msg: t('sale.ok', { no: String(data) }), href: '/money?view=ar' };
+    }
+    case 'addBill': {
+      const x = v as In<'addBill'>;
+      const { data, error } = await sb.rpc('create_bill', {
+        p_vendor: x.vendor_id, p_category: x.category, p_total: x.total, p_date: x.date, p_batch: x.batch_id ?? null, p_bill_no: x.bill_no ?? null,
+      });
+      return fail(error) ?? { ok: true, msg: t('bill.ok', { no: String(data) }), href: '/money?view=ap' };
+    }
+    case 'payOpen': {
+      const x = v as In<'payOpen'>;
+      const { error } = await sb.rpc('record_payment', { p_kind: x.kind, p_id: x.id, p_amount: x.amount, p_mode: x.mode, p_date: x.date, p_utr: x.utr ?? null });
+      return fail(error) ?? { ok: true, msg: t('pay.ok', { amt: fmtINR(x.amount) }) };
+    }
+    case 'addCustomer': {
+      const x = v as In<'addCustomer'>;
+      const { error } = await sb.from('customer').insert({ name: x.name, kind: x.kind, phone: x.phone, credit_limit: x.credit_limit, credit_days: x.credit_days });
+      return fail(error) ?? { ok: true, msg: t('customer.ok', { name: x.name }) };
+    }
+    case 'addVendor': {
+      const x = v as In<'addVendor'>;
+      const { error } = await sb.from('vendor').insert({
+        name: x.name, category: x.category, contact_name: x.contact, phone: x.phone, gstin: x.gstin, payment_terms_days: x.terms, is_verified: !!x.gstin,
+      });
+      return fail(error) ?? { ok: true, msg: t('vendor.ok', { name: x.name }) };
+    }
+    case 'addWorker': {
+      const x = v as In<'addWorker'>;
+      const { error } = await sb.from('worker').insert({ name: x.name, role: x.role, farm_id: x.farm_id, wage_rate: x.wage, phone: x.phone });
+      return fail(error) ?? { ok: true, msg: t('worker.ok', { name: x.name }) };
+    }
+    case 'attSet': {
+      const x = v as In<'attSet'>;
+      const { error } = await sb.from('attendance').upsert({ worker_id: x.worker_id, att_date: x.date, status: x.status }, { onConflict: 'worker_id,att_date' });
+      return fail(error) ?? { ok: true, msg: t('att.ok') };
+    }
+    case 'logSave': {
+      const x = v as In<'logSave'>;
+      const p = {
+        mortality: x.mortality, culls: x.culls, feed_kg: Math.round(x.feed_bags * 50 * 10) / 10, water: x.water, tmin: x.tmin, tmax: x.tmax, rh: x.rh,
+        avg_w: x.avg_w, remarks: x.remarks, ...(x.eggs ? { eggs: x.eggs } : {}),
+      };
+      const { error } = await sb.rpc('save_daily_log', { p_batch: x.batch_id, p_date: x.date, p });
+      if (error) return fail(error)!;
+      const { data: b } = await sb.from('batch').select('code').eq('id', x.batch_id).maybeSingle();
+      return { ok: true, msg: t('log.ok'), href: b ? `/farm/batch/${encodeURIComponent(b.code)}` : undefined };
+    }
+  }
+  return { ok: false, error: t('unknown') };
+}

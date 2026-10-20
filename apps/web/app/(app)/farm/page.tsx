@@ -21,7 +21,7 @@ export default async function Farm() {
                 <div className="t" style={{ fontWeight: 700 }}>{f.name}</div>
                 <div className="s">{t(`farmType.${f.farm_type}`)} · {f.district} · {t('farm.capacity', { n: fmtN(f.capacity) })}</div>
               </div>
-              <ActBtn act="addShed" className="btn small secondary">{t('farm.addShed')}</ActBtn>
+              <ActBtn act="addShed" ctx={{ farm: f.id }} className="btn small secondary">{t('farm.addShed')}</ActBtn>
             </div>
             <div className="list" style={{ marginTop: 6 }}>
               {f.sheds.length ? (
@@ -47,7 +47,7 @@ export default async function Farm() {
                   return b ? (
                     <Link key={s.id} className="item" href={`/farm/batch/${b.code}`}>{body}</Link>
                   ) : (
-                    <ActBtn key={s.id} act="addBatch" className="item">{body}</ActBtn>
+                    <ActBtn key={s.id} act="addBatch" ctx={{ shed: s.id }} className="item">{body}</ActBtn>
                   );
                 })
               ) : (

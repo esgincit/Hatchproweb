@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { claimsFromUser } from '@/lib/auth/claims';
 import { tabsFor } from '@/lib/auth/permissions';
 import { AppShell } from '@/components/shell/AppShell';
+import { todayIST } from '@/lib/view/load';
 import { pickerOptions, type FarmType } from '@/lib/farm-types';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -33,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <AppShell tenantName={tenant?.name ?? 'HatchPro'} sub={sub} unread={unread ?? 0}
-      tabs={tabsFor(c.roles)} mode={mode} modes={pickerOptions(types)}>
+      tabs={tabsFor(c.roles)} mode={mode} modes={pickerOptions(types)} today={todayIST()}>
       {children}
     </AppShell>
   );

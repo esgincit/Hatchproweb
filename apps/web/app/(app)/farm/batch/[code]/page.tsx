@@ -59,6 +59,11 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
   const spikeDay = (m: number) => m > k.mb * 1.8 && m > 5;
   const cpe = b.ft === 'layer' && k.eggs ? costPerEgg(b) : null;
   const eggR = rate(v, 'egg'), brR = rate(v, 'broiler_farmgate');
+  const nextVacc = b.vacc.find((x) => !x.done);
+  const quickCtx: Record<string, Record<string, string>> = {
+    mort: { batch: b.id }, addVisit: { batch: b.id }, batchState: { batch: b.id },
+    vaccDone: nextVacc ? { vacc: nextVacc.id, name: nextVacc.name } : { batch: b.id },
+  };
 
   return (
     <>
@@ -70,7 +75,7 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
       {b.state !== 'closed' && (
         <div className="quick">
           {([['mort', '☠️', 'home.qMortality'], ['vaccDone', '💉', 'batch.vaccinate'], ['addVisit', '🩺', 'batch.vetVisit'], ['batchState', '🔁', 'batch.stateBtn']] as const).map(([a, i, l]) => (
-            <ActBtn key={a} act={a}><span>{i}</span>{t(l)}</ActBtn>
+            <ActBtn key={a} act={a} ctx={quickCtx[a]}><span>{i}</span>{t(l)}</ActBtn>
           ))}
         </div>
       )}
@@ -122,7 +127,7 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
       )}
 
       <div className="card">
-        <div className="row between" style={{ marginBottom: 6 }}><div className="eyebrow">{t('batch.vetVisits')}</div><ActBtn act="addVisit" className="btn small">{t('batch.addVisit')}</ActBtn></div>
+        <div className="row between" style={{ marginBottom: 6 }}><div className="eyebrow">{t('batch.vetVisits')}</div><ActBtn act="addVisit" ctx={{ batch: b.id }} className="btn small">{t('batch.addVisit')}</ActBtn></div>
         <div className="list">
           {visits.length ? visits.map((x, i) => (
             <div className="item" key={i}><div>
@@ -143,7 +148,7 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
               return (
                 <div className="item" key={x.id}>
                   <div><div className="t">{x.name}</div><div className="s">{t('common.due', { date: dmy(x.due) })}{x.done ? t('batch.doneOn', { date: dmy(x.done) }) : ''}</div></div>
-                  <div className="r">{x.done ? <span className="pill good">{t('common.done')}</span> : <ActBtn act="vaccDone" className={`btn small ${od ? '' : 'secondary'}`}>{od ? t('common.overdueMark') : t('common.markDone')}</ActBtn>}</div>
+                  <div className="r">{x.done ? <span className="pill good">{t('common.done')}</span> : <ActBtn act="vaccDone" ctx={{ vacc: x.id, name: x.name }} className={`btn small ${od ? '' : 'secondary'}`}>{od ? t('common.overdueMark') : t('common.markDone')}</ActBtn>}</div>
                 </div>
               );
             })}

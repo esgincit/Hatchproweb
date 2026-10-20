@@ -468,5 +468,164 @@
     "packaging": "Packaging",
     "fuel": "Fuel",
     "other": "Other"
+  },
+  "forms": {
+    "save": "Save",
+    "unknown": "This action is not available yet",
+    "invalid": "Please check the highlighted fields",
+    "signedOut": "Your session ended. Please sign in again.",
+    "notFound": "Not found",
+    "none": "— none —",
+    "pick": "Choose…",
+    "date": "Date",
+    "notes": "Notes",
+    "name": "Name",
+    "phone": "Phone",
+    "amount": "Amount (₹)",
+    "optionalBatch": "Batch (optional)",
+    "needFarm": "Add a farm first.",
+    "noFreeShed": "Every shed has an active batch. Add a shed or close a batch first.",
+    "noActiveBatch": "No active batch. Place a batch first.",
+    "needCustomer": "Add a customer first (More › Customers).",
+    "needVendor": "Add a vendor first (More › Vendors).",
+    "farm": {
+      "title": "Add farm",
+      "name": "Farm name",
+      "type": "Farm type",
+      "district": "District",
+      "village": "Village",
+      "capacity": "Capacity (birds)",
+      "ok": "Farm added · {name}"
+    },
+    "shed": {
+      "title": "Add shed",
+      "farm": "Farm",
+      "name": "Shed name",
+      "type": "Shed type",
+      "capacity": "Capacity (birds)",
+      "area": "Area (sq ft)",
+      "ok": "Shed added · {name}",
+      "cage": "Cage",
+      "deep_litter": "Deep litter",
+      "environment_controlled": "Environment controlled"
+    },
+    "batch": {
+      "title": "Place a batch",
+      "intro": "The vaccination schedule and the chick bill are created automatically.",
+      "submit": "Place batch",
+      "label": "Batch",
+      "shed": "Shed",
+      "code": "Batch code",
+      "breed": "Breed",
+      "placed": "Placed on",
+      "doc": "Chicks placed",
+      "rate": "Rate per chick (₹)",
+      "vendor": "Hatchery / supplier",
+      "ok": "Batch {code} placed · vaccination schedule ready"
+    },
+    "mort": {
+      "title": "Record mortality",
+      "submit": "Record",
+      "count": "Birds dead",
+      "cause": "Likely cause",
+      "ok": "{n} deaths recorded"
+    },
+    "vacc": {
+      "title": "Vaccination done · {name}",
+      "submit": "Mark done",
+      "ok": "Vaccination marked done"
+    },
+    "visit": {
+      "title": "Vet visit",
+      "vet": "Vet name",
+      "findings": "Findings",
+      "rx": "Prescription",
+      "ok": "Vet visit saved"
+    },
+    "sale": {
+      "title": "New sale",
+      "intro": "Eggs and live birds are GST-exempt; manure 5%. Due date follows the customer's credit days.",
+      "submit": "Raise invoice",
+      "customer": "Customer / trader",
+      "product": "Product",
+      "unit": "Unit",
+      "qty": "Quantity",
+      "rate": "Rate (₹ per unit)",
+      "ok": "Invoice {no} raised",
+      "egg": "Eggs",
+      "bird": "Live birds",
+      "manure": "Manure",
+      "spent_hen": "Spent hens",
+      "doc": "Day-old chicks"
+    },
+    "bill": {
+      "title": "New bill / expense",
+      "submit": "Book bill",
+      "vendor": "Vendor",
+      "category": "Category",
+      "no": "Vendor bill no. (optional)",
+      "ok": "Bill {no} booked"
+    },
+    "pay": {
+      "title": "Record payment",
+      "titleIn": "Receive payment",
+      "titleOut": "Pay bill",
+      "submit": "Record payment",
+      "nothing": "Nothing outstanding.",
+      "doc": "Bill / invoice",
+      "mode": "Mode",
+      "utr": "Reference / UTR (optional)",
+      "ok": "Payment of {amt} recorded",
+      "upi": "UPI",
+      "neft": "Bank transfer (NEFT)",
+      "cash": "Cash",
+      "cheque": "Cheque"
+    },
+    "customer": {
+      "title": "Add customer",
+      "kind": "Type",
+      "limit": "Credit limit (₹)",
+      "days": "Credit days",
+      "ok": "Customer added · {name}",
+      "trader": "Trader",
+      "retailer": "Retailer",
+      "integrator": "Integrator",
+      "wholesaler": "Wholesaler"
+    },
+    "vendor": {
+      "title": "Add vendor",
+      "category": "Category",
+      "contact": "Contact person",
+      "gstin": "GSTIN (optional)",
+      "terms": "Payment terms (days)",
+      "ok": "Vendor added · {name}"
+    },
+    "worker": {
+      "title": "Add worker",
+      "role": "Role",
+      "wage": "Monthly wage (₹)",
+      "ok": "Worker added · {name}",
+      "supervisor": "Supervisor",
+      "helper": "Helper",
+      "driver": "Driver",
+      "security": "Security"
+    },
+    "att": {
+      "ok": "Attendance saved"
+    },
+    "log": {
+      "ok": "Daily log saved"
+    }
+  },
+  "billCat": {
+    "chick": "Chicks",
+    "feed": "Feed",
+    "medicine": "Medicine",
+    "vaccine": "Vaccine",
+    "equipment": "Equipment",
+    "transport": "Transport",
+    "labour": "Labour",
+    "fuel": "Fuel",
+    "other": "Other"
   }
 }

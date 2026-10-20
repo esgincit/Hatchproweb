@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { TAB_ICONS, BellIcon } from './icons';
 import { TenantSheet } from './TenantSheet';
 import { Toaster } from '@/components/ui/Toast';
+import { ActionHost } from '@/components/forms/ActionHost';
 import type { FarmType } from '@/lib/farm-types';
 import type { Tab } from '@/lib/auth/permissions';
 
@@ -14,13 +15,14 @@ import type { Tab } from '@/lib/auth/permissions';
 const TE: Record<Tab, string> = { home: 'హోమ్', farm: 'ఫారం', log: 'నమోదు', money: 'డబ్బు', more: 'మరిన్ని' };
 const EN: Record<Tab, string> = { home: 'Home', farm: 'Farm', log: 'Log', money: 'Money', more: 'More' };
 
-export function AppShell({ tenantName, sub, unread, tabs, mode, modes, children }: {
+export function AppShell({ tenantName, sub, unread, tabs, mode, modes, today, children }: {
   tenantName: string;
   sub: string;
   unread: number;
   tabs: Tab[];
   mode: FarmType;
   modes: FarmType[];
+  today: string;
   children: React.ReactNode;
 }) {
   const t = useTranslations();
@@ -56,6 +58,7 @@ export function AppShell({ tenantName, sub, unread, tabs, mode, modes, children 
         ))}
       </nav>
       <Toaster />
+      <ActionHost today={today} />
       <TenantSheet open={open} onOpenChange={setOpen} modes={modes} mode={mode} />
     </div>
   );

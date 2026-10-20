@@ -1,16 +1,16 @@
 'use client';
-import { useTranslations } from 'next-intl';
-import { toast } from './Toast';
+import { openAct, type ActCtx } from '@/components/forms/ActionHost';
 
 /**
- * Every demo action button (data-act="…"). Renders exactly like the demo; the forms behind
- * each `act` key arrive with SchemaForm, until then a toast says so.
+ * Every demo action button (data-act="…"). Renders exactly like the demo; ActionHost (in the shell)
+ * opens the matching form with `ctx` (ids of the row the button sits on).
  */
-export function ActBtn({ act, className, children, style }: { act: string; className?: string; children: React.ReactNode; style?: React.CSSProperties }) {
-  const t = useTranslations('common');
+export function ActBtn({ act, ctx, className, children, style }: {
+  act: string; ctx?: ActCtx; className?: string; children: React.ReactNode; style?: React.CSSProperties;
+}) {
   return (
     <button type="button" className={className} style={style} data-act={act}
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toast(t('comingNext')); }}>
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); openAct(act, ctx); }}>
       {children}
     </button>
   );

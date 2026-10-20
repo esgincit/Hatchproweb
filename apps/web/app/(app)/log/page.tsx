@@ -29,7 +29,7 @@ export default async function LogPage({ searchParams }: { searchParams: Promise<
         <div className="t" style={{ fontWeight: 700 }}>{b.code}</div>
         <div className="s">{b.ft === 'layer' ? t('common.week', { n: Math.floor(b.age / 7) }) : t('common.day', { n: b.age })} · {t('log.opening')} <b className="mono">{fmtN(k.alive)}</b> · {sup}</div>
       </div>
-      <LogForm key={b.code} isLayer={b.ft === 'layer'} alive={k.alive} std={k.std} last={k.last ?? null} />
+      <LogForm key={b.code} batchId={b.id} today={today} isLayer={b.ft === 'layer'} alive={k.alive} std={k.std} last={k.last ?? null} />
     </>
   );
 }

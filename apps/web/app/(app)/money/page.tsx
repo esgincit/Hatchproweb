@@ -65,7 +65,7 @@ export default async function Money({ searchParams }: { searchParams: Promise<{ 
           {open(tn.bills).map((b) => (
             <div className="item" key={b.id}>
               <div><div className="t">{b.vendor}</div><div className="s">{b.no} · {b.category} · {t('common.due', { date: dmy(b.due) })}{b.batch ? ' · ' + b.batch : ''}</div></div>
-              <div className="r"><div className="t">{fmtL(b.total - b.paid)}</div><StatusPill s={b.status} /><div><ActBtn act="payOpen" className="btn small secondary" style={{ marginTop: 4 }}>{t('money.pay')}</ActBtn></div></div>
+              <div className="r"><div className="t">{fmtL(b.total - b.paid)}</div><StatusPill s={b.status} /><div><ActBtn act="payOpen" ctx={{ kind: 'bill', id: b.id }} className="btn small secondary" style={{ marginTop: 4 }}>{t('money.pay')}</ActBtn></div></div>
             </div>
           ))}
           {!open(tn.bills).length && <div className="s">{t('money.nothingOutstanding')}</div>}
@@ -83,7 +83,7 @@ export default async function Money({ searchParams }: { searchParams: Promise<{ 
           {open(tn.invoices).map((b) => (
             <div className="item" key={b.id}>
               <div><div className="t">{b.customer}</div><div className="s">{b.no} · {fmtN(b.qty)} {b.unit} @ ₹{b.rate} · {t('common.due', { date: dmy(b.due) })}</div></div>
-              <div className="r"><div className="t">{fmtL(b.total - b.paid)}</div><StatusPill s={b.status} /><div><ActBtn act="payOpen" className="btn small secondary" style={{ marginTop: 4 }}>{t('money.receive')}</ActBtn></div></div>
+              <div className="r"><div className="t">{fmtL(b.total - b.paid)}</div><StatusPill s={b.status} /><div><ActBtn act="payOpen" ctx={{ kind: 'invoice', id: b.id }} className="btn small secondary" style={{ marginTop: 4 }}>{t('money.receive')}</ActBtn></div></div>
             </div>
           ))}
           {!open(tn.invoices).length && <div className="s">{t('money.nothingOutstanding')}</div>}
@@ -163,7 +163,7 @@ export default async function Money({ searchParams }: { searchParams: Promise<{ 
         <div className="eyebrow" style={{ marginBottom: 6 }}>{t('money.spendByCat')}</div>
         {Object.entries(spend).sort((a, b) => b[1] - a[1]).map(([k, x]) => (
           <div className="row" key={k} style={{ fontSize: 12.5, padding: '3px 0' }}>
-            <span style={{ width: 84, textTransform: 'capitalize' }}>{k}</span>
+            <span style={{ width: 84 }}>{t.has(`billCat.${k}`) ? t(`billCat.${k}`) : k}</span>
             <div className="bar" style={{ flex: 1, height: 8 }}><i style={{ width: `${(100 * x) / spendTot}%`, background: 'var(--series2)' }} /></div>
             <b className="mono" style={{ width: 70, textAlign: 'right' }}>{fmtL(x)}</b>
           </div>

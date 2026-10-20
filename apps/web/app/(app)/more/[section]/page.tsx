@@ -10,6 +10,7 @@ import { ActBtn } from '@/components/ui/ActBtn';
 import type { View } from '@/lib/view/types';
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
+const ATT_STATUS = { P: 'present', H: 'half', A: 'absent', L: 'leave' } as const;
 type Ctx = { v: View; t: T; dmy: (s: string) => string; locale: string };
 
 export default async function Section({ params, searchParams }: { params: Promise<{ section: string }>; searchParams: Promise<{ tab?: string }> }) {
@@ -158,7 +159,7 @@ function People({ c: { v, t, dmy, locale }, tab }: { c: Ctx; tab: string }) {
           <div className="item" key={w.id} style={{ alignItems: 'center' }}>
             <div style={{ minWidth: 0 }}><div className="t">{w.name}</div><div className="s">{t('people.presentMonth', { role: w.role, n: attMonth(tn, w.id, today).P })}</div></div>
             <div className="r"><div className="segs" style={{ width: 150 }}>
-              {(['P', 'H', 'A', 'L'] as const).map((k) => <ActBtn key={k} act="attSet" className={code === k ? 'on ' + k : ''}>{k}</ActBtn>)}
+              {(['P', 'H', 'A', 'L'] as const).map((k) => <ActBtn key={k} act="attSet" ctx={{ worker_id: w.id, date: today, status: ATT_STATUS[k] }} className={code === k ? 'on ' + k : ''}>{k}</ActBtn>)}
             </div></div>
           </div>
         ); })}
@@ -318,7 +319,7 @@ function Health({ c: { v, t, dmy }, B }: { c: Ctx; B: React.ReactNode }) {
         {due.slice(0, 10).map((x) => { const od = daysBetween(x.due, today) > 0; return (
           <div className="item" key={x.id}>
             <div><div className="t">{x.name}</div><div className="s">{x.b.code} · {x.b.shed_name} · {t('common.due', { date: dmy(x.due) })}</div></div>
-            <div className="r"><ActBtn act="vaccDone" className={`btn small ${od ? '' : 'secondary'}`}>{od ? t('common.overdueMark') : t('common.markDone')}</ActBtn></div>
+            <div className="r"><ActBtn act="vaccDone" ctx={{ vacc: x.id, name: x.name }} className={`btn small ${od ? '' : 'secondary'}`}>{od ? t('common.overdueMark') : t('common.markDone')}</ActBtn></div>
           </div>
         ); })}
         {!due.length && <div className="s">{t('sections.allVaccDone')}</div>}
