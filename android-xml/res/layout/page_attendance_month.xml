@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monthly register: header row of day numbers + one row per worker; cells are 20dp toggles cycling P→H→A→L. Rendered by a RecyclerView with a horizontal scroll container. -->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/pos_ink2" android:paddingVertical="8dp" android:text="Tap any day to cycle P → H → A → L. Sundays are off."/>
+        <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/bg_card" android:padding="10dp" android:scrollbars="none">
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvRegister" android:layout_width="wrap_content" android:layout_height="wrap_content" tools:listitem="@layout/item_register_row"/>
+        </HorizontalScrollView>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="12dp" android:layout_marginTop="14dp">
+            <TextView style="@style/Eyebrow" android:text="Month to date"/>
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSummary" android:layout_width="match_parent" android:layout_height="wrap_content" android:nestedScrollingEnabled="false"/>
+        </LinearLayout>
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnExport" style="@style/Widget.Material3.Button.TonalButton" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="14dp" android:text="Export register (Excel)"/>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

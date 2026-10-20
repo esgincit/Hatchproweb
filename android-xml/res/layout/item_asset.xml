@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingVertical="10dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+            <TextView android:id="@+id/name" android:layout_width="match_parent" android:layout_height="wrap_content" android:textStyle="bold" android:textColor="@color/pos_ink" tools:text="Diesel generator 62.5 kVA"/>
+            <TextView android:id="@+id/sub" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/pos_ink2" tools:text="generator · next service 12 Nov"/>
+        </LinearLayout>
+        <TextView android:id="@+id/status" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingHorizontal="8dp" android:paddingVertical="3dp" android:textSize="11sp" android:textStyle="bold" android:background="@drawable/bg_pill_good" android:textColor="@color/pos_good" tools:text="OK"/>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="6dp">
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnReport" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="wrap_content" android:layout_height="34dp" android:text="@string/report_issue"/>
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnService" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="wrap_content" android:layout_height="34dp" android:layout_marginStart="6dp" android:text="@string/service_done"/>
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shell: tenant switcher + notification bell on top, fragment container, 5-tab bottom navigation -->
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/pos_bg">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+        <LinearLayout android:id="@+id/topbar" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="8dp" android:background="@color/pos_surface">
+            <com.google.android.material.chip.Chip android:id="@+id/chipTenant" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="VKR Poultry Farms" app:chipIcon="@drawable/ic_home" app:closeIconVisible="false" app:chipBackgroundColor="@color/pos_surface2"/>
+            <FrameLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="10dp">
+                <ImageButton android:id="@+id/btnBell" android:layout_width="38dp" android:layout_height="38dp" android:background="@drawable/bg_tile" android:src="@drawable/ic_more" android:contentDescription="Notifications"/>
+                <TextView android:id="@+id/badgeBell" android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="top|end" android:gravity="center"
+                    android:background="@drawable/bg_pill_crit" android:textColor="@color/pos_crit" android:textSize="10sp" android:textStyle="bold" android:text="6"/>
+            </FrameLayout>
+        </LinearLayout>
+        <androidx.fragment.app.FragmentContainerView android:id="@+id/nav_host" android:name="androidx.navigation.fragment.NavHostFragment"
+            android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" app:defaultNavHost="true"/>
+        <com.google.android.material.bottomnavigation.BottomNavigationView android:id="@+id/bottomNav" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:background="@color/pos_surface" app:menu="@menu/bottom_nav" app:labelVisibilityMode="labeled" app:itemIconTint="@color/pos_accent_ink" app:itemTextColor="@color/pos_accent_ink"/>
+    </LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

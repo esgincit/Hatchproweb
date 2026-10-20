@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tab_home">హోమ్</string>
+    <string name="tab_farm">ఫారం</string>
+    <string name="tab_log">నమోదు</string>
+    <string name="tab_money">డబ్బు</string>
+    <string name="tab_more">మరిన్ని</string>
+    <string name="greeting">శుభోదయం, %1$s</string>
+    <string name="quick_mortality">మరణాలు</string>
+    <string name="quick_sale">అమ్మకం</string>
+    <string name="quick_payment">చెల్లింపు</string>
+    <string name="quick_attendance">హాజరు</string>
+    <string name="kpi_birds_alive">బతికున్న కోళ్లు</string>
+    <string name="kpi_eggs_today">ఈరోజు గుడ్లు</string>
+    <string name="kpi_mortality_today">ఈరోజు మరణాలు</string>
+    <string name="needs_attention">దృష్టి అవసరం</string>
+    <string name="market_rates">మార్కెట్ ధరలు</string>
+    <string name="daily_log">రోజువారీ నమోదు · %1$s</string>
+    <string name="section_birds">కోళ్లు</string>
+    <string name="mortality">మరణాలు</string>
+    <string name="culls">తొలగింపులు</string>
+    <string name="section_eggs">గ్రేడ్ వారీ గుడ్లు (30 ట్రేలు)</string>
+    <string name="section_feed_water">దాణా &amp; నీరు</string>
+    <string name="feed_bags">దాణా (50 కిలోల బస్తాలు)</string>
+    <string name="water_litres">నీరు (లీటర్లు)</string>
+    <string name="section_climate">షెడ్ వాతావరణం</string>
+    <string name="section_photos">ఫోటో ఆధారాలు</string>
+    <string name="check_with_ai">AI తో తనిఖీ</string>
+    <string name="remarks">వ్యాఖ్యలు</string>
+    <string name="save_log">సేవ్ · ఆన్‌లైన్ అయ్యాక సింక్</string>
+    <string name="attendance_title">హాజరు · %1$s</string>
+    <string name="submit_attendance">హాజరు సమర్పించండి (%1$d ఉన్నారు)</string>
+    <string name="equipment_title">పరికరాలు &amp; నిర్వహణ</string>
+    <string name="report_issue">సమస్య నివేదించండి</string>
+    <string name="service_done">సర్వీస్ పూర్తయింది</string>
+</resources>

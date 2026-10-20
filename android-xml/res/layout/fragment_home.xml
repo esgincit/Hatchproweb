@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home: greeting + live indicator, 4 quick actions, 2x2 KPI tiles, attention list, market rates, batch list -->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:id="@+id/tvGreeting" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textSize="17sp" android:textStyle="bold" android:textColor="@color/pos_ink" tools:text="Good morning, Venkata" xmlns:tools="http://schemas.android.com/tools"/>
+            <TextView android:id="@+id/tvLive" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="11sp" android:textColor="@color/pos_muted" android:drawableStart="@drawable/bg_pill_good" android:drawablePadding="6dp" android:text="@string/live_synced"/>
+        </LinearLayout>
+
+        <GridLayout android:id="@+id/quickActions" android:layout_width="match_parent" android:layout_height="wrap_content" android:columnCount="4" android:layout_marginTop="14dp">
+            <include layout="@layout/item_quick_action" android:id="@+id/qaMortality"/>
+            <include layout="@layout/item_quick_action" android:id="@+id/qaSale"/>
+            <include layout="@layout/item_quick_action" android:id="@+id/qaPayment"/>
+            <include layout="@layout/item_quick_action" android:id="@+id/qaAttendance"/>
+        </GridLayout>
+
+        <GridLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:columnCount="2" android:layout_marginTop="14dp" android:useDefaultMargins="true">
+            <include layout="@layout/item_kpi_tile" android:id="@+id/kpiBirds"/>
+            <include layout="@layout/item_kpi_tile" android:id="@+id/kpiEggs"/>
+            <include layout="@layout/item_kpi_tile" android:id="@+id/kpiMargin"/>
+            <include layout="@layout/item_kpi_tile" android:id="@+id/kpiMortality"/>
+        </GridLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="12dp" android:layout_marginTop="14dp">
+            <TextView style="@style/Eyebrow" android:text="@string/needs_attention"/>
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvAlerts" android:layout_width="match_parent" android:layout_height="wrap_content" android:nestedScrollingEnabled="false" tools:listitem="@layout/item_alert" xmlns:tools="http://schemas.android.com/tools"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="12dp" android:layout_marginTop="14dp">
+            <TextView style="@style/Eyebrow" android:text="@string/market_rates"/>
+            <include layout="@layout/item_rate_row" android:id="@+id/rateEgg"/>
+            <include layout="@layout/item_rate_row" android:id="@+id/rateBroiler"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="12dp" android:layout_marginTop="14dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView style="@style/Eyebrow" android:layout_width="0dp" android:layout_weight="1" android:text="@string/batches"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/btnPlaceBatch" style="@style/Widget.Material3.Button.TonalButton" android:layout_width="wrap_content" android:layout_height="36dp" android:text="@string/place_batch"/>
+            </LinearLayout>
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvBatches" android:layout_width="match_parent" android:layout_height="wrap_content" android:nestedScrollingEnabled="false" tools:listitem="@layout/item_batch" xmlns:tools="http://schemas.android.com/tools"/>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

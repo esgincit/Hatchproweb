@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- PoultryOS palette: egg-yolk amber accent on warm straw neutrals -->
+    <color name="pos_bg">#F3EFE6</color>
+    <color name="pos_surface">#FFFDF8</color>
+    <color name="pos_surface2">#F8F4EA</color>
+    <color name="pos_ink">#201A12</color>
+    <color name="pos_ink2">#5B5244</color>
+    <color name="pos_muted">#8C8273</color>
+    <color name="pos_line">#E4DCCB</color>
+    <color name="pos_accent">#D9870F</color>
+    <color name="pos_accent_ink">#5A3600</color>
+    <color name="pos_accent_soft">#FBE9C7</color>
+    <color name="pos_good">#2F7D4A</color>
+    <color name="pos_good_soft">#DFF1E3</color>
+    <color name="pos_warn">#B6700A</color>
+    <color name="pos_warn_soft">#FDECCB</color>
+    <color name="pos_crit">#B3362B</color>
+    <color name="pos_crit_soft">#F9DCD8</color>
+    <color name="pos_info">#2B5F8A</color>
+    <color name="pos_info_soft">#DBE8F3</color>
+</resources>

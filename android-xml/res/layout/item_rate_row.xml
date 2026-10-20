@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="10dp">
+    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView android:id="@+id/name" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" android:textColor="@color/pos_ink" tools:text="NECC egg · Hyderabad"/>
+        <TextView android:id="@+id/unit" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/pos_ink2" tools:text="per egg"/>
+    </LinearLayout>
+    <com.github.mikephil.charting.charts.LineChart android:id="@+id/spark" android:layout_width="72dp" android:layout_height="24dp"/>
+    <TextView android:id="@+id/value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:textStyle="bold" android:textColor="@color/pos_ink" tools:text="₹5.69"/>
+</LinearLayout>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="10dp">
+    <View android:id="@+id/stripe" android:layout_width="4dp" android:layout_height="match_parent" android:background="@color/pos_crit"/>
+    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="10dp">
+        <TextView android:id="@+id/asset" android:layout_width="match_parent" android:layout_height="wrap_content" android:textStyle="bold" android:textColor="@color/pos_ink" tools:text="Nipple drinking system"/>
+        <TextView android:id="@+id/issue" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/pos_ink2" tools:text="Drinker line leakage, litter wet near column 4"/>
+        <TextView android:id="@+id/meta" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/pos_muted" tools:text="opened 18 Oct · high · Electrician – Yadagiri"/>
+    </LinearLayout>
+    <com.google.android.material.button.MaterialButton android:id="@+id/btnClose" android:layout_width="wrap_content" android:layout_height="34dp" android:text="@string/close_ticket"/>
+</LinearLayout>

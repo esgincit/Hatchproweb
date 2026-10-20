@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/nav_home"  android:icon="@drawable/ic_home"  android:title="@string/tab_home"/>
+    <item android:id="@+id/nav_farm"  android:icon="@drawable/ic_farm"  android:title="@string/tab_farm"/>
+    <item android:id="@+id/nav_log"   android:icon="@drawable/ic_log"   android:title="@string/tab_log"/>
+    <item android:id="@+id/nav_money" android:icon="@drawable/ic_money" android:title="@string/tab_money"/>
+    <item android:id="@+id/nav_more"  android:icon="@drawable/ic_more"  android:title="@string/tab_more"/>
+</menu>

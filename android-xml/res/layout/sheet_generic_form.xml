@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom sheet used by every "+ Add" / action: title, intro, a 2-column field grid filled from a schema, extra slot, submit, cancel -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" android:background="@color/pos_surface">
+    <TextView android:id="@+id/tvTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="17sp" android:textStyle="bold" android:textColor="@color/pos_ink"/>
+    <TextView android:id="@+id/tvIntro" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12.5sp" android:textColor="@color/pos_ink2" android:visibility="gone"/>
+    <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp">
+        <GridLayout android:id="@+id/gridFields" android:layout_width="match_parent" android:layout_height="wrap_content" android:columnCount="2" android:useDefaultMargins="true"/>
+    </androidx.core.widget.NestedScrollView>
+    <FrameLayout android:id="@+id/extra" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <com.google.android.material.button.MaterialButton android:id="@+id/btnSubmit" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" app:backgroundTint="@color/pos_accent" android:textColor="@color/pos_ink"/>
+    <com.google.android.material.button.MaterialButton android:id="@+id/btnCancel" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="8dp" android:text="@android:string/cancel"/>
+</LinearLayout>

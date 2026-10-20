@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PoultryOS" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/pos_accent</item>
+        <item name="colorOnPrimary">@color/pos_ink</item>
+        <item name="colorPrimaryContainer">@color/pos_accent_soft</item>
+        <item name="colorOnPrimaryContainer">@color/pos_accent_ink</item>
+        <item name="colorSurface">@color/pos_surface</item>
+        <item name="colorOutline">@color/pos_line</item>
+        <item name="android:windowBackground">@color/pos_bg</item>
+    </style>
+    <style name="Eyebrow">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.09</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/pos_muted</item>
+        <item name="android:layout_marginBottom">6dp</item>
+    </style>
+    <style name="Field" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="boxCornerRadiusTopStart">10dp</item>
+        <item name="boxCornerRadiusTopEnd">10dp</item>
+        <item name="boxCornerRadiusBottomStart">10dp</item>
+        <item name="boxCornerRadiusBottomEnd">10dp</item>
+    </style>
+    <style name="FieldGrid" parent="Field">
+        <item name="android:layout_columnWeight">1</item>
+    </style>
+</resources>

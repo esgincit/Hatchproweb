@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Equipment: 3 KPI tiles, open tickets list (Close), asset register (Report issue / Service done), closed tickets -->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textSize="17sp" android:textStyle="bold" android:textColor="@color/pos_ink" android:text="@string/equipment_title"/>
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnAddAsset" style="@style/Widget.Material3.Button.TonalButton" android:layout_width="wrap_content" android:layout_height="36dp" android:text="@string/add_asset"/>
+        </LinearLayout>
+        <GridLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:columnCount="3" android:useDefaultMargins="true" android:layout_marginTop="10dp">
+            <include layout="@layout/item_kpi_tile" android:id="@+id/kpiAssets"/>
+            <include layout="@layout/item_kpi_tile" android:id="@+id/kpiOpen"/>
+            <include layout="@layout/item_kpi_tile" android:id="@+id/kpiServiceDue"/>
+        </GridLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="12dp" android:layout_marginTop="14dp">
+            <TextView style="@style/Eyebrow" android:text="@string/open_tickets"/>
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvTickets" android:layout_width="match_parent" android:layout_height="wrap_content" android:nestedScrollingEnabled="false" tools:listitem="@layout/item_ticket"/>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="12dp" android:layout_marginTop="14dp">
+            <TextView style="@style/Eyebrow" android:text="@string/asset_register"/>
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvAssets" android:layout_width="match_parent" android:layout_height="wrap_content" android:nestedScrollingEnabled="false" tools:listitem="@layout/item_asset"/>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

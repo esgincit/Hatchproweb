@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="10dp">
+    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView android:id="@+id/name" android:layout_width="match_parent" android:layout_height="wrap_content" android:textStyle="bold" android:textColor="@color/pos_ink" tools:text="Mallesh"/>
+        <TextView android:id="@+id/sub" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/pos_ink2" tools:text="supervisor · 16 days present this month"/>
+    </LinearLayout>
+    <com.google.android.material.button.MaterialButtonToggleGroup android:id="@+id/segs" android:layout_width="150dp" android:layout_height="wrap_content" app:singleSelection="true" app:selectionRequired="true">
+        <Button android:id="@+id/segP" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="36dp" android:text="@string/att_present" android:insetTop="0dp" android:insetBottom="0dp"/>
+        <Button android:id="@+id/segH" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="36dp" android:text="@string/att_half" android:insetTop="0dp" android:insetBottom="0dp"/>
+        <Button android:id="@+id/segA" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="36dp" android:text="@string/att_absent" android:insetTop="0dp" android:insetBottom="0dp"/>
+        <Button android:id="@+id/segL" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="36dp" android:text="@string/att_leave" android:insetTop="0dp" android:insetBottom="0dp"/>
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+</LinearLayout>

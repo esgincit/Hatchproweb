@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Supervisor daily entry: shed chips, birds, eggs by grade, feed & water, climate, photos, remarks, save (offline) -->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+        <TextView android:id="@+id/tvTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="17sp" android:textStyle="bold" android:textColor="@color/pos_ink" android:text="@string/daily_log"/>
+        <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:scrollbars="none" android:layout_marginTop="10dp">
+            <com.google.android.material.chip.ChipGroup android:id="@+id/chipsShed" android:layout_width="wrap_content" android:layout_height="wrap_content" app:singleSelection="true" app:singleLine="true"/>
+        </HorizontalScrollView>
+
+        <TextView style="@style/Eyebrow" android:layout_marginTop="14dp" android:text="@string/section_birds"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <com.google.android.material.textfield.TextInputLayout style="@style/Field" android:hint="@string/mortality"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etMortality" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number"/></com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout style="@style/Field" android:hint="@string/culls"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etCulls" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number"/></com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <TextView style="@style/Eyebrow" android:layout_marginTop="14dp" android:text="@string/section_eggs"/>
+        <GridLayout android:id="@+id/gridEggs" android:layout_width="match_parent" android:layout_height="wrap_content" android:columnCount="3">
+            <com.google.android.material.textfield.TextInputLayout style="@style/FieldGrid" android:hint="@string/grade_jumbo"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etJumbo" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number"/></com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout style="@style/FieldGrid" android:hint="@string/grade_large"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etLarge" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number"/></com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout style="@style/FieldGrid" android:hint="@string/grade_medium"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etMedium" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number"/></com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout style="@style/FieldGrid" android:hint="@string/grade_small"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etSmall" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number"/></com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout style="@style/FieldGrid" android:hint="@string/grade_cracked"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etCracked" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number"/></com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout style="@style/FieldGrid" android:hint="@string/grade_dirty"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etDirty" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number"/></com.google.android.material.textfield.TextInputLayout>
+        </GridLayout>
+        <TextView android:id="@+id/tvEggTotal" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/pos_ink2" android:text="= 0 eggs · 0.0% hen-day"/>
+
+        <TextView style="@style/Eyebrow" android:layout_marginTop="14dp" android:text="@string/section_feed_water"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <com.google.android.material.textfield.TextInputLayout style="@style/Field" android:hint="@string/feed_bags"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etFeed" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal"/></com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout style="@style/Field" android:hint="@string/water_litres"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etWater" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number"/></com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <TextView style="@style/Eyebrow" android:layout_marginTop="14dp" android:text="@string/section_climate"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <com.google.android.material.textfield.TextInputLayout style="@style/Field" android:hint="@string/temp_min"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etTmin" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal"/></com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout style="@style/Field" android:hint="@string/temp_max"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etTmax" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="numberDecimal"/></com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout style="@style/Field" android:hint="@string/humidity"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etRh" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number"/></com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <TextView style="@style/Eyebrow" android:layout_marginTop="14dp" android:text="@string/section_photos"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <include layout="@layout/item_photo_slot" android:id="@+id/photoDroppings"/>
+            <include layout="@layout/item_photo_slot" android:id="@+id/photoFeed"/>
+        </LinearLayout>
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnAi" style="@style/Widget.Material3.Button.TonalButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/check_with_ai" android:visibility="gone"/>
+        <androidx.cardview.widget.CardView android:id="@+id/cardAi" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" app:cardBackgroundColor="@color/pos_info_soft" app:cardCornerRadius="12dp" app:cardElevation="0dp">
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvAiResults" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp"/>
+        </androidx.cardview.widget.CardView>
+
+        <com.google.android.material.textfield.TextInputLayout style="@style/Field" android:layout_marginTop="14dp" android:hint="@string/remarks" app:endIconMode="custom" app:endIconDrawable="@drawable/ic_log"><com.google.android.material.textfield.TextInputEditText android:id="@+id/etRemarks" android:layout_width="match_parent" android:layout_height="wrap_content"/></com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnSave" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="16dp" android:text="@string/save_log" app:backgroundTint="@color/pos_accent" android:textColor="@color/pos_ink"/>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
