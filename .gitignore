@@ -5,3 +5,8 @@ mobile/**/*.g.dart
 .supabase/
 node_modules/
 __pycache__/
+
+# supabase cli local state
+supabase/.branches/
+supabase/.temp/
+node_modules/
