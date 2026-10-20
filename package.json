@@ -1,0 +1,11 @@
+{
+  "name": "poultryos",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "test": "pnpm --filter web test",
+    "e2e": "pnpm --filter web e2e",
+    "build": "pnpm --filter web build"
+  }
+}
