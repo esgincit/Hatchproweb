@@ -3,7 +3,7 @@ import { OtpLogin } from '@/components/auth/OtpLogin';
 export default async function Login({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   return (
-    <main className="screen" style={{ minHeight: '100dvh', justifyContent: 'center' }}>
+    <main className="screen" style={{ minHeight: '100dvh', paddingTop: '12vh' }}>
       <div className="wrap" style={{ maxWidth: 420 }}>
         <div className="eyebrow">HatchPro</div>
         <h1 className="h2">Sign in to your farm</h1>

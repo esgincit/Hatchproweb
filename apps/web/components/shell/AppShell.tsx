@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { TAB_ICONS, BellIcon } from './icons';
 import { TenantSheet } from './TenantSheet';
+import { Toaster } from '@/components/ui/Toast';
 import { FARM_TYPE_INFO, type FarmType } from '@/lib/farm-types';
 import type { Tab } from '@/lib/auth/permissions';
 
@@ -36,7 +37,7 @@ export function AppShell({ tenantName, sub, unread, tabs, mode, modes, children 
             </span>
             <span style={{ marginLeft: 'auto', color: 'var(--muted)' }}>▾</span>
           </button>
-          <Link className="iconbtn" href="/more" aria-label="Notifications">
+          <Link className="iconbtn" href="/more/notifications" aria-label="Notifications">
             <BellIcon />
             {unread > 0 && <span className="badge">{unread}</span>}
           </Link>
@@ -51,6 +52,7 @@ export function AppShell({ tenantName, sub, unread, tabs, mode, modes, children 
           </Link>
         ))}
       </nav>
+      <Toaster />
       <TenantSheet open={open} onOpenChange={setOpen} modes={modes} mode={mode} />
     </div>
   );

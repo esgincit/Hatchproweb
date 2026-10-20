@@ -2,7 +2,7 @@ import { OtpLogin } from '@/components/auth/OtpLogin';
 
 export default function PlatformLogin() {
   return (
-    <main className="screen" style={{ minHeight: '100dvh', justifyContent: 'center' }}>
+    <main className="screen" style={{ minHeight: '100dvh', paddingTop: '12vh' }}>
       <div className="wrap" style={{ maxWidth: 420 }}>
         <div className="eyebrow">HatchPro · staff</div>
         <h1 className="h2">Platform console</h1>

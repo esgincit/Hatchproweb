@@ -101,8 +101,17 @@ td{padding:7px 6px;border-bottom:1px solid var(--line)}td.n,th.n{text-align:righ
 .app{height:100dvh;display:flex;flex-direction:column;background:var(--surface)}
 .col{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;min-width:0}
 .screen{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.screen>.wrap{width:100%;max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
-a.tab,a.back,a.item,a.iconbtn{text-decoration:none;color:inherit}
+/* block (not flex) page column: flex intrinsic sizing mis-measures responsive SVG charts and lets wide registers widen cards */
+.screen{display:block}
+.screen>.wrap{width:100%;max-width:1120px;margin:0 auto}
+.screen>.wrap>*+*{margin-top:14px}
+a.tab,a.back,a.item,a.iconbtn,a.tile,a.chip{text-decoration:none}
+/* demo charts are drawn for a 340px phone; on wide screens keep them that size instead of scaling up */
+.chart{max-height:260px}
+a.item,a.iconbtn,a.tile{color:inherit}
+/* demo styles .menu button; links get the same look */
+.menu a{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 12px;text-align:left;display:flex;flex-direction:column;gap:4px;color:inherit;text-decoration:none}
+.menu a .t{font-weight:700;font-size:13.5px}.menu a .s{font-size:11.5px;color:var(--muted)}
 @media (min-width:768px){
   .app{flex-direction:row}
   .tabs{order:-1;display:flex;flex-direction:column;gap:4px;width:92px;flex:0 0 92px;border-top:0;border-right:1px solid var(--line);padding:12px 8px}

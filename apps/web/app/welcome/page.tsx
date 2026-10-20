@@ -15,7 +15,7 @@ export default async function Welcome() {
   ]);
   const types = [...new Set((farms ?? []).map((f) => f.farm_type as FarmType))];
   return (
-    <main className="screen" style={{ minHeight: '100dvh', justifyContent: 'center' }}>
+    <main className="screen" style={{ minHeight: '100dvh', paddingTop: '12vh' }}>
       <div className="wrap" style={{ maxWidth: 560 }}>
         <div className="eyebrow">Welcome{me?.full_name ? `, ${me.full_name.split(' ')[0]}` : ''}</div>
         <h1 className="h2">What do you want to manage now?</h1>
