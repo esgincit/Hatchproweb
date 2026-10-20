@@ -35,7 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .join(' · ');
 
   return (
-    <AppShell tenantName={tenant?.name ?? 'PoultryOS'} sub={sub} unread={unread ?? 0}
+    <AppShell tenantName={tenant?.name ?? 'HatchPro'} sub={sub} unread={unread ?? 0}
       tabs={tabsFor(c.roles)} mode={mode} modes={pickerOptions(types)}>
       {children}
     </AppShell>

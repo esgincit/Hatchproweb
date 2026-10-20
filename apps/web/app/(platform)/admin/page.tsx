@@ -10,8 +10,8 @@ export default async function Admin() {
       <div className="col">
         <header className="topbar">
           <div className="tenant">
-            <span className="avatar" style={{ background: 'var(--ink)', color: 'var(--bg)' }}>PO</span>
-            <span><div className="name">PoultryOS Platform</div><div className="sub">Platform admin · all tenants</div></span>
+            <span className="avatar" style={{ background: 'var(--ink)', color: 'var(--bg)' }}>HP</span>
+            <span><div className="name">HatchPro Platform</div><div className="sub">Platform admin · all tenants</div></span>
           </div>
         </header>
         <main className="screen"><div className="wrap">

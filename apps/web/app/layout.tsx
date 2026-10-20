@@ -6,7 +6,7 @@ const manrope = Manrope({ subsets: ['latin'], weight: ['500', '600', '700', '800
 const plex = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-plex' });
 const telugu = Noto_Sans_Telugu({ subsets: ['telugu'], weight: ['500'], variable: '--font-telugu' });
 
-export const metadata: Metadata = { title: 'PoultryOS', description: 'Poultry farm operations — layer, broiler, hatchery' };
+export const metadata: Metadata = { title: 'HatchPro', description: 'Poultry farm operations — layer, broiler, hatchery' };
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

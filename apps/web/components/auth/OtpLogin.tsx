@@ -24,7 +24,7 @@ export function OtpLogin({ portal }: { portal: 'farm' | 'platform' }) {
     if (error)
       return setErr(
         /signups? not allowed/i.test(error.message)
-          ? 'This number has no account yet. Apply for access and the PoultryOS team will set you up.'
+          ? 'This number has no account yet. Apply for access and the HatchPro team will set you up.'
           : error.message,
       );
     setSent(true);
@@ -46,8 +46,8 @@ export function OtpLogin({ portal }: { portal: 'farm' | 'platform' }) {
       setBusy(false);
       return setErr(
         portal === 'platform'
-          ? 'This number is not a PoultryOS staff account. Use the farm login.'
-          : 'PoultryOS staff sign in at /platform/login.',
+          ? 'This number is not a HatchPro staff account. Use the farm login.'
+          : 'HatchPro staff sign in at /platform/login.',
       );
     }
     router.replace(landingFor(c));
