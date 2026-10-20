@@ -5,6 +5,8 @@ import { redirectFor } from '@/lib/auth/route-guard';
 
 export async function middleware(request: NextRequest) {
   const { response, user } = await updateSession(request);
+  // Server actions POST to the current page; redirecting them breaks the call. Each action checks auth itself.
+  if (request.headers.has('next-action')) return response;
   const to = redirectFor(request.nextUrl.pathname, user ? claimsFromUser(user) : null);
   if (!to) return response;
   const url = request.nextUrl.clone();

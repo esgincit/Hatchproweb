@@ -1,33 +1,24 @@
 // Small render helpers ported from demo/index.html:294-300 (ragPill, stateLabel, statusPill, back, header, live).
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import type { Rag } from '@/lib/kpi';
 
-export const RagPill = ({ rag }: { rag: Rag }) =>
-  ({
-    good: <span className="pill good">● On track</span>,
-    warn: <span className="pill warn">● Below curve</span>,
-    crit: <span className="pill crit">● Mortality spike</span>,
-    neutral: <span className="pill neutral">Closed</span>,
-  })[rag];
+const RAG_CLS: Record<Rag, string> = { good: 'good', warn: 'warn', crit: 'crit', neutral: 'neutral' };
+export function RagPill({ rag }: { rag: Rag }) {
+  const t = useTranslations('rag');
+  return <span className={`pill ${RAG_CLS[rag]}`}>{rag === 'neutral' ? '' : '● '}{t(rag)}</span>;
+}
 
-const STATE: Record<string, string> = {
-  planned: 'Planned', placed: 'Placed', brooding: 'Brooding', growing: 'Growing', laying: 'Laying', finishing: 'Finishing', lifting: 'Lifting', closed: 'Closed',
-};
-export const stateLabel = (s: string) => STATE[s] ?? s;
+export function StatusPill({ s }: { s: string }) {
+  const t = useTranslations('pay');
+  const cls = { paid: 'good', partial: 'warn', unpaid: 'neutral', overdue: 'crit' }[s] ?? 'neutral';
+  return <span className={`pill ${cls}`}>{t.has(s) ? t(s) : s}</span>;
+}
 
-export const StatusPill = ({ s }: { s: string }) =>
-  ({
-    paid: <span className="pill good">Paid</span>,
-    partial: <span className="pill warn">Partial</span>,
-    unpaid: <span className="pill neutral">Unpaid</span>,
-    overdue: <span className="pill crit">Overdue</span>,
-  })[s] ?? <span className="pill neutral">{s}</span>;
-
-export const Back = ({ href }: { href: string }) => (
-  <Link className="back" href={href}>
-    ‹ Back
-  </Link>
-);
+export function Back({ href }: { href: string }) {
+  const t = useTranslations('common');
+  return <Link className="back" href={href}>‹ {t('back')}</Link>;
+}
 
 export const Header = ({ title, action }: { title: React.ReactNode; action?: React.ReactNode }) => (
   <div className="row between">
@@ -37,12 +28,15 @@ export const Header = ({ title, action }: { title: React.ReactNode; action?: Rea
 );
 
 /** Static until Realtime lands (Phase 10); keeps the demo's "live" affordance. */
-export const Live = ({ label = 'live' }: { label?: string }) => (
-  <span className="live">
-    <span className="dot" />
-    <span>{label}</span>
-  </span>
-);
+export function Live({ label }: { label?: string }) {
+  const t = useTranslations('common');
+  return (
+    <span className="live">
+      <span className="dot" />
+      <span>{label ?? t('live')}</span>
+    </span>
+  );
+}
 
 export const sevStripe = (s: string) => (s === 'critical' ? 'crit' : s === 'warning' ? 'warn' : 'info');
 

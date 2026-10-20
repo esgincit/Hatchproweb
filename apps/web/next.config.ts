@@ -1,7 +1,10 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
+import { fileURLToPath } from 'node:url';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // monorepo: pnpm lockfile lives at the repo root
+  turbopack: { root: fileURLToPath(new URL('../..', import.meta.url)) },
 };
 
-export default nextConfig;
+export default createNextIntlPlugin('./i18n/request.ts')(nextConfig);

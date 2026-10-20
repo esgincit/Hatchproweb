@@ -14,6 +14,7 @@ const SCREENS: [string, RegExp][] = [
 test('all tenant screens render with data and no horizontal overflow', async ({ page, context }) => {
   test.setTimeout(240_000);
   await context.clearCookies();
+  await context.addCookies([{ name: 'NEXT_LOCALE', value: 'en', url: 'http://localhost:3100' }]); // seed users prefer Telugu
   await admin.from('app_user').update({ active_farm_type: 'layer' }).eq('phone', '+91 98490 12345');
   await page.goto('/login');
   await page.getByLabel('Mobile number').fill('9849012345');

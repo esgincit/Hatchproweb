@@ -1,14 +1,10 @@
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { claimsFromUser } from '@/lib/auth/claims';
 import { tabsFor } from '@/lib/auth/permissions';
 import { AppShell } from '@/components/shell/AppShell';
 import { pickerOptions, type FarmType } from '@/lib/farm-types';
-
-const ROLE_LABEL: Record<string, string> = {
-  tenant_owner: 'Owner', farm_manager: 'Manager', finance: 'Finance', shed_supervisor: 'Supervisor',
-  labour: 'Labour', veterinarian: 'Vet', store_keeper: 'Store', auditor: 'Auditor',
-};
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const sb = await createClient();
@@ -29,8 +25,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const mode = (me?.active_farm_type as FarmType | null) ?? (types.length === 1 ? types[0] : null);
   if (!mode) redirect('/welcome');
 
+  const t = await getTranslations();
   const plan = tenant?.plan ? tenant.plan[0].toUpperCase() + tenant.plan.slice(1) : '';
-  const sub = [ROLE_LABEL[c.roles[0]] ?? c.roles[0], tenant?.state, plan + (tenant?.status === 'trial' ? ' trial' : '')]
+  const sub = [c.roles[0] ? t(`roles.${c.roles[0]}`) : '', tenant?.state, plan + (tenant?.status === 'trial' ? ' trial' : '')]
     .filter(Boolean)
     .join(' · ');
 

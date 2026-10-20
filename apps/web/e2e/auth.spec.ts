@@ -20,6 +20,7 @@ async function login(page: Page, path: string, phone: string) {
 
 test.beforeEach(async ({ context }) => {
   await context.clearCookies();
+  await context.addCookies([{ name: 'NEXT_LOCALE', value: 'en', url: 'http://localhost:3100' }]); // seed users prefer Telugu
   const { error } = await admin.from('app_user').update({ active_farm_type: null }).not('id', 'is', null);
   expect(error).toBeNull();
 });

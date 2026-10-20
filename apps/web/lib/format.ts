@@ -13,3 +13,13 @@ export const addDays = (s: string, n: number) => {
   return d.toISOString().slice(0, 10);
 };
 export const daysBetween = (a: string, b: string) => Math.round((+new Date(b) - +new Date(a)) / 864e5);
+
+/** Localised "19 Oct" / month names; digits stay Western (as used across Indian apps). */
+export const dateFmt = (locale: string) => {
+  const f = new Intl.DateTimeFormat(locale + '-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  return (s: string) => f.format(new Date(s + 'T00:00:00Z'));
+};
+export const monthFmt = (locale: string, style: 'short' | 'long' = 'short') => {
+  const f = new Intl.DateTimeFormat(locale + '-IN', { month: style, timeZone: 'UTC' });
+  return (s: string) => f.format(new Date(s.slice(0, 7) + '-01T00:00:00Z'));
+};
