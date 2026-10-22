@@ -157,3 +157,21 @@ test('roles: a supervisor does not see owner-only buttons', async ({ page }) => 
   await expect(page.getByRole('button', { name: /Close batch/ })).toHaveCount(0);     // owner/manager only
   await expect(page.locator('.quick button', { hasText: 'State' })).toHaveCount(0);
 });
+
+test('exports download real files; a supervisor is refused money exports', async ({ page }) => {
+  await login(page);
+  for (const [kind, type, must] of [
+    ['tally', 'application/xml', '<VOUCHER VCHTYPE="Sales"'], ['gstr1', 'application/json', '"invoices"'],
+    ['statements', 'text/csv', 'Receivable'], ['register', 'text/csv', 'Payable days'], ['pnl', 'text/csv', 'VKR-B-2026-14'],
+  ] as const) {
+    const r = await page.request.get(`/api/export/${kind}`);
+    expect(r.status(), kind).toBe(200);
+    expect(r.headers()['content-type']).toContain(type);
+    expect(r.headers()['content-disposition']).toContain('attachment');
+    expect(await r.text()).toContain(must);
+  }
+  await page.context().clearCookies();
+  await login(page, '9000033445', '+91 90000 33445');
+  expect((await page.request.get('/api/export/tally')).status()).toBe(403);
+  expect((await page.request.get('/api/export/register')).status()).toBe(200); // supervisors keep the attendance register
+});

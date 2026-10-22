@@ -38,5 +38,8 @@ export const ACT_ROLES: Record<string, string[]> = {
   raisePO: [...MONEY, 'store_keeper'], grnOpen: [...OWN, 'store_keeper'],
   addRate: MONEY, addAdvance: [...OWN, 'finance'],
   inviteUser: ['tenant_owner'], // matches invite-user edge function + user_role_assignment policy
+  // downloads (app/api/export) — the route enforces the same lists
+  tally: [...MONEY, 'auditor'], gstr: [...MONEY, 'auditor'], stmt: [...MONEY, 'auditor'], payroll: [...MONEY, 'auditor'],
+  report: [...MONEY, 'auditor', 'shed_supervisor'],
 };
 export const canAct = (roles: string[], act: string) => (ACT_ROLES[act] ?? []).some((r) => roles.includes(r));

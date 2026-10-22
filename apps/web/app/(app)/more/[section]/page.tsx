@@ -54,15 +54,16 @@ export default async function Section({ params, searchParams }: { params: Promis
     );
     case 'reports': {
       const reports: [string, string][] = [
-        ['rDaily', t('sections.rDailySub')], ['rWeekly', t('sections.rWeeklySub')], ['rPnl', t('sections.rPnlSub')], ['rVacc', 'PDF'],
-        ['rVendor', 'PDF'], ['rTrader', 'PDF'], ['rAtt', 'Excel'], ['rMort', t('sections.rMortSub')],
+        ['rDaily', t('sections.rDailySub')], ['rWeekly', t('sections.rWeeklySub')], ['rPnl', 'CSV'], ['rVacc', 'PDF'],
+        ['rVendor', 'CSV'], ['rTrader', 'CSV'], ['rAtt', 'CSV'], ['rMort', t('sections.rMortSub')],
       ];
+      const EXPORT: Record<string, string> = { rPnl: 'pnl', rVendor: 'statements', rTrader: 'statements', rAtt: 'register' };
       return (
         <>{B}<Header title={t('sections.reportsTitle')} />
           <div className="card"><div className="list">
             {reports.map(([k, sub]) => (
               <div className="item" key={k}><div><div className="t">{t(`sections.${k}`)}</div><div className="s">{sub}</div></div>
-                <div className="r"><ActBtn act="report" className="btn small secondary">{t('common.generate')}</ActBtn></div></div>
+                <div className="r"><ActBtn act="report" ctx={EXPORT[k] ? { kind: EXPORT[k] } : {}} className="btn small secondary">{t('common.generate')}</ActBtn></div></div>
             ))}
           </div></div></>
       );
@@ -141,7 +142,7 @@ function People({ c: { v, t, dmy, locale }, tab }: { c: Ctx; tab: string }) {
             ); })}</tbody>
           </table></div>
         </div>
-        <ActBtn act="report" className="btn secondary">{t('people.export')}</ActBtn>
+        <ActBtn act="report" ctx={{ kind: 'register' }} className="btn secondary">{t('people.export')}</ActBtn>
       </>
     );
 

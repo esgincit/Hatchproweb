@@ -91,6 +91,11 @@ export function nextBatchCode(codes: string[], year: string) {
 // Acts that reuse another form, and acts that just navigate.
 const ALIAS: Record<string, string> = { addShedPick: 'addShed', addVisitPick: 'addVisit' };
 const NAV: Record<string, string> = { attToday: '/more/people' };
+// file downloads (app/api/export/[kind]); `report` rows pass the kind they export
+const DOWNLOAD: Record<string, (c: ActCtx) => string | null> = {
+  tally: () => '/api/export/tally', gstr: () => '/api/export/gstr1', stmt: () => '/api/export/statements',
+  payroll: () => '/api/export/register', report: (c) => (c.kind ? `/api/export/${c.kind}` : null),
+};
 // Register grid: each tap moves the day one step P → H → A → L → P (blank days start at P).
 const NEXT_ATT: Record<string, string> = { P: 'half', H: 'absent', A: 'leave', L: 'present' };
 const DIRECT: Record<string, (c: ActCtx) => { act: string; input: Record<string, unknown> }> = {
@@ -131,6 +136,8 @@ export function ActionHost({ today }: { today: string }) {
       const { act: a, ctx } = (e as CustomEvent<{ act: string; ctx: ActCtx }>).detail;
       if (NAV[a]) return router.push(NAV[a]);
       if (a === 'attSubmit') return toast(t('forms.att.ok')); // each tap already saved
+      const dl = DOWNLOAD[a]?.(ctx);
+      if (dl) { window.location.href = dl; return; }
       const direct = DIRECT[a]?.(ctx);
       if (direct) { // one tap, no form
         const r = await runAct(direct.act, direct.input);
