@@ -14,8 +14,21 @@ begin
   assert not exists (select 1 from payment where ref_id = b and paid_on = current_date and amount = o), 'no payment yet';
   begin perform decide_payment((select id from payment_approval where bill_id = b), true); assert false, 'finance approved own request';
   exception when raise_exception then null; end;
-  r := record_payment('bill', (select id from bill where status <> 'paid' and id <> b and total - paid > 1000 limit 1), 1000, 'cash', current_date);
+  r := record_payment('bill', (select id from bill where status <> 'paid' and id <> b and total <= 50000 and total - paid > 1000 limit 1), 1000, 'cash', current_date);
   assert r = 'paid', 'small payment goes through';
+  -- splitting a big bill into small payments still needs approval; a second request waits for the first
+  begin perform record_payment('bill', b, 1000, 'cash', current_date); assert false, 'second request while one is pending';
+  exception when raise_exception then null; end;
+  -- going round record_payment: direct payment row / bill.paid edit / pre-approved request are refused
+  begin insert into payment (direction, party_type, party_id, ref_type, ref_id, amount, mode, paid_on)
+    select 'out', 'vendor', vendor_id, 'bill', id, 1000, 'cash', current_date from bill where id = b;
+    assert false, 'direct payment row on big bill'; exception when raise_exception then null; end;
+  begin update bill set paid = total where id = b; assert false, 'direct bill.paid edit'; exception when raise_exception then null; end;
+  begin update bill set total = 40000 where id = b; assert false, 'lowering a big bill'; exception when raise_exception then null; end;
+  begin insert into payment_approval (bill_id, amount, mode, paid_on, status, requested_by) values (b, 10, 'cash', current_date, 'approved', auth.uid());
+    assert false, 'pre-approved request'; exception when insufficient_privilege then null; end;
+  begin insert into payment_approval (bill_id, amount, mode, paid_on, requested_by) values (b, 10, 'cash', current_date, gen_random_uuid());
+    assert false, 'spoofed requester'; exception when insufficient_privilege then null; end;
 end $$;
 -- owner approves → paid
 set local request.jwt.claims = '{"sub":"d847552a-9978-5cbf-aedf-2f20c382f6c6","app_metadata":{"tenant_id":"4c593c59-b79c-5b92-8601-fd7c0d7a3b4c","roles":["tenant_owner"]}}';
