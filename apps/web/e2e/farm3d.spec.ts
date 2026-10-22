@@ -22,14 +22,16 @@ test('live 3D farm: open a shed, mortality updates live', async ({ page, context
   await expect(page).toHaveURL(/\/home$/);
 
   await page.goto('/farm');
-  await expect(page.getByTestId('farm3d').locator('canvas')).toBeVisible({ timeout: 5_000 });
-  await page.waitForTimeout(2500);
+  const stage = page.getByTestId('farm3d');
+  await expect(stage.locator('canvas')).toBeVisible({ timeout: 5_000 });
+  await expect(stage.getByRole('status')).toBeHidden({ timeout: 30_000 }); // loading card gone
+  await page.waitForTimeout(1500);
   await page.screenshot({ path: info.outputPath('farm3d-overview.png') });
 
-  await page.getByRole('button', { name: /Shed A/ }).first().click();
+  await stage.getByRole('group', { name: 'Sheds' }).getByRole('button', { name: /Shed A/ }).click();
   const panel = page.getByTestId('farm3d-panel');
   await expect(panel).toContainText('VKR-B-2026-14');
-  await expect(panel).toContainText('expected');
+  await expect(panel).toContainText('Expected vs actual');
   await page.waitForTimeout(3000);
   await page.screenshot({ path: info.outputPath('farm3d-shed.png') });
 
@@ -41,4 +43,16 @@ test('live 3D farm: open a shed, mortality updates live', async ({ page, context
   } finally {
     await admin.from('daily_shed_log').update({ mortality: l!.mortality }).eq('id', l!.id);
   }
+
+  // panel actions open their form for this batch; Esc closes the form first, then the panel
+  await panel.getByRole('button', { name: 'Record mortality' }).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByText('Record mortality')).toBeVisible();
+  await expect(sheet.getByLabel('Batch', { exact: true })).toHaveValue(b!.id);
+  await page.screenshot({ path: info.outputPath('farm3d-mortality-form.png') });
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await expect(panel).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
 });

@@ -4,7 +4,7 @@ import type { Batch, Tenant } from '@/lib/view/types';
 
 const log = (day: number, mortality: number, extra: Partial<Batch['logs'][number]> = {}) => ({
   id: 'l' + day, date: `2026-10-${String(day).padStart(2, '0')}`, day, birds: 10000 - day * 10, mortality, culls: 1,
-  feed_kg: 1000, water: 2000, eggs: 0, grades: null, avg_w: null, tmax: 32, tmin: 24, remarks: null, ...extra,
+  feed_kg: 1000, water: 2000, eggs: 0, grades: null, avg_w: null, tmax: 32, tmin: 24, remarks: null, rh: null, by: null, ...extra,
 });
 const batch = (mort: number[], extra: Partial<Batch> = {}): Batch => ({
   id: 'b', code: 'B1', ft: 'broiler', breed: 'Cobb', age: mort.length, doc: 10000, doc_rate: 40, state: 'growing', placed: '2026-10-01',

@@ -34,14 +34,14 @@ test('place a batch in a free shed, then record mortality on it', async ({ page 
   await login(page);
   try {
     await page.goto('/farm');
-    await page.getByRole('button', { name: /Shed B/ }).click(); // empty shed → place batch form
+    await page.locator('.card').getByRole('button', { name: /Shed B/ }).click(); // empty shed (farm card) → place batch form
     const sheet = page.getByRole('dialog');
     await expect(sheet.getByText('Place a batch')).toBeVisible();
     await sheet.getByLabel('Batch code').fill(code);
     await sheet.getByLabel('Chicks placed').fill('5000');
     await sheet.getByLabel('Rate per chick (₹)').fill('38');
     await sheet.getByRole('button', { name: 'Place batch' }).click();
-    await expect(page).toHaveURL(new RegExp(`/farm/batch/${code}$`));
+    await expect(page).toHaveURL(new RegExp(`/farm/batch/${code}$`), { timeout: 20_000 }); // save + first render of the batch page (dev)
     await expect(page.locator('.h2', { hasText: code })).toBeVisible();
     await expect(page.locator('.eyebrow', { hasText: 'Vaccination schedule' })).toBeVisible();
     await expect(page.locator('.toast')).toContainText('vaccination schedule ready');
@@ -136,9 +136,12 @@ test('server refuses actions outside the role (supervisor cannot place a batch)'
   await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 }); // first hit compiles the page in dev
   await page.goto('/farm');
   // the button is hidden for supervisors; open the form the way a tampered page would, the server must still refuse
-  await expect(page.getByRole('button', { name: /Shed B/ })).toHaveCount(0);
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent('hp-act', { detail: { act: 'addBatch', ctx: {} } })));
+  await expect(page.locator('.card').getByRole('button', { name: /Shed B/ })).toHaveCount(0); // the 3D viewer's shed list is view-only
   const sheet = page.getByRole('dialog');
+  await expect(async () => { // the form host listens only once the page has hydrated
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('hp-act', { detail: { act: 'addBatch', ctx: {} } })));
+    await expect(sheet.getByLabel('Batch code')).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
   await sheet.getByLabel('Batch code').fill('E2E-FORBIDDEN');
   await sheet.getByLabel('Chicks placed').fill('100');
   await sheet.getByRole('button', { name: 'Place batch' }).click();

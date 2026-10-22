@@ -33,12 +33,12 @@ test('batch lifecycle: place → change stage → close with lifting invoice', a
   await login(page);
   try {
     await page.goto('/farm');
-    await page.getByRole('button', { name: /Shed B/ }).click();
+    await page.locator('.card').getByRole('button', { name: /Shed B/ }).click(); // farm card, not the 3D viewer's list
     const sheet = page.getByRole('dialog');
     await sheet.getByLabel('Batch code').fill(code);
     await sheet.getByLabel('Chicks placed').fill('2000');
     await sheet.getByRole('button', { name: 'Place batch' }).click();
-    await expect(page).toHaveURL(new RegExp(`/farm/batch/${code}$`));
+    await expect(page).toHaveURL(new RegExp(`/farm/batch/${code}$`), { timeout: 20_000 }); // save + first render of the batch page (dev)
 
     await page.locator('.quick button', { hasText: 'State' }).click();
     await sheet.getByLabel('Stage').selectOption('growing');

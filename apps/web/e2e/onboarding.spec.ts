@@ -76,7 +76,7 @@ test('apply → approve → owner gets farm + sheds → invites a supervisor', a
   await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 }); // single farm type → no picker
   await page.goto('/farm');
   await expect(page.getByText('Sunrise Broiler Unit')).toBeVisible();
-  await expect(page.getByText('North Shed')).toBeVisible();
+  await expect(page.locator('.card').getByText('North Shed').first()).toBeVisible(); // farm card, not the 3D viewer's list
 
   // 5. owner invites a supervisor
   await page.goto('/more/users');

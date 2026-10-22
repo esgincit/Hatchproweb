@@ -5,6 +5,7 @@ export type Grades = Partial<Record<'jumbo' | 'large' | 'medium' | 'small' | 'cr
 export type Log = {
   id: string; date: string; day: number; birds: number; mortality: number; culls: number; feed_kg: number;
   water: number; eggs: number; grades: Grades | null; avg_w: number | null; tmax: number | null; tmin: number | null; remarks: string | null;
+  rh: number | null; by: string | null; // humidity %, app_user id of whoever logged it
 };
 export type Vacc = { id: string; name: string; due: string; done: string | null };
 export type Curve = { week: number; egg: number | null; weight: number | null }[];
@@ -14,7 +15,10 @@ export type Batch = {
   cum: { dead: number; feed: number; eggs: number; saleable: number }; // from v_batch_kpi (all-time)
 };
 export type Shed = { id: string; name: string; type: string; capacity: number; area: number | null };
-export type Farm = { id: string; name: string; farm_type: FarmType; district: string; capacity: number; sheds: Shed[] };
+export type Farm = {
+  id: string; name: string; farm_type: FarmType; district: string; village: string; capacity: number; sheds: Shed[];
+  lat: number | null; lng: number | null; feed_kg: number | null; // complete feed in this farm's store (null = not tracked)
+};
 export type Bill = { id: string; no: string; vendor: string; category: string; date: string; due: string; total: number; paid: number; status: string; batch: string | null };
 export type Invoice = { id: string; no: string; customer: string; product: string; qty: number; unit: string; rate: number; date: string; due: string; total: number; paid: number; status: string; batch: string | null };
 export type Tenant = {
@@ -23,10 +27,10 @@ export type Tenant = {
   users: { id: string; name: string; role: string; phone: string }[];
   vendors: { id: string; name: string; category: string; contact: string; phone: string; terms: number; rating: number | null; gstin: string | null }[];
   customers: { id: string; name: string; kind: string; phone: string; credit_limit: number; credit_days: number }[];
-  workers: { id: string; name: string; role: string; wage: number }[];
+  workers: { id: string; name: string; role: string; wage: number; farm_id: string | null }[];
   attendance: Record<string, Record<string, 'P' | 'H' | 'A' | 'L'>>; // worker id → date → code
-  assets: { id: string; name: string; category: string; next_service: string; status: string }[];
-  tickets: { id: string; asset: string; opened: string; issue: string; priority: string; status: string; cost: number | null }[];
+  assets: { id: string; name: string; category: string; next_service: string; status: string; farm_id: string | null; shed_id: string | null }[];
+  tickets: { id: string; asset_id: string | null; asset: string; opened: string; issue: string; priority: string; status: string; cost: number | null }[];
   bills: Bill[]; invoices: Invoice[];
   vet_visits: { batch: string; date: string; vet: string; findings: string; prescription: string }[];
   disease_cases: { id: string; batch: string; opened: string; disease: string; confidence: number; vet_confirmed: boolean; status: string; notes: string }[];

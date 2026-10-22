@@ -1,0 +1,1014 @@
+{
+  "barrel": {
+    "name": "barrel",
+    "file": "barrel.glb",
+    "tris": 970,
+    "bytes": 178268,
+    "footprint": [
+      0.63,
+      0.64
+    ],
+    "height": 0.93,
+    "bounds": {
+      "min": [
+        -0.317,
+        -0.0,
+        -0.319
+      ],
+      "max": [
+        0.317,
+        0.931,
+        0.319
+      ]
+    },
+    "nodes": [
+      "barrel"
+    ],
+    "materials": [
+      "barrel"
+    ],
+    "attach": {},
+    "source": "Poly Haven \"barrel_03\" (CC0), decimated from 1473 tris"
+  },
+  "chair": {
+    "name": "chair",
+    "file": "chair.glb",
+    "tris": 582,
+    "bytes": 199720,
+    "footprint": [
+      0.63,
+      0.66
+    ],
+    "height": 0.88,
+    "bounds": {
+      "min": [
+        -0.314,
+        -0.001,
+        -0.33
+      ],
+      "max": [
+        0.321,
+        0.881,
+        0.33
+      ]
+    },
+    "nodes": [
+      "chair"
+    ],
+    "materials": [
+      "chair"
+    ],
+    "attach": {},
+    "source": "Poly Haven \"plastic_monobloc_chair_01\" (CC0), decimated from 3356 tris"
+  },
+  "crate": {
+    "name": "crate",
+    "file": "crate.glb",
+    "tris": 970,
+    "bytes": 257268,
+    "footprint": [
+      0.3,
+      0.41
+    ],
+    "height": 0.26,
+    "bounds": {
+      "min": [
+        -0.149,
+        0.0,
+        -0.206
+      ],
+      "max": [
+        0.149,
+        0.264,
+        0.206
+      ]
+    },
+    "nodes": [
+      "crate"
+    ],
+    "materials": [
+      "crate"
+    ],
+    "attach": {},
+    "source": "Poly Haven \"plastic_crate_01\" (CC0), decimated from 18320 tris"
+  },
+  "electric_pole": {
+    "name": "electric_pole",
+    "file": "electric_pole.glb",
+    "tris": 353,
+    "bytes": 17704,
+    "footprint": [
+      1.5,
+      0.24
+    ],
+    "height": 7.88,
+    "bounds": {
+      "min": [
+        -0.75,
+        0.0,
+        -0.08
+      ],
+      "max": [
+        0.75,
+        7.88,
+        0.157
+      ]
+    },
+    "nodes": [
+      "electric_pole"
+    ],
+    "materials": [
+      "M_concrete",
+      "M_galv",
+      "M_paint_white"
+    ],
+    "attach": {
+      "wires": [
+        [
+          -0.65,
+          7.405,
+          0.081
+        ],
+        [
+          0.65,
+          7.405,
+          0.081
+        ],
+        [
+          0.0,
+          7.855,
+          0.0
+        ]
+      ]
+    },
+    "source": "procedural (original)",
+    "notes": "Crossarm along X; wires run along glTF Z. attach.wires = [left, right, top] insulator necks."
+  },
+  "feed_bag": {
+    "name": "feed_bag",
+    "file": "feed_bag.glb",
+    "tris": 290,
+    "bytes": 91516,
+    "footprint": [
+      0.46,
+      0.7
+    ],
+    "height": 0.18,
+    "bounds": {
+      "min": [
+        -0.231,
+        0.001,
+        -0.351
+      ],
+      "max": [
+        0.231,
+        0.18,
+        0.349
+      ]
+    },
+    "nodes": [
+      "feed_bag"
+    ],
+    "materials": [
+      "feed_bag"
+    ],
+    "attach": {},
+    "source": "Poly Haven \"cement_bag\" (CC0), decimated from 844 tris"
+  },
+  "feed_silo": {
+    "name": "feed_silo",
+    "file": "feed_silo.glb",
+    "tris": 1910,
+    "bytes": 95380,
+    "footprint": [
+      3.2,
+      3.2
+    ],
+    "height": 8.48,
+    "bounds": {
+      "min": [
+        -1.444,
+        -0.05,
+        -1.635
+      ],
+      "max": [
+        1.444,
+        8.484,
+        3.518
+      ]
+    },
+    "nodes": [
+      "feed_silo",
+      "SiloBody"
+    ],
+    "materials": [
+      "M_concrete",
+      "M_galv",
+      "M_steel_dark"
+    ],
+    "attach": {
+      "auger_end": [
+        0.0,
+        1.9,
+        3.418
+      ]
+    },
+    "source": "procedural (original)",
+    "notes": "origin = silo axis; footprint = leg circle; the auger reaches 3.3 m toward +Z (see bounds)."
+  },
+  "gas_cylinder": {
+    "name": "gas_cylinder",
+    "file": "gas_cylinder.glb",
+    "tris": 968,
+    "bytes": 182436,
+    "footprint": [
+      0.34,
+      0.34
+    ],
+    "height": 0.55,
+    "bounds": {
+      "min": [
+        -0.17,
+        -0.0,
+        -0.168
+      ],
+      "max": [
+        0.17,
+        0.554,
+        0.169
+      ]
+    },
+    "nodes": [
+      "gas_cylinder"
+    ],
+    "materials": [
+      "gas_cylinder"
+    ],
+    "attach": {},
+    "source": "Poly Haven \"propane_tank\" (CC0), decimated from 5238 tris"
+  },
+  "gate": {
+    "name": "gate",
+    "file": "gate.glb",
+    "tris": 1476,
+    "bytes": 108136,
+    "footprint": [
+      8.38,
+      0.78
+    ],
+    "height": 6.61,
+    "bounds": {
+      "min": [
+        -4.19,
+        -0.05,
+        -0.39
+      ],
+      "max": [
+        4.19,
+        6.605,
+        0.39
+      ]
+    },
+    "nodes": [
+      "gate",
+      "SignBoard",
+      "GateLeafL",
+      "GateLeafR"
+    ],
+    "materials": [
+      "M_concrete",
+      "M_emissive_light",
+      "M_plaster",
+      "M_rubber",
+      "M_steel_dark",
+      "SignBoard"
+    ],
+    "attach": {
+      "sign_centre": [
+        0,
+        5.3,
+        0.1
+      ]
+    },
+    "source": "procedural (original)",
+    "notes": "Leaves swing about their node origin (the hinge, glTF Y axis); closed = rotation 0. SignBoard front face UV 0..1 (u left->right, v bottom->top seen from +Z)."
+  },
+  "generator_room": {
+    "name": "generator_room",
+    "file": "generator_room.glb",
+    "tris": 1250,
+    "bytes": 84884,
+    "footprint": [
+      5.86,
+      3.3
+    ],
+    "height": 4.17,
+    "bounds": {
+      "min": [
+        -2.9,
+        -0.05,
+        -1.65
+      ],
+      "max": [
+        2.96,
+        4.166,
+        1.65
+      ]
+    },
+    "nodes": [
+      "generator_room",
+      "DGSet"
+    ],
+    "materials": [
+      "M_brick",
+      "M_concrete",
+      "M_emissive_light",
+      "M_paint_yellow",
+      "M_rust",
+      "M_steel_dark"
+    ],
+    "attach": {},
+    "source": "procedural (original)",
+    "notes": "DGSet (separate node) beside the room on +X; control door faces +Z; exhaust stack top ~4.2 m."
+  },
+  "godown": {
+    "name": "godown",
+    "file": "godown.glb",
+    "tris": 1248,
+    "bytes": 88708,
+    "footprint": [
+      15.1,
+      10.1
+    ],
+    "height": 5.72,
+    "bounds": {
+      "min": [
+        -8.1,
+        -0.05,
+        -5.617
+      ],
+      "max": [
+        7.97,
+        5.725,
+        7.0
+      ]
+    },
+    "nodes": [
+      "godown"
+    ],
+    "materials": [
+      "M_brick",
+      "M_concrete",
+      "M_corrugated",
+      "M_emissive_light",
+      "M_galv",
+      "M_steel_dark"
+    ],
+    "attach": {},
+    "source": "procedural (original)",
+    "notes": "Footprint = plinth; loading ramp adds 2 m toward +Z, roof overhangs 0.6 m (eaves) / 0.45 m (gables). Ridge along glTF X; rolling shutter on the front (+Z); staff door on the -X gable."
+  },
+  "motorbike": {
+    "name": "motorbike",
+    "file": "motorbike.glb",
+    "tris": 2950,
+    "bytes": 126208,
+    "footprint": [
+      0.75,
+      2.0
+    ],
+    "height": 1.31,
+    "bounds": {
+      "min": [
+        -0.551,
+        -0.002,
+        -0.902
+      ],
+      "max": [
+        0.214,
+        1.311,
+        0.968
+      ]
+    },
+    "nodes": [
+      "motorbike"
+    ],
+    "materials": [
+      "M_chrome",
+      "M_glass",
+      "M_paint_red",
+      "M_plastic_black",
+      "M_rubber",
+      "M_steel_dark"
+    ],
+    "attach": {},
+    "source": "procedural (original)",
+    "notes": "Nose toward +Z; leans 10 deg toward -X on its side stand, bars on left lock."
+  },
+  "office": {
+    "name": "office",
+    "file": "office.glb",
+    "tris": 1938,
+    "bytes": 160392,
+    "footprint": [
+      8.1,
+      6.1
+    ],
+    "height": 4.77,
+    "bounds": {
+      "min": [
+        -4.55,
+        -0.05,
+        -3.55
+      ],
+      "max": [
+        4.55,
+        4.77,
+        3.95
+      ]
+    },
+    "nodes": [
+      "office"
+    ],
+    "materials": [
+      "M_concrete",
+      "M_emissive_light",
+      "M_glass",
+      "M_plaster",
+      "M_plastic_black",
+      "M_steel_dark",
+      "SolarPanel"
+    ],
+    "attach": {},
+    "source": "procedural (original)",
+    "notes": "Footprint = plinth; entrance steps add 0.95 m toward +Z. Roof slab 3.2 m, parapet 4.1 m, roof tank top 4.77 m."
+  },
+  "palm_palmyra_1": {
+    "name": "palm_palmyra_1",
+    "file": "palm_palmyra_1.glb",
+    "tris": 2406,
+    "bytes": 378916,
+    "footprint": [
+      1.0,
+      1.0
+    ],
+    "height": 13.71,
+    "bounds": {
+      "min": [
+        -2.941,
+        -0.001,
+        -2.114
+      ],
+      "max": [
+        2.095,
+        13.711,
+        2.631
+      ]
+    },
+    "nodes": [
+      "palm_palmyra_1"
+    ],
+    "materials": [
+      "PalmyraAtlas"
+    ],
+    "attach": {
+      "crown_centre": [
+        -0.471,
+        11.35,
+        0.284
+      ]
+    },
+    "source": "procedural (original)",
+    "notes": "Footprint = trunk; crown ~4.5 m across (see bounds). One alpha-MASK double-sided atlas material."
+  },
+  "palm_palmyra_2": {
+    "name": "palm_palmyra_2",
+    "file": "palm_palmyra_2.glb",
+    "tris": 2406,
+    "bytes": 388384,
+    "footprint": [
+      1.0,
+      1.0
+    ],
+    "height": 12.23,
+    "bounds": {
+      "min": [
+        -2.59,
+        -0.003,
+        -1.475
+      ],
+      "max": [
+        2.253,
+        12.23,
+        3.388
+      ]
+    },
+    "nodes": [
+      "palm_palmyra_2"
+    ],
+    "materials": [
+      "PalmyraAtlas"
+    ],
+    "attach": {
+      "crown_centre": [
+        -0.127,
+        9.75,
+        0.891
+      ]
+    },
+    "source": "procedural (original)",
+    "notes": "Footprint = trunk; crown ~4.5 m across (see bounds). One alpha-MASK double-sided atlas material."
+  },
+  "panel_box": {
+    "name": "panel_box",
+    "file": "panel_box.glb",
+    "tris": 969,
+    "bytes": 206304,
+    "footprint": [
+      0.35,
+      0.11
+    ],
+    "height": 0.5,
+    "bounds": {
+      "min": [
+        -0.175,
+        -0.0,
+        -0.054
+      ],
+      "max": [
+        0.172,
+        0.503,
+        0.06
+      ]
+    },
+    "nodes": [
+      "panel_box"
+    ],
+    "materials": [
+      "panel_box"
+    ],
+    "attach": {},
+    "source": "Poly Haven \"power_box_01\" (CC0), decimated from 21272 tris"
+  },
+  "person": {
+    "name": "person",
+    "file": "person.glb",
+    "tris": 1968,
+    "bytes": 90568,
+    "footprint": [
+      0.52,
+      0.28
+    ],
+    "height": 1.72,
+    "bounds": {
+      "min": [
+        -0.26,
+        -0.016,
+        -0.113
+      ],
+      "max": [
+        0.259,
+        1.718,
+        0.162
+      ]
+    },
+    "nodes": [
+      "person"
+    ],
+    "materials": [
+      "M_cloth_lower",
+      "M_cloth_shirt",
+      "M_skin"
+    ],
+    "attach": {
+      "hip_L": [
+        0.09,
+        0.88,
+        0.0
+      ],
+      "hip_R": [
+        -0.09,
+        0.88,
+        0.0
+      ],
+      "shoulder_L": [
+        0.19,
+        1.4,
+        0.0
+      ],
+      "shoulder_R": [
+        -0.19,
+        1.4,
+        0.0
+      ]
+    },
+    "source": "procedural (original)",
+    "notes": "Faces +Z. _anim (three: geometry.attributes._anim, vec4) = legL, legR, armL, armR weights; rotate those vertices about attach hip_* / shoulder_* (glTF X axis) for a walk cycle. Left = +X."
+  },
+  "pickup_bolero": {
+    "name": "pickup_bolero",
+    "file": "pickup_bolero.glb",
+    "tris": 3916,
+    "bytes": 183280,
+    "footprint": [
+      1.95,
+      5.46
+    ],
+    "height": 1.88,
+    "bounds": {
+      "min": [
+        -0.975,
+        0.0,
+        -2.66
+      ],
+      "max": [
+        0.975,
+        1.879,
+        2.8
+      ]
+    },
+    "nodes": [
+      "pickup_bolero"
+    ],
+    "materials": [
+      "M_glass",
+      "M_paint_grey",
+      "M_paint_white",
+      "M_plastic_black",
+      "M_rubber",
+      "PickupDecal"
+    ],
+    "attach": {},
+    "source": "procedural (original)",
+    "notes": "Nose toward +Z. Wheel radius 0.355 at x=+-0.725; deck floor 0.82 m."
+  },
+  "pump_house": {
+    "name": "pump_house",
+    "file": "pump_house.glb",
+    "tris": 720,
+    "bytes": 43288,
+    "footprint": [
+      3.8,
+      3.15
+    ],
+    "height": 2.92,
+    "bounds": {
+      "min": [
+        -1.95,
+        -0.05,
+        -1.4
+      ],
+      "max": [
+        1.85,
+        2.92,
+        1.75
+      ]
+    },
+    "nodes": [
+      "pump_house"
+    ],
+    "materials": [
+      "M_brick",
+      "M_concrete",
+      "M_galv",
+      "M_paint_grey",
+      "M_paint_red",
+      "M_steel_dark"
+    ],
+    "attach": {
+      "delivery": [
+        1.35,
+        0.95,
+        0.55
+      ]
+    },
+    "source": "procedural (original)",
+    "notes": "Borewell head on the front-right; delivery pipe enters the +X wall at 0.95 m."
+  },
+  "security_cabin": {
+    "name": "security_cabin",
+    "file": "security_cabin.glb",
+    "tris": 790,
+    "bytes": 60052,
+    "footprint": [
+      3.02,
+      3.28
+    ],
+    "height": 3.01,
+    "bounds": {
+      "min": [
+        -1.51,
+        -0.05,
+        -1.504
+      ],
+      "max": [
+        1.51,
+        3.009,
+        1.773
+      ]
+    },
+    "nodes": [
+      "security_cabin"
+    ],
+    "materials": [
+      "M_concrete",
+      "M_corrugated",
+      "M_emissive_light",
+      "M_glass",
+      "M_plaster",
+      "M_steel_dark"
+    ],
+    "attach": {},
+    "source": "procedural (original)",
+    "notes": "Door + window on the front (+Z), windows on both sides; roof falls to the back."
+  },
+  "shrub": {
+    "name": "shrub",
+    "file": "shrub.glb",
+    "tris": 720,
+    "bytes": 204144,
+    "footprint": [
+      1.89,
+      2.0
+    ],
+    "height": 1.46,
+    "bounds": {
+      "min": [
+        -0.897,
+        -0.131,
+        -1.131
+      ],
+      "max": [
+        0.997,
+        1.455,
+        0.873
+      ]
+    },
+    "nodes": [
+      "shrub",
+      "Canopy"
+    ],
+    "materials": [
+      "M_bark",
+      "ShrubLeaves"
+    ],
+    "attach": {},
+    "source": "procedural (original)",
+    "notes": "Canopy: alpha-MASK double-sided cards with outward normals."
+  },
+  "transformer": {
+    "name": "transformer",
+    "file": "transformer.glb",
+    "tris": 1436,
+    "bytes": 74876,
+    "footprint": [
+      3.2,
+      1.55
+    ],
+    "height": 7.5,
+    "bounds": {
+      "min": [
+        -1.6,
+        -0.067,
+        -0.75
+      ],
+      "max": [
+        1.6,
+        7.5,
+        0.803
+      ]
+    },
+    "nodes": [
+      "transformer"
+    ],
+    "materials": [
+      "M_concrete",
+      "M_galv",
+      "M_paint_grey",
+      "M_paint_white",
+      "M_plastic_black",
+      "M_steel_dark"
+    ],
+    "attach": {
+      "wires": [
+        [
+          -0.96,
+          7.385,
+          0.131
+        ],
+        [
+          0.0,
+          7.385,
+          0.131
+        ],
+        [
+          0.96,
+          7.385,
+          0.131
+        ]
+      ]
+    },
+    "source": "procedural (original)",
+    "notes": "Poles along X (2.5 m apart); line arrives along glTF Z onto attach.wires (insulator necks)."
+  },
+  "tree_neem_1": {
+    "name": "tree_neem_1",
+    "file": "tree_neem_1.glb",
+    "tris": 3920,
+    "bytes": 949344,
+    "footprint": [
+      1.2,
+      1.2
+    ],
+    "height": 9.12,
+    "bounds": {
+      "min": [
+        -4.892,
+        -0.057,
+        -6.724
+      ],
+      "max": [
+        5.118,
+        9.118,
+        6.38
+      ]
+    },
+    "nodes": [
+      "tree_neem_1",
+      "Canopy"
+    ],
+    "materials": [
+      "M_bark",
+      "NeemLeaves"
+    ],
+    "attach": {
+      "crown_centre": [
+        0.302,
+        5.461,
+        0.204
+      ]
+    },
+    "source": "procedural (original)",
+    "notes": "Footprint = trunk zone (crown spreads ~7 m, see bounds). Canopy: alpha-MASK double-sided cards with outward crown normals -- render without the back-face normal flip (or accept darker backs)."
+  },
+  "tree_neem_2": {
+    "name": "tree_neem_2",
+    "file": "tree_neem_2.glb",
+    "tris": 3936,
+    "bytes": 911732,
+    "footprint": [
+      1.2,
+      1.2
+    ],
+    "height": 8.02,
+    "bounds": {
+      "min": [
+        -4.244,
+        -0.057,
+        -4.683
+      ],
+      "max": [
+        5.861,
+        8.016,
+        5.454
+      ]
+    },
+    "nodes": [
+      "tree_neem_2",
+      "Canopy"
+    ],
+    "materials": [
+      "M_bark",
+      "NeemLeaves"
+    ],
+    "attach": {
+      "crown_centre": [
+        -0.005,
+        5.3,
+        0.071
+      ]
+    },
+    "source": "procedural (original)",
+    "notes": "Footprint = trunk zone (crown spreads ~8 m, see bounds). Canopy: alpha-MASK double-sided cards with outward crown normals -- render without the back-face normal flip (or accept darker backs)."
+  },
+  "truck_407": {
+    "name": "truck_407",
+    "file": "truck_407.glb",
+    "tris": 4632,
+    "bytes": 218568,
+    "footprint": [
+      2.45,
+      5.6
+    ],
+    "height": 2.48,
+    "bounds": {
+      "min": [
+        -1.225,
+        0.0,
+        -2.895
+      ],
+      "max": [
+        1.225,
+        2.48,
+        2.7
+      ]
+    },
+    "nodes": [
+      "truck_407"
+    ],
+    "materials": [
+      "M_glass",
+      "M_paint_blue",
+      "M_paint_grey",
+      "M_rubber",
+      "M_steel_dark",
+      "Truck407Decal"
+    ],
+    "attach": {},
+    "source": "procedural (original)",
+    "notes": "Nose toward +Z. Wheel radius 0.40, axles at z=0.40 (front x=+-0.80, rear duals x=+-0.66/+-0.89)."
+  },
+  "water_tank": {
+    "name": "water_tank",
+    "file": "water_tank.glb",
+    "tris": 1950,
+    "bytes": 84112,
+    "footprint": [
+      2.75,
+      2.75
+    ],
+    "height": 6.39,
+    "bounds": {
+      "min": [
+        -1.375,
+        -0.05,
+        -1.375
+      ],
+      "max": [
+        1.375,
+        6.388,
+        1.632
+      ]
+    },
+    "nodes": [
+      "water_tank",
+      "Tank"
+    ],
+    "materials": [
+      "M_concrete",
+      "M_galv",
+      "M_paint_red",
+      "M_paint_white",
+      "M_plastic_black",
+      "M_steel_dark"
+    ],
+    "attach": {
+      "inlet": [
+        0.9,
+        0.0,
+        -0.95
+      ],
+      "outlet": [
+        -0.78,
+        0.0,
+        1.6
+      ]
+    },
+    "source": "procedural (original)"
+  },
+  "wheelbarrow": {
+    "name": "wheelbarrow",
+    "file": "wheelbarrow.glb",
+    "tris": 782,
+    "bytes": 32956,
+    "footprint": [
+      0.66,
+      1.68
+    ],
+    "height": 0.66,
+    "bounds": {
+      "min": [
+        -0.332,
+        -0.013,
+        -0.865
+      ],
+      "max": [
+        0.332,
+        0.657,
+        0.815
+      ]
+    },
+    "nodes": [
+      "wheelbarrow"
+    ],
+    "materials": [
+      "M_galv",
+      "M_paint_red",
+      "M_rubber",
+      "M_steel_dark"
+    ],
+    "attach": {},
+    "source": "procedural (original)",
+    "notes": "Wheel toward +Z, handles toward -Z."
+  }
+}

@@ -26,10 +26,10 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
   const monthStart = today.slice(0, 8) + '01';
   const q = await Promise.all([
     sb.from('tenant').select('id,name,plan,state,status').maybeSingle(),
-    sb.from('farm').select('id,name,farm_type,district,capacity_birds,shed(id,name,shed_type,capacity_birds,area_sqft)').order('created_at'),
+    sb.from('farm').select('id,name,farm_type,district,village,lat,lng,capacity_birds,shed(id,name,shed_type,capacity_birds,area_sqft)').order('created_at'),
     sb.from('batch').select('id,code,farm_type,placed_on,doc_count,doc_rate,state,breed(id,name),farm(name),shed(name)').order('placed_on', { ascending: false }),
     sb.from('daily_shed_log')
-      .select('id,batch_id,log_date,birds_opening,mortality,culls,feed_kg,water_litres,temp_min_c,temp_max_c,avg_weight_g,remarks,egg_production(grade,count)')
+      .select('id,batch_id,log_date,birds_opening,mortality,culls,feed_kg,water_litres,temp_min_c,temp_max_c,humidity_pct,avg_weight_g,remarks,created_by,egg_production(grade,count)')
       .gte('log_date', since).order('log_date'),
     sb.from('v_batch_kpi').select('batch_id,cum_mortality,feed_kg,eggs,saleable_eggs'),
     sb.from('vaccination_schedule').select('id,batch_id,due_date,done_on,vaccine_master(name)').order('due_date'),
@@ -37,10 +37,10 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
     sb.from('app_user').select('id,full_name,phone,user_role_assignment(role)').order('created_at'),
     sb.from('vendor').select('id,name,category,contact_name,phone,payment_terms_days,rating,gstin').order('name'),
     sb.from('customer').select('id,name,kind,phone,credit_limit,credit_days').order('name'),
-    sb.from('worker').select('id,name,role,wage_rate').eq('active', true).order('name'),
+    sb.from('worker').select('id,name,role,wage_rate,farm_id').eq('active', true).order('name'),
     sb.from('attendance').select('worker_id,att_date,status').gte('att_date', monthStart),
-    sb.from('asset').select('id,name,category,next_service_on,status').order('name'),
-    sb.from('maintenance_ticket').select('id,opened_on,issue,priority,status,cost,asset(name)').order('opened_on', { ascending: false }),
+    sb.from('asset').select('id,name,category,next_service_on,status,farm_id,shed_id').order('name'),
+    sb.from('maintenance_ticket').select('id,opened_on,issue,priority,status,cost,asset_id,asset(name)').order('opened_on', { ascending: false }),
     sb.from('bill').select('id,bill_no,category,bill_date,due_date,total,paid,status,batch_id,vendor(name)').order('bill_date', { ascending: false }),
     sb.from('invoice')
       .select('id,invoice_no,product,qty,unit,rate,invoice_date,due_date,total,paid,status,batch_id,customer(name)')
@@ -49,8 +49,8 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
     sb.from('disease_case').select('id,batch_id,opened_on,ai_top_condition,ai_confidence,vet_confirmed,status,notes').order('opened_on', { ascending: false }),
     sb.from('notification').select('id,kind,severity,title,body,created_at,read_at').order('created_at', { ascending: false }).limit(50),
     sb.from('purchase_order').select('id,po_no,expected_on,status,total,vendor(name),po_line(qty,rate,item(name))').order('po_date', { ascending: false }),
-    sb.from('v_stock_balance').select('item_id,qty'),
-    sb.from('item').select('id,name,unit,reorder_level'),
+    sb.from('v_stock_balance').select('item_id,qty,store_id'),
+    sb.from('item').select('id,name,unit,reorder_level,category'),
     sb.from('market_rate').select('product,rate_date,rate').is('tenant_id', null)
       .in('product', ['egg', 'broiler_farmgate', 'maize', 'soya']).in('zone', ['Hyderabad', 'Telangana'])
       .gte('rate_date', addDays(today, -60)).order('rate_date'),
@@ -58,10 +58,11 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
     sb.from('tenant_document').select('id,name,ref_no,expires_on').order('expires_on'),
     sb.from('payment_approval').select('id,amount,paid_on,bill(bill_no,vendor(name))').eq('status', 'pending').order('created_at'),
     sb.from('worker_advance').select('id,worker_id,amount,given_on,reason,worker(name)').gte('given_on', monthStart).order('given_on', { ascending: false }),
+    sb.from('store').select('id,farm_id'),
   ]);
   const err = q.find((r) => r.error)?.error;
   if (err) throw new Error(err.message);
-  const [tenantRows, farms, batches, logs, kpi, vacc, curves, users, vendors, customers, workers, att, assets, tickets, bills, invoices, visits, cases, notifs, pos, stock, items, rates, diseases, docs, approvals, advances] =
+  const [tenantRows, farms, batches, logs, kpi, vacc, curves, users, vendors, customers, workers, att, assets, tickets, bills, invoices, visits, cases, notifs, pos, stock, items, rates, diseases, docs, approvals, advances, stores] =
     q.map((r) => r.data ?? []) as any[][];
   const tenant = tenantRows as any;
 
@@ -77,6 +78,7 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
       id: l.id, date: l.log_date, day: daysBetween(placed, l.log_date), birds: l.birds_opening, mortality: l.mortality, culls: l.culls,
       feed_kg: n(l.feed_kg), water: n(l.water_litres), eggs: grades ? Object.values(grades).reduce((a, c) => a + (c ?? 0), 0) : 0, grades,
       avg_w: l.avg_weight_g, tmax: l.temp_max_c == null ? null : n(l.temp_max_c), tmin: l.temp_min_c == null ? null : n(l.temp_min_c), remarks: l.remarks,
+      rh: l.humidity_pct == null ? null : n(l.humidity_pct), by: l.created_by ?? null,
     });
     logsBy.set(l.batch_id, list);
   }
@@ -97,6 +99,14 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
 
   const qty = new Map<string, number>();
   for (const s of stock) qty.set(s.item_id, (qty.get(s.item_id) ?? 0) + n(s.qty));
+  // complete feed (not ingredients) on hand per farm, via each farm's store — drives silo levels in the 3D farm
+  const farmOfStore = new Map<string, string>(stores.map((s) => [s.id, s.farm_id]));
+  const feedItems = new Set(items.filter((i) => i.category === 'feed').map((i) => i.id));
+  const feedByFarm: Record<string, number> = {};
+  for (const s of stock) {
+    const f = farmOfStore.get(s.store_id);
+    if (f && feedItems.has(s.item_id)) feedByFarm[f] = (feedByFarm[f] ?? 0) + n(s.qty);
+  }
   const attendance: Tenant['attendance'] = {};
   for (const a of att) (attendance[a.worker_id] ??= {})[a.att_date] = ATT[a.status] ?? 'P';
 
@@ -105,7 +115,8 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
     farms: farms
       .filter((f) => !mode || f.farm_type === mode)
       .map((f) => ({
-        id: f.id, name: f.name, farm_type: f.farm_type, district: f.district ?? '', capacity: n(f.capacity_birds),
+        id: f.id, name: f.name, farm_type: f.farm_type, district: f.district ?? '', village: f.village ?? '', capacity: n(f.capacity_birds),
+        lat: f.lat == null ? null : n(f.lat), lng: f.lng == null ? null : n(f.lng), feed_kg: f.id in feedByFarm ? Math.round(feedByFarm[f.id]) : null,
         sheds: (f.shed ?? []).map((s: any) => ({ id: s.id, name: s.name, type: s.shed_type, capacity: n(s.capacity_birds), area: s.area_sqft })),
       })),
     batches: allBatches.filter((b) => !mode || b.ft === mode),
@@ -115,11 +126,11 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
       terms: v.payment_terms_days, rating: v.rating == null ? null : n(v.rating), gstin: v.gstin,
     })),
     customers: customers.map((c) => ({ id: c.id, name: c.name, kind: c.kind, phone: c.phone ?? '', credit_limit: n(c.credit_limit), credit_days: c.credit_days ?? 0 })),
-    workers: workers.map((w) => ({ id: w.id, name: w.name, role: w.role, wage: n(w.wage_rate) })),
+    workers: workers.map((w) => ({ id: w.id, name: w.name, role: w.role, wage: n(w.wage_rate), farm_id: w.farm_id ?? null })),
     attendance,
-    assets: assets.map((a) => ({ id: a.id, name: a.name, category: a.category, next_service: a.next_service_on ?? today, status: a.status })),
+    assets: assets.map((a) => ({ id: a.id, name: a.name, category: a.category, next_service: a.next_service_on ?? today, status: a.status, farm_id: a.farm_id ?? null, shed_id: a.shed_id ?? null })),
     tickets: tickets.map((k) => ({
-      id: k.id, asset: one<any>(k.asset)?.name ?? '', opened: k.opened_on, issue: k.issue, priority: k.priority, status: k.status, cost: k.cost == null ? null : n(k.cost),
+      id: k.id, asset_id: k.asset_id ?? null, asset: one<any>(k.asset)?.name ?? '', opened: k.opened_on, issue: k.issue, priority: k.priority, status: k.status, cost: k.cost == null ? null : n(k.cost),
     })),
     bills: bills.map((b) => ({
       id: b.id, no: b.bill_no, vendor: one<any>(b.vendor)?.name ?? '', category: b.category, date: b.bill_date, due: b.due_date,
