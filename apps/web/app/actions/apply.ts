@@ -26,6 +26,6 @@ export async function submitApplication(input: unknown): Promise<{ ok: true } | 
     labour: { supervisor: a.labour_supervisor, worker: a.labour_worker, vaccinator: a.labour_vaccinator, driver: a.labour_driver, technician: a.labour_technician },
     consent: a.consent,
   });
-  if (error) return { ok: false, error: error.code === '23505' ? t('duplicate') : error.message };
+  if (error) return { ok: false, error: error.code === 'P0001' ? t('duplicate') : error.message };
   return { ok: true };
 }
