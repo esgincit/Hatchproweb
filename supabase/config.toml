@@ -45,6 +45,8 @@ auth_token = "local-dev"
 919849022334 = "123456"   # Rajitha Reddy — VKR finance
 919440012121 = "123456"   # K. Srinivasulu — KS owner
 919000000000 = "123456"   # Praveen G — platform admin
+919999000001 = "123456"   # e2e: new applicant (approved in onboarding.spec)
+919999000002 = "123456"   # e2e: supervisor invited by that owner
 
 [storage]
 enabled = true
@@ -69,4 +71,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.provision-tenant]
+verify_jwt = true
+
+[functions.invite-user]
 verify_jwt = true

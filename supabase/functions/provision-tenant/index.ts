@@ -2,6 +2,7 @@
 //   tenant row → owner auth user (phone login) with tenant_id/roles claims → app_user + role →
 //   subscription/trial → welcome notification → WhatsApp invite with the OTP login link.
 // Body: { name, legal_name?, gstin?, state, plan, trial_days, owner_name, owner_phone, language?, farm_types?, features? }
+//   or { application_id, plan?, trial_days? } — approves an onboarding_application and also creates its farms + sheds.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 Deno.serve(async (req) => {
@@ -12,13 +13,26 @@ Deno.serve(async (req) => {
   const { data: { user } } = await caller.auth.getUser();
   if (!user || user.app_metadata?.platform !== true) return new Response("forbidden", { status: 403 });
 
-  const b = await req.json();
+  let b = await req.json();
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  // deno-lint-ignore no-explicit-any
+  let app: any = null;
+  if (b.application_id) {
+    const { data } = await admin.from("onboarding_application").select("*").eq("id", b.application_id).maybeSingle();
+    if (!data) return new Response("application not found", { status: 404 });
+    if (data.status !== "submitted") return new Response("application already decided", { status: 409 });
+    app = data;
+    b = {
+      name: app.business_name, legal_name: app.legal_name, gstin: app.gstin, pan: app.pan, state: app.state,
+      plan: b.plan ?? "starter", trial_days: b.trial_days ?? 30, owner_name: app.owner_name, owner_phone: app.phone,
+      language: app.language, farm_types: app.farm_types, features: b.features,
+    };
+  }
   const phone = "+" + String(b.owner_phone).replace(/\D/g, "");
 
   // 1. tenant
   const { data: tenant, error: tErr } = await admin.from("tenant").insert({
-    name: b.name, legal_name: b.legal_name ?? b.name, gstin: b.gstin ?? null, state: b.state,
+    name: b.name, legal_name: b.legal_name ?? b.name, gstin: b.gstin ?? null, pan: b.pan ?? null, state: b.state,
     plan: b.plan ?? "starter", status: (b.trial_days ?? 0) > 0 ? "trial" : "active",
   }).select().single();
   if (tErr) return new Response(tErr.message, { status: 400 });
@@ -42,10 +56,35 @@ Deno.serve(async (req) => {
 
   // 5. welcome + onboarding
   await admin.from("notification").insert([
-    { tenant_id: tenant.id, user_id: ownerId, kind: "info", severity: "info", title: `Welcome to PoultryOS, ${b.owner_name.split(" ")[0]}`, body: "Finish setup: add your first farm, sheds and a batch." },
+    { tenant_id: tenant.id, user_id: ownerId, kind: "info", severity: "info", title: `Welcome to HatchPro, ${b.owner_name.split(" ")[0]}`, body: "Finish setup: add your first farm, sheds and a batch." },
     { tenant_id: tenant.id, user_id: ownerId, kind: "reminder", severity: "warning", title: "Add your first farm", body: "Onboarding wizard · 5 steps · about 10 minutes." },
   ]);
   await admin.from("audit_log").insert({ tenant_id: tenant.id, user_id: user.id, action: "tenant.provisioned", entity_type: "tenant", entity_id: tenant.id, after: { plan: b.plan, trial_ends_on: trialEnds, by: user.id } });
+
+  // 5b. from an application: its sites become farms (type = first farm type), sheds as captured
+  if (app) {
+    for (const site of (app.sites ?? []) as Array<Record<string, unknown>>) {
+      const sheds = (site.sheds ?? []) as Array<Record<string, unknown>>;
+      const cap = sheds.reduce((a, s) => a + Number(s.capacity ?? 0), 0);
+      const { data: farm, error: fErr } = await admin.from("farm").insert({
+        tenant_id: tenant.id, name: String(site.name ?? b.name), farm_type: app.farm_types[0], district: site.district ?? app.district,
+        state: site.state ?? app.state, village: site.village ?? null, lat: site.lat ?? null, lng: site.lng ?? null, capacity_birds: cap || null,
+      }).select("id").single();
+      if (fErr) return new Response(fErr.message, { status: 400 });
+      if (sheds.length) {
+        const shedType = (t: unknown) => (t === "cage" || t === "environment_controlled" ? t : "deep_litter");
+        const { error: sErr } = await admin.from("shed").insert(sheds.map((s) => ({
+          tenant_id: tenant.id, farm_id: farm.id, name: String(s.name), shed_type: shedType(s.type), capacity_birds: Number(s.capacity ?? 0),
+          area_sqft: s.length_ft && s.width_ft ? Math.round(Number(s.length_ft) * Number(s.width_ft)) : null,
+        })));
+        if (sErr) return new Response(sErr.message, { status: 400 });
+      }
+    }
+    await admin.from("app_user").update({ email: app.email ?? null }).eq("id", ownerId);
+    await admin.from("onboarding_application").update({
+      status: "approved", tenant_id: tenant.id, reviewed_by: user.id, reviewed_at: new Date().toISOString(),
+    }).eq("id", app.id);
+  }
 
   // 6. WhatsApp invite (template must be approved in Meta Business Manager)
   const token = Deno.env.get("WHATSAPP_TOKEN"), phoneId = Deno.env.get("WHATSAPP_PHONE_ID");

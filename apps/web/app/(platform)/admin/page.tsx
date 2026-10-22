@@ -9,6 +9,7 @@ import { Toaster } from '@/components/ui/Toast';
 import { Header } from '@/components/ui/bits';
 import { LanguagePicker } from '@/components/i18n/LanguagePicker';
 import { dateFmt, fmtL, fmtN } from '@/lib/format';
+import { Applications, type AppRow } from '@/components/admin/Applications';
 
 const PRICE: Record<string, number> = { starter: 999, growth: 2999, pro: 7999, enterprise: 25000 };
 
@@ -18,12 +19,13 @@ export default async function Admin() {
   // defence in depth: middleware already guards /admin
   const { data: { user } } = await sb.auth.getUser();
   if (!user || !claimsFromUser(user).platform) redirect('/platform/login');
-  const [{ data: tenants }, { data: kpi }, { data: farms }, { data: users }, { data: rates }] = await Promise.all([
+  const [{ data: tenants }, { data: kpi }, { data: farms }, { data: users }, { data: rates }, { data: apps }] = await Promise.all([
     sb.from('tenant').select('id,name,plan,status,state').order('name'),
     sb.from('v_batch_kpi').select('tenant_id,birds_alive,state'),
     sb.from('farm').select('tenant_id'),
     sb.from('app_user').select('tenant_id'),
     sb.from('market_rate').select('product,rate_date').is('tenant_id', null).order('rate_date', { ascending: false }).limit(50),
+    sb.from('onboarding_application').select('*').eq('status', 'submitted').order('created_at'),
   ]);
   const count = (xs: { tenant_id: string | null }[] | null, id: string) => (xs ?? []).filter((x) => x.tenant_id === id).length;
   const rows = (tenants ?? []).map((tt) => ({
@@ -52,6 +54,7 @@ export default async function Admin() {
             <div className="tile"><div className="lbl">{t('birds')}</div><div className="val">{fmtN(rows.reduce((a, r) => a + r.birds, 0))}</div><div className="delta flat">{t('acrossFarms', { n: rows.reduce((a, r) => a + r.farms, 0) })}</div></div>
             <div className="tile"><div className="lbl">{t('users')}</div><div className="val">{rows.reduce((a, r) => a + r.users, 0)}</div><div className="delta flat">{t('farmLogins')}</div></div>
           </div>
+          <Applications rows={(apps ?? []) as AppRow[]} />
           <div className="card">
             <div className="eyebrow" style={{ marginBottom: 6 }}>{t('tenants')}</div>
             <div className="list">

@@ -24,6 +24,10 @@ export const PRIORITIES = ['low', 'medium', 'high'] as const;
 export const ASSET_CATS = ['feeder', 'drinker', 'fan', 'generator', 'incubator', 'grader', 'vehicle', 'other'] as const;
 export const ITEM_CATS = ['feed', 'feed_ingredient', 'medicine', 'vaccine', 'disinfectant', 'equipment', 'spare', 'packaging', 'fuel', 'other'] as const;
 export const RATE_PRODUCTS = ['egg', 'broiler_farmgate', 'maize', 'soya'] as const;
+export const STAFF_ROLES = ['farm_manager', 'finance', 'shed_supervisor', 'labour', 'veterinarian', 'store_keeper', 'auditor'] as const;
+export const LANGS = ['en', 'te', 'hi', 'ta', 'kn'] as const;
+/** Indian mobile: any formatting, last 10 digits starting 6-9 */
+const mobile = z.string().transform((s) => s.replace(/\D/g, '').slice(-10)).pipe(z.string().regex(/^[6-9]\d{9}$/));
 
 export const SCHEMAS = {
   addFarm: z.object({ name: text, farm_type: z.enum(FARM_TYPES), district: opt(text), village: opt(text), capacity: opt(int(1)) }),
@@ -62,7 +66,31 @@ export const SCHEMAS = {
   addRate: z.object({ product: z.enum(RATE_PRODUCTS), zone: text, rate: money, date }),
   addDoc: z.object({ name: text, ref_no: opt(z.string().max(60)), expires: opt(date) }),
   addAdvance: z.object({ worker_id: id, amount: money, date, reason: opt(z.string().max(200)) }),
+  inviteUser: z.object({ name: text, phone: mobile, role: z.enum(STAFF_ROLES), language: z.enum(LANGS), farm_id: opt(id) }),
 } as const;
+
+/* ---------- public application (no login) — not an ActKey, submitted by app/actions/apply.ts ---------- */
+const optText = (max = 120) => opt(z.string().trim().max(max));
+const count = opt(z.coerce.number().int().min(0).max(1_000_000));
+export const SHED_ROW = z.object({
+  name: text, length_ft: opt(z.coerce.number().positive().max(2000)), width_ft: opt(z.coerce.number().positive().max(500)),
+  type: z.enum(['open', 'environment_controlled', 'semi_ec']), floor: z.enum(['deep_litter', 'cage', 'slatted']), capacity: int(1),
+});
+export const APPLY = z.object({
+  business_name: text, legal_name: optText(), entity_type: z.enum(['proprietor', 'partnership', 'llp', 'pvt_ltd', 'fpo', 'cooperative']),
+  pan: z.string().trim().toUpperCase().regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/),
+  gstin: opt(z.string().trim().toUpperCase().regex(/^[0-9A-Z]{15}$/)), udyam: optText(40), fssai: optText(20), pcb_ref: optText(60), trade_licence: optText(60),
+  owner_name: text, phone: mobile, alt_phone: opt(mobile), email: opt(z.string().trim().email().max(120)), whatsapp: opt(mobile), language: z.enum(LANGS),
+  farm_types: z.array(z.enum(FARM_TYPES)).min(1),
+  site_name: text, village: optText(), mandal: optText(), district: text, state: text, pin: z.string().trim().regex(/^\d{6}$/),
+  lat: opt(z.coerce.number().min(6).max(38)), lng: opt(z.coerce.number().min(68).max(98)), // India bounds
+  land_acres: opt(z.coerce.number().positive().max(10_000)), ownership: z.enum(['owned', 'leased']),
+  sheds: z.array(SHED_ROW).min(1).max(60),
+  current_birds: count, breed: optText(60), model: z.enum(['independent', 'integrator', 'own_integration']), integrator: optText(80), monthly_volume: count,
+  labour_supervisor: count, labour_worker: count, labour_vaccinator: count, labour_driver: count, labour_technician: count,
+  consent: z.literal(true),
+});
+export type Application = z.infer<typeof APPLY>;
 
 export type ActKey = keyof typeof SCHEMAS;
 export const isAct = (a: string): a is ActKey => a in SCHEMAS;

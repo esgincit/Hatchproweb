@@ -37,5 +37,6 @@ export const ACT_ROLES: Record<string, string[]> = {
   closeTicket: [...OWN, 'store_keeper'], serviceDone: [...OWN, 'store_keeper'],
   raisePO: [...MONEY, 'store_keeper'], grnOpen: [...OWN, 'store_keeper'],
   addRate: MONEY, addAdvance: [...OWN, 'finance'],
+  inviteUser: ['tenant_owner'], // matches invite-user edge function + user_role_assignment policy
 };
 export const canAct = (roles: string[], act: string) => (ACT_ROLES[act] ?? []).some((r) => roles.includes(r));

@@ -8,8 +8,9 @@ import { createClient } from '@/lib/supabase/client';
 import { runAct } from '@/app/actions/forms';
 import {
   SCHEMAS, isAct, FARM_TYPES, SHED_TYPES, VENDOR_CATS, BILL_CATS, PRODUCTS, CUSTOMER_KINDS, WORKER_ROLES, PAY_MODES,
-  STAGES, PRIORITIES, ASSET_CATS, ITEM_CATS, RATE_PRODUCTS,
+  STAGES, PRIORITIES, ASSET_CATS, ITEM_CATS, RATE_PRODUCTS, STAFF_ROLES,
 } from '@/lib/schemas';
+import { LOCALES, LOCALE_NAMES } from '@/lib/i18n/locales';
 import { addDays, fmtINR } from '@/lib/format';
 import { toast } from '@/components/ui/Toast';
 import { FormSheet, type FormSpec, type Field } from './FormSheet';
@@ -441,6 +442,17 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
           { id: 'amount', label: f('amount'), type: 'number', half: true, required: true },
           date(),
           { id: 'reason', label: f('advance.reason') },
+        ],
+      };
+    case 'inviteUser':
+      return {
+        title: f('invite.title'), intro: f('invite.intro'), submit: f('invite.submit'),
+        fields: [
+          { id: 'name', label: f('name'), required: true },
+          { id: 'phone', label: f('invite.phone'), type: 'tel', placeholder: '98490 12345', half: true, required: true },
+          { id: 'role', label: f('worker.role'), type: 'select', options: STAFF_ROLES.map((r): Opt => [r, t(`roles.${r}`)]), value: 'shed_supervisor', half: true },
+          { id: 'language', label: t('common.language'), type: 'select', options: LOCALES.map((l): Opt => [l, LOCALE_NAMES[l]]), value: 'te', half: true },
+          { id: 'farm_id', label: f('invite.farm'), type: 'select', options: [[ '', f('invite.allFarms') ], ...L.farms.map((x): Opt => [x.id, x.name])], half: true },
         ],
       };
     default:

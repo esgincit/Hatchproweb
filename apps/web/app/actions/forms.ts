@@ -202,6 +202,17 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
       const { error } = await sb.from('tenant_document').insert({ name: x.name, ref_no: x.ref_no, expires_on: x.expires });
       return fail(error) ?? { ok: true, msg: t('doc.ok', { name: x.name }) };
     }
+    case 'inviteUser': {
+      const x = v as In<'inviteUser'>;
+      // creating a login needs the service role → edge function (it re-checks owner + staff-role rules)
+      const { data, error } = await sb.functions.invoke('invite-user', { body: x });
+      if (error) {
+        const ctx = (error as { context?: Response }).context;
+        const body = ctx ? await ctx.json().catch(() => null) : null;
+        return { ok: false, error: body?.error ?? error.message };
+      }
+      return { ok: true, msg: t('invite.ok', { name: x.name, phone: String(data?.phone ?? '') }), href: '/more/users' };
+    }
     case 'addAdvance': {
       const x = v as In<'addAdvance'>;
       const { error } = await sb.from('worker_advance').insert({ worker_id: x.worker_id, amount: x.amount, given_on: x.date, reason: x.reason });

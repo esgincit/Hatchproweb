@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { OtpLogin } from '@/components/auth/OtpLogin';
 import { LanguagePicker } from '@/components/i18n/LanguagePicker';
 
@@ -13,6 +14,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         <p style={{ color: 'var(--ink2)', margin: 0 }}>{t('farmWho')}</p>
         {error === 'no-access' && <div className="pill warn" style={{ whiteSpace: 'normal' }}>{t('noRole')}</div>}
         <OtpLogin portal="farm" />
+        <Link className="back" href="/apply">{t('applyLink')} ›</Link>
       </div>
     </main>
   );
