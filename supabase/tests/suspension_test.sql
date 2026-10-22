@@ -12,6 +12,8 @@ do $$ begin
   begin perform record_payment('bill', (select id from bill where total > paid limit 1), 1, 'cash', current_date); assert false, 'rpc while suspended';
   exception when insufficient_privilege or raise_exception then null; end; -- FOR UPDATE can't see the row → 'document not found'
   assert not exists (select 1 from payment where paid_on = current_date and amount = 1), 'no payment written';
+  delete from po_line; assert exists (select 1 from po_line), 'po_line delete while suspended';
+  delete from batch_state_history; assert exists (select 1 from batch_state_history), 'batch_state_history delete while suspended';
 end $$;
 -- other tenant unaffected
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000aa","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["tenant_owner"]}}';
