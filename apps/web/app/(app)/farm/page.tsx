@@ -7,12 +7,15 @@ import { batchKpi } from '@/lib/kpi';
 import { fmtN } from '@/lib/format';
 import { Header, RagPill } from '@/components/ui/bits';
 import { ActBtn } from '@/components/ui/ActBtn';
+import Farm3DView from '@/components/farm3d/Farm3DView';
+import { farmScene } from '@/lib/farm3d';
 
 export default async function Farm() {
   const [{ t: tn }, t] = await Promise.all([currentMode().then(loadView), getTranslations()]);
   return (
     <>
       <Header title={t('farm.title')} action={<ActBtn act="addFarm" className="btn small">{t('farm.addFarm')}</ActBtn>} />
+      {tn.farms.length > 0 && <Farm3DView farms={farmScene(tn)} />}
       {tn.farms.length ? (
         tn.farms.map((f) => (
           <div className="card" key={f.id}>

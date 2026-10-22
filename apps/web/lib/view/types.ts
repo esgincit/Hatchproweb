@@ -13,7 +13,7 @@ export type Batch = {
   placed: string; shed_name: string; farm_name: string; logs: Log[]; vacc: Vacc[]; curve: Curve;
   cum: { dead: number; feed: number; eggs: number; saleable: number }; // from v_batch_kpi (all-time)
 };
-export type Shed = { id: string; name: string; type: string; capacity: number };
+export type Shed = { id: string; name: string; type: string; capacity: number; area: number | null };
 export type Farm = { id: string; name: string; farm_type: FarmType; district: string; capacity: number; sheds: Shed[] };
 export type Bill = { id: string; no: string; vendor: string; category: string; date: string; due: string; total: number; paid: number; status: string; batch: string | null };
 export type Invoice = { id: string; no: string; customer: string; product: string; qty: number; unit: string; rate: number; date: string; due: string; total: number; paid: number; status: string; batch: string | null };

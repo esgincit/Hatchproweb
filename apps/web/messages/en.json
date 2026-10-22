@@ -911,5 +911,26 @@
   "suspended": {
     "title": "Account suspended",
     "body": "This farm account is suspended. Please contact HatchPro support to restore access."
+  },
+  "farm3d": {
+    "title": "Live farm",
+    "live": "Live",
+    "hint": "Tap a shed to look inside · drag to rotate · pinch to zoom",
+    "back": "← All sheds",
+    "empty": "Empty",
+    "day": "Day {day}",
+    "birds": "Birds",
+    "eggsSet": "Eggs set",
+    "weight": "Weight",
+    "eggs": "Egg %",
+    "mortality": "Mortality",
+    "temp": "Temperature",
+    "vs": "{actual} (expected {expected})",
+    "mortVal": "{today} today · {avg}/day (7d)",
+    "issue": "Issue",
+    "none": "None",
+    "lastUpdate": "Last update",
+    "scale": "Showing {drawn} of {alive} birds",
+    "open": "Open batch"
   }
 }

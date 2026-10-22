@@ -26,7 +26,7 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
   const monthStart = today.slice(0, 8) + '01';
   const q = await Promise.all([
     sb.from('tenant').select('id,name,plan,state,status').maybeSingle(),
-    sb.from('farm').select('id,name,farm_type,district,capacity_birds,shed(id,name,shed_type,capacity_birds)').order('created_at'),
+    sb.from('farm').select('id,name,farm_type,district,capacity_birds,shed(id,name,shed_type,capacity_birds,area_sqft)').order('created_at'),
     sb.from('batch').select('id,code,farm_type,placed_on,doc_count,doc_rate,state,breed(id,name),farm(name),shed(name)').order('placed_on', { ascending: false }),
     sb.from('daily_shed_log')
       .select('id,batch_id,log_date,birds_opening,mortality,culls,feed_kg,water_litres,temp_min_c,temp_max_c,avg_weight_g,remarks,egg_production(grade,count)')
@@ -106,7 +106,7 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
       .filter((f) => !mode || f.farm_type === mode)
       .map((f) => ({
         id: f.id, name: f.name, farm_type: f.farm_type, district: f.district ?? '', capacity: n(f.capacity_birds),
-        sheds: (f.shed ?? []).map((s: any) => ({ id: s.id, name: s.name, type: s.shed_type, capacity: n(s.capacity_birds) })),
+        sheds: (f.shed ?? []).map((s: any) => ({ id: s.id, name: s.name, type: s.shed_type, capacity: n(s.capacity_birds), area: s.area_sqft })),
       })),
     batches: allBatches.filter((b) => !mode || b.ft === mode),
     users: users.map((u) => ({ id: u.id, name: u.full_name, phone: u.phone ?? '', role: u.user_role_assignment?.[0]?.role ?? '' })),
