@@ -34,6 +34,8 @@ begin
   begin insert into bill (farm_id, vendor_id, bill_no, bill_date, due_date, category, total, paid, status)
     select farm_id, vendor_id, 'X-PAID', current_date, current_date, 'feed', 90000, 90000, 'paid' from bill where id = b;
     assert false, 'born-paid big bill'; exception when raise_exception then null; end;
+  begin update bill set status = 'paid' where id = b; assert false, 'marking a big bill paid'; exception when raise_exception then null; end;
+  begin delete from bill where id = b; assert false, 'deleting a big bill'; exception when raise_exception then null; end;
   begin update bill set total = 40000 where id = b; assert false, 'lowering a big bill'; exception when raise_exception then null; end;
   begin insert into payment_approval (bill_id, amount, mode, paid_on, status, requested_by) values (b, 10, 'cash', current_date, 'approved', auth.uid());
     assert false, 'pre-approved request'; exception when insufficient_privilege then null; end;
