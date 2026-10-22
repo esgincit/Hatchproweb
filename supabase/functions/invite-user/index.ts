@@ -26,6 +26,9 @@ Deno.serve(async (req) => {
   const tenantId = meta.tenant_id;
 
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  // service role skips RLS, so repeat the 0017 suspension rule here
+  const { data: ten } = await admin.from("tenant").select("status").eq("id", tenantId).maybeSingle();
+  if (!ten || ten.status === "suspended") return json({ error: "account suspended" }, 403);
   if (b.farm_id) { // farm scope must belong to the inviter's tenant
     const { data: farm } = await admin.from("farm").select("id").eq("id", b.farm_id).eq("tenant_id", tenantId).maybeSingle();
     if (!farm) return json({ error: "farm not found" }, 400);
