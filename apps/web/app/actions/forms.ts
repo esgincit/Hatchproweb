@@ -86,8 +86,13 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
     }
     case 'payOpen': {
       const x = v as In<'payOpen'>;
-      const { error } = await sb.rpc('record_payment', { p_kind: x.kind, p_id: x.id, p_amount: x.amount, p_mode: x.mode, p_date: x.date, p_utr: x.utr ?? null });
-      return fail(error) ?? { ok: true, msg: t('pay.ok', { amt: fmtINR(x.amount) }) };
+      const { data, error } = await sb.rpc('record_payment', { p_kind: x.kind, p_id: x.id, p_amount: x.amount, p_mode: x.mode, p_date: x.date, p_utr: x.utr ?? null });
+      return fail(error) ?? { ok: true, msg: data === 'pending' ? t('pay.pending', { amt: fmtINR(x.amount) }) : t('pay.ok', { amt: fmtINR(x.amount) }) };
+    }
+    case 'decidePay': {
+      const x = v as In<'decidePay'>;
+      const { error } = await sb.rpc('decide_payment', { p_id: x.approval_id, p_approve: x.approve === 'yes' });
+      return fail(error) ?? { ok: true, msg: x.approve === 'yes' ? t('pay.approved') : t('pay.rejected') };
     }
     case 'addCustomer': {
       const x = v as In<'addCustomer'>;

@@ -56,11 +56,12 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
       .gte('rate_date', addDays(today, -60)).order('rate_date'),
     sb.from('disease_master').select('code,name,signs').order('name'),
     sb.from('tenant_document').select('id,name,ref_no,expires_on').order('expires_on'),
+    sb.from('payment_approval').select('id,amount,paid_on,bill(bill_no,vendor(name))').eq('status', 'pending').order('created_at'),
     sb.from('worker_advance').select('id,worker_id,amount,given_on,reason,worker(name)').gte('given_on', monthStart).order('given_on', { ascending: false }),
   ]);
   const err = q.find((r) => r.error)?.error;
   if (err) throw new Error(err.message);
-  const [tenantRows, farms, batches, logs, kpi, vacc, curves, users, vendors, customers, workers, att, assets, tickets, bills, invoices, visits, cases, notifs, pos, stock, items, rates, diseases, docs, advances] =
+  const [tenantRows, farms, batches, logs, kpi, vacc, curves, users, vendors, customers, workers, att, assets, tickets, bills, invoices, visits, cases, notifs, pos, stock, items, rates, diseases, docs, approvals, advances] =
     q.map((r) => r.data ?? []) as any[][];
   const tenant = tenantRows as any;
 
@@ -145,6 +146,7 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
       .filter((i) => qty.has(i.id))
       .map((i) => ({ item_id: i.id, item: i.name, unit: i.unit, qty: Math.round((qty.get(i.id) ?? 0) * 10) / 10, reorder: n(i.reorder_level) })),
     docs: docs.map((d) => ({ id: d.id, name: d.name, ref_no: d.ref_no, expires: d.expires_on })),
+    approvals: approvals.map((a) => { const bl = one<any>(a.bill); return { id: a.id, bill_no: bl?.bill_no ?? '', vendor: one<any>(bl?.vendor)?.name ?? '', amount: n(a.amount), date: a.paid_on }; }),
     advances: advances.map((a) => ({ id: a.id, worker_id: a.worker_id, worker: one<any>(a.worker)?.name ?? '', amount: n(a.amount), date: a.given_on, reason: a.reason ?? '' })),
   };
 

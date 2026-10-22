@@ -175,3 +175,29 @@ test('exports download real files; a supervisor is refused money exports', async
   expect((await page.request.get('/api/export/tally')).status()).toBe(403);
   expect((await page.request.get('/api/export/register')).status()).toBe(200); // supervisors keep the attendance register
 });
+
+test('payment over ₹50,000 by finance waits for the owner, who approves it', async ({ page, browser }, info) => {
+  const no = `E2E-AP-${info.project.name}-${Date.now() % 100000}`;
+  const { data: v } = await admin.from('vendor').select('id,tenant_id,name').limit(1).single();
+  const { data: f } = await admin.from('farm').select('id').eq('tenant_id', v!.tenant_id).limit(1).single();
+  const { data: bill } = await admin.from('bill').insert({ tenant_id: v!.tenant_id, farm_id: f!.id, vendor_id: v!.id, bill_no: no, bill_date: '2026-10-19', due_date: '2026-11-19', category: 'feed', total: 60000 }).select('id').single();
+  try {
+    await login(page, '9849022334', '+91 98490 22334'); // finance
+    await page.goto('/money?view=ap');
+    await page.locator('.item', { hasText: no }).getByRole('button', { name: 'Pay' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Record payment' }).click();
+    await expect(page.locator('.toast')).toContainText('sent to the owner');
+    expect((await admin.from('bill').select('paid').eq('id', bill!.id).single()).data!.paid).toBe(0);
+
+    const owner = await (await browser.newContext()).newPage();
+    await login(owner);
+    await owner.goto('/money?view=ap');
+    await owner.locator('.stripe .item', { hasText: no }).getByRole('button', { name: 'Approve' }).click();
+    await expect(owner.locator('.toast')).toContainText('approved');
+    expect((await admin.from('bill').select('status,paid').eq('id', bill!.id).single()).data).toEqual({ status: 'paid', paid: 60000 });
+  } finally {
+    await admin.from('payment').delete().eq('ref_id', bill!.id);
+    await admin.from('payment_approval').delete().eq('bill_id', bill!.id);
+    await admin.from('bill').delete().eq('id', bill!.id);
+  }
+});

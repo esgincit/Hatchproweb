@@ -295,7 +295,10 @@
     "costEgg": "Cost / egg",
     "fcr": "FCR",
     "noBatches": "No batches yet.",
-    "notDue": "Not due"
+    "notDue": "Not due",
+    "approvals": "Waiting for owner approval · {n}",
+    "approve": "Approve",
+    "reject": "Reject"
   },
   "more": {
     "title": "More",
@@ -598,7 +601,10 @@
       "upi": "UPI",
       "neft": "Bank transfer (NEFT)",
       "cash": "Cash",
-      "cheque": "Cheque"
+      "cheque": "Cheque",
+      "pending": "Over ₹50,000 — {amt} sent to the owner for approval",
+      "approved": "Payment approved and recorded",
+      "rejected": "Payment request rejected"
     },
     "customer": {
       "title": "Add customer",

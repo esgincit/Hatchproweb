@@ -9,8 +9,14 @@ const MONEY = ['tenant_owner', 'farm_manager', 'finance', 'auditor'];
 const PEOPLE = ['tenant_owner', 'farm_manager', 'finance', 'shed_supervisor'];
 const KINDS: Record<string, string[]> = { tally: MONEY, gstr1: MONEY, statements: MONEY, pnl: MONEY, register: PEOPLE };
 
-const csv = (rows: (string | number | null | undefined)[][]) =>
-  '﻿' + rows.map((r) => r.map((v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }).join(',')).join('\r\n');
+// Text cells starting with = + - @ or a control char would run as formulas in Excel (CSV injection): prefix '.
+const cell = (v: string | number | null | undefined) => {
+  if (typeof v === 'number') return String(v);
+  let s = String(v ?? '');
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+const csv = (rows: (string | number | null | undefined)[][]) => '﻿' + rows.map((r) => r.map(cell).join(',')).join('\r\n');
 const xml = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[c]!);
 
 export async function GET(_req: Request, { params }: { params: Promise<{ kind: string }> }) {

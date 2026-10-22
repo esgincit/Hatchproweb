@@ -60,6 +60,19 @@ export default async function Money({ searchParams }: { searchParams: Promise<{ 
       <>
         <Header title={t('money.payables')} action={<ActBtn act="addBill" className="btn small">{t('money.addBill')}</ActBtn>} />
         {chips}
+        {tn.approvals.length > 0 && (
+          <div className="card stripe warn"><div className="eyebrow" style={{ marginBottom: 6 }}>{t('money.approvals', { n: tn.approvals.length })}</div><div className="list">
+            {tn.approvals.map((a) => (
+              <div className="item" key={a.id}>
+                <div><div className="t">{a.vendor}</div><div className="s">{a.bill_no} · {dmy(a.date)}</div></div>
+                <div className="r"><div className="t">{fmtL(a.amount)}</div><div className="row" style={{ gap: 6, marginTop: 4 }}>
+                  <ActBtn act="approvePay" ctx={{ approval: a.id }} className="btn small">{t('money.approve')}</ActBtn>
+                  <ActBtn act="rejectPay" ctx={{ approval: a.id }} className="btn small danger">{t('money.reject')}</ActBtn>
+                </div></div>
+              </div>
+            ))}
+          </div></div>
+        )}
         <div className="card"><AgeBar b={ageing(tn.bills, today)} notDue={t('money.notDue')} /></div>
         <div className="card"><div className="list">
           {open(tn.bills).map((b) => (

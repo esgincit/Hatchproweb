@@ -66,6 +66,7 @@ export const SCHEMAS = {
   addRate: z.object({ product: z.enum(RATE_PRODUCTS), zone: text, rate: money, date }),
   addDoc: z.object({ name: text, ref_no: opt(z.string().max(60)), expires: opt(date) }),
   addAdvance: z.object({ worker_id: id, amount: money, date, reason: opt(z.string().max(200)) }),
+  decidePay: z.object({ approval_id: id, approve: z.enum(['yes', 'no']) }),
   inviteUser: z.object({ name: text, phone: mobile, role: z.enum(STAFF_ROLES), language: z.enum(LANGS), farm_id: opt(id) }),
 } as const;
 

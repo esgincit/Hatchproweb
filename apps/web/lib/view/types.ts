@@ -34,6 +34,7 @@ export type Tenant = {
   pos: { id: string; no: string; vendor: string; item: string; qty: number; rate: number; total: number; expected: string; status: string }[];
   stock: { item_id: string; item: string; unit: string; qty: number; reorder: number }[];
   docs: { id: string; name: string; ref_no: string | null; expires: string | null }[];
+  approvals: { id: string; bill_no: string; vendor: string; amount: number; date: string }[];
   advances: { id: string; worker_id: string; worker: string; amount: number; date: string; reason: string }[];
 };
 export type Rate = { date: string; rate: number };

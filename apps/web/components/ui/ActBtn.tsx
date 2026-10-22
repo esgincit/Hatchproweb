@@ -6,7 +6,7 @@ import { ACT_ROLES, canAct } from '@/lib/auth/permissions';
 /** Signed-in user's roles, provided by the app shell. null = don't filter (e.g. platform console). */
 export const RolesContext = createContext<string[] | null>(null);
 // buttons that open another act's form / save through another act
-const SAME_AS: Record<string, string> = { addShedPick: 'addShed', addVisitPick: 'addVisit', payQuick: 'payOpen', attCycle: 'attSet', attSubmit: 'attSet' };
+const SAME_AS: Record<string, string> = { addShedPick: 'addShed', addVisitPick: 'addVisit', payQuick: 'payOpen', attCycle: 'attSet', attSubmit: 'attSet', approvePay: 'decidePay', rejectPay: 'decidePay' };
 
 /**
  * Every demo action button (data-act="…"). Renders exactly like the demo; ActionHost (in the shell)

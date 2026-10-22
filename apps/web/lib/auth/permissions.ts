@@ -37,6 +37,7 @@ export const ACT_ROLES: Record<string, string[]> = {
   closeTicket: [...OWN, 'store_keeper'], serviceDone: [...OWN, 'store_keeper'],
   raisePO: [...MONEY, 'store_keeper'], grnOpen: [...OWN, 'store_keeper'],
   addRate: MONEY, addAdvance: [...OWN, 'finance'],
+  decidePay: ['tenant_owner'], // payments > ₹50,000 by others wait for the owner (0012)
   inviteUser: ['tenant_owner'], // matches invite-user edge function + user_role_assignment policy
   // downloads (app/api/export) — the route enforces the same lists
   tally: [...MONEY, 'auditor'], gstr: [...MONEY, 'auditor'], stmt: [...MONEY, 'auditor'], payroll: [...MONEY, 'auditor'],

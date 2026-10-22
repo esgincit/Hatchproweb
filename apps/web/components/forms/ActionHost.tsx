@@ -103,6 +103,8 @@ const DIRECT: Record<string, (c: ActCtx) => { act: string; input: Record<string,
   attCycle: (c) => ({ act: 'attSet', input: { worker_id: c.worker_id, date: c.date, status: NEXT_ATT[c.code] ?? 'present' } }),
   confirmCase: (c) => ({ act: 'confirmCase', input: { case_id: c.case } }),
   closeCase: (c) => ({ act: 'closeCase', input: { case_id: c.case } }),
+  approvePay: (c) => ({ act: 'decidePay', input: { approval_id: c.approval, approve: 'yes' } }),
+  rejectPay: (c) => ({ act: 'decidePay', input: { approval_id: c.approval, approve: 'no' } }),
 };
 
 export function ActionHost({ today }: { today: string }) {
