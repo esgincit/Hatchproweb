@@ -24,6 +24,13 @@ export function tabsFor(roles: string[]): Tab[] {
 const OWN = ['tenant_owner', 'farm_manager'];
 const MONEY = [...OWN, 'finance'];
 const SHED = [...OWN, 'shed_supervisor', 'labour', 'veterinarian'];
+/** which platform team sees/does what on the console (DB mirrors `billing` in 0016) */
+export const TEAM = {
+  applications: ['platform_admin', 'platform_sales', 'platform_ops'],
+  billing: ['platform_admin', 'platform_finance'],
+  feeds: ['platform_admin', 'platform_ops', 'platform_marketing'],
+} as const;
+
 export const ACT_ROLES: Record<string, string[]> = {
   addFarm: OWN, addShed: OWN, addBatch: OWN, addWorker: OWN,
   saleOpen: MONEY, addBill: MONEY, payOpen: MONEY, addCustomer: MONEY, addVendor: MONEY,

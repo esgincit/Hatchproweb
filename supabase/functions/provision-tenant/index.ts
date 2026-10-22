@@ -11,7 +11,10 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
   });
   const { data: { user } } = await caller.auth.getUser();
-  if (!user || user.app_metadata?.platform !== true) return new Response("forbidden", { status: 403 });
+  // ...on a team that onboards farms (mirrors TEAM.applications in apps/web/lib/auth/permissions.ts)
+  const ONBOARDS = ["platform_admin", "platform_sales", "platform_ops"];
+  const roles: unknown[] = Array.isArray(user?.app_metadata?.roles) ? user.app_metadata.roles : [];
+  if (!user || user.app_metadata?.platform !== true || !roles.some((r) => ONBOARDS.includes(String(r)))) return new Response("forbidden", { status: 403 });
 
   let b = await req.json();
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);

@@ -17,7 +17,7 @@ export function redirectFor(pathname: string, c: Claims | null): string | null {
   const isAdmin = under(pathname, '/admin');
   let to: string | null;
   if (!c) to = isPublic ? null : isAdmin ? '/platform/login' : '/login';
-  else if (c.platform) to = isAdmin ? null : '/admin';
+  else if (c.platform) to = isAdmin || under(pathname, '/apply') ? null : '/admin'; // staff fill /apply for farms that call in
   else if (isAdmin || isPublic) to = landingFor(c);
   else {
     const seg = pathname.split('/')[1] as Tab;

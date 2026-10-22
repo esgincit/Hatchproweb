@@ -21,6 +21,8 @@ export async function runAct(act: string, input: Record<string, unknown>): Promi
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return { ok: false, error: t('signedOut') };
   if (!canAct(claimsFromUser(user).roles, act)) return { ok: false, error: t('forbidden') };
+  const { data: ten } = await sb.from('tenant').select('status').maybeSingle(); // RLS: own tenant only
+  if (ten?.status === 'suspended') return { ok: false, error: t('forbidden') }; // ponytail: app-level; DB-level block if suspension must stop raw API writes
 
   const res = await write(act, parsed.data as never, sb, t);
   if (res.ok) revalidatePath('/', 'layout');

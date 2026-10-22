@@ -38,6 +38,7 @@ describe('redirectFor', () => {
   it('platform staff stay in /admin', () => {
     expect(redirectFor('/home', admin)).toBe('/admin');
     expect(redirectFor('/admin/tenants', admin)).toBeNull();
+    expect(redirectFor('/apply', admin)).toBeNull();
   });
   it('tenant users cannot open /admin or login pages', () => {
     expect(redirectFor('/admin', owner)).toBe('/home');

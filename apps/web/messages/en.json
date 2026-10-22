@@ -476,7 +476,20 @@
     "approve": "Approve & create account",
     "reject": "Reject",
     "approved": "{name} approved · owner can log in",
-    "rejected": "Application rejected"
+    "rejected": "Application rejected",
+    "status": "Status",
+    "save": "Save",
+    "saved": "{name} updated",
+    "st_trial": "Trial",
+    "st_active": "Active",
+    "st_suspended": "Suspended",
+    "team": {
+      "platform_admin": "Super admin",
+      "platform_finance": "Finance team",
+      "platform_sales": "Sales team",
+      "platform_ops": "Operations team",
+      "platform_marketing": "Marketing team"
+    }
   },
   "vendorCat": {
     "doc_hatchery": "Day-old chicks",
@@ -894,5 +907,9 @@
     },
     "consent": "I confirm these details are correct and agree to HatchPro verifying them and contacting me.",
     "submit": "Submit application"
+  },
+  "suspended": {
+    "title": "Account suspended",
+    "body": "This farm account is suspended. Please contact HatchPro support to restore access."
   }
 }

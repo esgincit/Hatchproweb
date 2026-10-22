@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { claimsFromUser } from '@/lib/auth/claims';
 import { tabsFor } from '@/lib/auth/permissions';
 import { AppShell } from '@/components/shell/AppShell';
+import { SignOutButton } from '@/components/shell/SignOutButton';
 import { todayIST } from '@/lib/view/load';
 import { pickerOptions, type FarmType } from '@/lib/farm-types';
 
@@ -22,6 +23,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     sb.from('notification').select('id', { count: 'exact', head: true }).is('read_at', null),
     sb.from('farm').select('farm_type'),
   ]);
+  if (tenant?.status === 'suspended') {
+    const t = await getTranslations('suspended');
+    return <div className="app"><main className="screen"><div className="wrap"><div className="card stripe crit" role="alert"><h2>{t('title')}</h2><p className="s">{t('body')}</p></div><SignOutButton /></div></main></div>;
+  }
   const types = [...new Set((farms ?? []).map((f) => f.farm_type as FarmType))];
   const mode = (me?.active_farm_type as FarmType | null) ?? (types.length === 1 ? types[0] : null);
   if (!mode) redirect('/welcome');
