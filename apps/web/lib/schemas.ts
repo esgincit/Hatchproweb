@@ -19,6 +19,11 @@ export const WORKER_ROLES = ['supervisor', 'helper', 'driver', 'security'] as co
 export const PAY_MODES = ['upi', 'neft', 'cash', 'cheque'] as const;
 export const ATT = ['present', 'half', 'absent', 'leave'] as const;
 export const GRADES = ['jumbo', 'large', 'medium', 'small', 'cracked', 'dirty'] as const;
+export const STAGES = ['placed', 'brooding', 'growing', 'laying', 'finishing', 'lifting'] as const;
+export const PRIORITIES = ['low', 'medium', 'high'] as const;
+export const ASSET_CATS = ['feeder', 'drinker', 'fan', 'generator', 'incubator', 'grader', 'vehicle', 'other'] as const;
+export const ITEM_CATS = ['feed', 'feed_ingredient', 'medicine', 'vaccine', 'disinfectant', 'equipment', 'spare', 'packaging', 'fuel', 'other'] as const;
+export const RATE_PRODUCTS = ['egg', 'broiler_farmgate', 'maize', 'soya'] as const;
 
 export const SCHEMAS = {
   addFarm: z.object({ name: text, farm_type: z.enum(FARM_TYPES), district: opt(text), village: opt(text), capacity: opt(int(1)) }),
@@ -42,6 +47,21 @@ export const SCHEMAS = {
     tmin: opt(z.coerce.number().min(-10).max(60)), tmax: opt(z.coerce.number().min(-10).max(60)), rh: opt(z.coerce.number().min(0).max(100)),
     avg_w: opt(int(1)), remarks: opt(z.string().max(500)), eggs: opt(z.partialRecord(z.enum(GRADES), z.coerce.number().int().min(0))),
   }),
+  closeBatch: z.object({ batch_id: id, date, customer_id: opt(id), weight_kg: opt(money), rate: opt(money) }),
+  batchState: z.object({ batch_id: id, state: z.enum(STAGES), date }),
+  addVacc: z.object({ batch_id: id, vaccine_id: id, due: date }),
+  confirmCase: z.object({ case_id: id }),
+  closeCase: z.object({ case_id: id }),
+  reportIssue: z.object({ asset_id: id, issue: z.string().trim().min(3).max(500), priority: z.enum(PRIORITIES), date }),
+  closeTicket: z.object({ ticket_id: id, date, cost: opt(z.coerce.number().min(0)), vendor_id: opt(id) }),
+  addAsset: z.object({ farm_id: id, name: text, category: z.enum(ASSET_CATS), cost: opt(z.coerce.number().min(0)), next_service: date, date, vendor_id: opt(id) }),
+  serviceDone: z.object({ asset_id: id, date, next_service: date }),
+  addItem: z.object({ name: text, category: z.enum(ITEM_CATS), unit: z.string().trim().min(1).max(20), reorder: opt(z.coerce.number().min(0)), gst: opt(z.coerce.number().min(0).max(28)) }),
+  raisePO: z.object({ vendor_id: id, item_id: id, qty: money, rate: money, expected: date, date }),
+  grnOpen: z.object({ po_id: id, qty: money, bill_amount: money, date, lot: opt(z.string().max(40)), expiry: opt(date) }),
+  addRate: z.object({ product: z.enum(RATE_PRODUCTS), zone: text, rate: money, date }),
+  addDoc: z.object({ name: text, ref_no: opt(z.string().max(60)), expires: opt(date) }),
+  addAdvance: z.object({ worker_id: id, amount: money, date, reason: opt(z.string().max(200)) }),
 } as const;
 
 export type ActKey = keyof typeof SCHEMAS;

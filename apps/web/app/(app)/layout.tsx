@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <AppShell tenantName={tenant?.name ?? 'HatchPro'} sub={sub} unread={unread ?? 0}
-      tabs={tabsFor(c.roles)} mode={mode} modes={pickerOptions(types)} today={todayIST()}>
+      tabs={tabsFor(c.roles)} mode={mode} modes={pickerOptions(types)} today={todayIST()} roles={c.roles}>
       {children}
     </AppShell>
   );

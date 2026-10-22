@@ -38,7 +38,19 @@ export default async function Section({ params, searchParams }: { params: Promis
     );
     case 'docs': return (
       <>{B}<Header title={t('sections.docsTitle')} action={<ActBtn act="addDoc" className="btn small">{t('sections.addDoc')}</ActBtn>} />
-        <div className="card"><div className="list"><div className="s">{t('sections.noDocs')}</div></div></div></>
+        <div className="card"><div className="list">
+          {v.t.docs.map((d) => {
+            const dl = d.expires ? daysBetween(v.today, d.expires) : null;
+            const pill = dl == null ? null : dl < 0 ? ['crit', t('sections.docExpired')] : dl < 45 ? ['warn', t('sections.docDays', { n: dl })] : ['good', t('sections.docValid')];
+            return (
+              <div className="item" key={d.id}>
+                <div><div className="t">{d.name}</div><div className="s">{[d.ref_no, d.expires ? t('sections.docExpires', { date: c.dmy(d.expires) }) : null].filter(Boolean).join(' · ')}</div></div>
+                {pill && <div className="r"><span className={`pill ${pill[0]}`}>{pill[1]}</span></div>}
+              </div>
+            );
+          })}
+          {!v.t.docs.length && <div className="s">{t('sections.noDocs')}</div>}
+        </div></div></>
     );
     case 'reports': {
       const reports: [string, string][] = [
@@ -106,9 +118,10 @@ function People({ c: { v, t, dmy, locale }, tab }: { c: Ctx; tab: string }) {
                   const code = attGet(tn, w.id, ds, today);
                   const label = code in { P: 1, H: 1, A: 1, L: 1 } ? t(`people.${code}`) : '';
                   return (
-                    <ActBtn key={w.id + ds} act="attCycle" className={`d ${code}`}>
+                    ds > today ? <div key={w.id + ds} className="d -" /> : (
+                    <ActBtn key={w.id + ds} act="attCycle" ctx={{ worker_id: w.id, date: ds, code }} className={`d ${code}`}>
                       <span aria-label={`${w.name} ${ds} ${label}`}>{code === 'S' ? '·' : code === '-' ? '' : code}</span>
-                    </ActBtn>
+                    </ActBtn>)
                   );
                 }),
               ])}
@@ -133,7 +146,12 @@ function People({ c: { v, t, dmy, locale }, tab }: { c: Ctx; tab: string }) {
     );
 
   if (tab === 'wages') {
-    const rows = tn.workers.map((w) => { const a = attMonth(tn, w.id, today); const gross = Math.round((w.wage * a.payable) / a.days); return { w, a, adv: 0, gross, net: gross }; });
+    const rows = tn.workers.map((w) => {
+      const a = attMonth(tn, w.id, today);
+      const gross = Math.round((w.wage * a.payable) / a.days);
+      const adv = tn.advances.filter((x) => x.worker_id === w.id).reduce((s, x) => s + x.amount, 0);
+      return { w, a, adv, gross, net: gross - adv };
+    });
     const sum = (f: (r: (typeof rows)[number]) => number) => rows.reduce((s, r) => s + f(r), 0);
     return (
       <><Back href="/more" /><Header title={t('people.wagesTitle', { month })} action={<ActBtn act="addAdvance" className="btn small">{t('people.addAdvance')}</ActBtn>} />{chips}
@@ -147,6 +165,11 @@ function People({ c: { v, t, dmy, locale }, tab }: { c: Ctx; tab: string }) {
             <tr><td><b>{t('people.total')}</b></td><td /><td className="n"><b>{fmtINR(sum((r) => r.gross))}</b></td><td className="n">{fmtINR(sum((r) => r.adv))}</td><td className="n"><b>{fmtINR(sum((r) => r.net))}</b></td></tr>
           </tbody>
         </table></div></div>
+        {tn.advances.length > 0 && (
+          <div className="card"><div className="eyebrow" style={{ marginBottom: 6 }}>{t('people.advancesMonth')}</div><div className="list">
+            {tn.advances.map((x) => <div className="item" key={x.id}><div><div className="t">{x.worker}</div><div className="s">{dmy(x.date)}{x.reason ? ' · ' + x.reason : ''}</div></div><div className="r">{fmtINR(x.amount)}</div></div>)}
+          </div></div>
+        )}
         <ActBtn act="payroll" className="btn">{t('people.payroll')}</ActBtn>
       </>
     );
@@ -188,7 +211,7 @@ function Vendors({ c: { v, t }, B }: { c: Ctx; B: React.ReactNode }) {
                     <div className="t">{x.name} {x.gstin && <span className="pill good" style={{ fontSize: 10 }}>GST ✓</span>}</div>
                     <div className="s">{x.contact} · {x.phone} · {t('sections.termsDays', { n: x.terms })}{x.rating != null ? ` · ★ ${x.rating}` : ''}</div>
                   </div>
-                  <div className="r">{out > 0 && <div className="s" style={{ color: 'var(--crit)' }}>{t('sections.dueAmt', { amt: fmtL(out) })}</div>}<ActBtn act="raisePO" className="btn small secondary">{t('sections.po')}</ActBtn></div>
+                  <div className="r">{out > 0 && <div className="s" style={{ color: 'var(--crit)' }}>{t('sections.dueAmt', { amt: fmtL(out) })}</div>}<ActBtn act="raisePO" ctx={{ vendor: x.id }} className="btn small secondary">{t('sections.po')}</ActBtn></div>
                 </div>
               );
             })}
@@ -235,7 +258,7 @@ function Stock({ c: { v, t, dmy }, B }: { c: Ctx; B: React.ReactNode }) {
               <tr key={s.item}>
                 <td>{s.item}<div className="s" style={{ color: 'var(--muted)' }}>{s.unit}{days ? ' · ' + t('sections.daysLeft', { n: days }) : ''}</div></td>
                 <td className="n">{fmtN(s.qty)}</td><td className="n">{fmtN(s.reorder)}</td>
-                <td>{low ? <ActBtn act="raisePO" className="btn small">{t('sections.reorder')}</ActBtn> : <span className="pill good">{t('common.ok')}</span>}</td>
+                <td>{low ? <ActBtn act="raisePO" ctx={{ item: s.item_id }} className="btn small">{t('sections.reorder')}</ActBtn> : <span className="pill good">{t('common.ok')}</span>}</td>
               </tr>
             );
           })}
@@ -248,7 +271,7 @@ function Stock({ c: { v, t, dmy }, B }: { c: Ctx; B: React.ReactNode }) {
           {tn.pos.map((p) => (
             <div className="item" key={p.id}>
               <div><div className="t">{p.no} · {p.vendor}</div><div className="s">{p.item} · {fmtN(p.qty)} @ ₹{p.rate} · {t('sections.expected', { date: dmy(p.expected) })}</div></div>
-              <div className="r"><div className="t">{fmtL(p.total)}</div>{p.status === 'closed' ? <span className="pill good">{t('sections.received')}</span> : <ActBtn act="grnOpen" className="btn small secondary">{t('sections.receive')}</ActBtn>}</div>
+              <div className="r"><div className="t">{fmtL(p.total)}</div>{p.status === 'closed' ? <span className="pill good">{t('sections.received')}</span> : <ActBtn act="grnOpen" ctx={{ po: p.id }} className="btn small secondary">{t('sections.receive')}</ActBtn>}</div>
             </div>
           ))}
           {!tn.pos.length && <div className="s">{t('sections.noPos')}</div>}
@@ -273,7 +296,7 @@ function Equipment({ c: { v, t, dmy }, B }: { c: Ctx; B: React.ReactNode }) {
           {open.map((k) => (
             <div key={k.id} className={`item stripe ${k.priority === 'high' ? 'crit' : 'warn'}`}>
               <div style={{ minWidth: 0 }}><div className="t">{k.asset}</div><div className="s">{k.issue}</div><div className="s" style={{ color: 'var(--muted)' }}>{t('sections.opened', { date: dmy(k.opened), priority: k.priority })}</div></div>
-              <div className="r"><ActBtn act="closeTicket" className="btn small">{t('common.close')}</ActBtn></div>
+              <div className="r"><ActBtn act="closeTicket" ctx={{ ticket: k.id, name: k.asset }} className="btn small">{t('common.close')}</ActBtn></div>
             </div>
           ))}
         </div></div>
@@ -290,8 +313,8 @@ function Equipment({ c: { v, t, dmy }, B }: { c: Ctx; B: React.ReactNode }) {
                 {dl < 14 ? <span className="pill warn">{t('sections.serviceDue')}</span> : hasOpen ? <span className="pill crit">{t('sections.fault')}</span> : <span className="pill good">{t('common.ok')}</span>}
               </div>
               <div className="row" style={{ gap: 6 }}>
-                <ActBtn act="reportIssue" className="btn small secondary">{t('sections.reportIssue')}</ActBtn>
-                <ActBtn act="serviceDone" className="btn small secondary">{t('sections.serviceDone')}</ActBtn>
+                <ActBtn act="reportIssue" ctx={{ asset: a.id, name: a.name }} className="btn small secondary">{t('sections.reportIssue')}</ActBtn>
+                <ActBtn act="serviceDone" ctx={{ asset: a.id, name: a.name }} className="btn small secondary">{t('sections.serviceDone')}</ActBtn>
               </div>
             </div>
           );
@@ -328,7 +351,7 @@ function Health({ c: { v, t, dmy }, B }: { c: Ctx; B: React.ReactNode }) {
         {tn.disease_cases.map((cs) => (
           <div key={cs.id} className={`item stripe ${cs.status === 'open' ? 'crit' : 'good'}`}>
             <div><div className="t">{cs.disease} · {cs.batch}</div><div className="s">{Math.round(cs.confidence * 100)}% · {cs.vet_confirmed ? t('sections.vetConfirmed') : t('sections.awaitingVet')} · {cs.status}</div></div>
-            {cs.status === 'open' && <div className="r"><ActBtn act="closeCase" className="btn small secondary">{t('sections.resolve')}</ActBtn></div>}
+            {cs.status === 'open' && <div className="r"><ActBtn act="closeCase" ctx={{ case: cs.id }} className="btn small secondary">{t('sections.resolve')}</ActBtn></div>}
           </div>
         ))}
         {!tn.disease_cases.length && <div className="s">{t('sections.noCases')}</div>}

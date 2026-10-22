@@ -10,3 +10,4 @@ __pycache__/
 supabase/.branches/
 supabase/.temp/
 node_modules/
+deno.lock

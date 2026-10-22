@@ -61,7 +61,7 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
   const eggR = rate(v, 'egg'), brR = rate(v, 'broiler_farmgate');
   const nextVacc = b.vacc.find((x) => !x.done);
   const quickCtx: Record<string, Record<string, string>> = {
-    mort: { batch: b.id }, addVisit: { batch: b.id }, batchState: { batch: b.id },
+    mort: { batch: b.id }, addVisit: { batch: b.id }, batchState: { batch: b.id, state: b.state },
     vaccDone: nextVacc ? { vacc: nextVacc.id, name: nextVacc.name } : { batch: b.id },
   };
 
@@ -115,7 +115,7 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
         <div className="card stripe crit">
           <div className="row between">
             <div className="eyebrow">{t('batch.aiFlag')}</div>
-            {!cases[0].vet_confirmed && <ActBtn act="confirmCase" className="btn small secondary">{t('batch.vetConfirm')}</ActBtn>}
+            {!cases[0].vet_confirmed && <ActBtn act="confirmCase" ctx={{ case: cases[0].id }} className="btn small secondary">{t('batch.vetConfirm')}</ActBtn>}
           </div>
           {cases.map((c) => (
             <div key={c.id}>
@@ -141,7 +141,7 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
 
       {!hatch && (
         <div className="card">
-          <div className="row between" style={{ marginBottom: 6 }}><div className="eyebrow">{t('batch.vaccSchedule')}</div><ActBtn act="addVacc" className="btn small">{t('common.add')}</ActBtn></div>
+          <div className="row between" style={{ marginBottom: 6 }}><div className="eyebrow">{t('batch.vaccSchedule')}</div><ActBtn act="addVacc" ctx={{ batch: b.id, ft: b.ft }} className="btn small">{t('common.add')}</ActBtn></div>
           <div className="list">
             {b.vacc.map((x) => {
               const od = !x.done && daysBetween(x.due, today) > 0;
@@ -192,7 +192,7 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
           </>)}
         </div>
       </div>
-      {b.state !== 'closed' && <ActBtn act="closeBatch" className="btn secondary">{t('batch.closeBatch')}</ActBtn>}
+      {b.state !== 'closed' && <ActBtn act="closeBatch" ctx={{ batch: b.id }} className="btn secondary">{t('batch.closeBatch')}</ActBtn>}
     </>
   );
 }

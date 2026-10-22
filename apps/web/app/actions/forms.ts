@@ -122,6 +122,91 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
       const { data: b } = await sb.from('batch').select('code').eq('id', x.batch_id).maybeSingle();
       return { ok: true, msg: t('log.ok'), href: b ? `/farm/batch/${encodeURIComponent(b.code)}` : undefined };
     }
+    case 'closeBatch': {
+      const x = v as In<'closeBatch'>;
+      const { data, error } = await sb.rpc('close_batch', {
+        p_batch: x.batch_id, p_date: x.date, p_customer: x.customer_id ?? null, p_weight_kg: x.weight_kg ?? null, p_rate: x.rate ?? null,
+      });
+      return fail(error) ?? { ok: true, msg: data ? t('close.okSale', { no: String(data) }) : t('close.ok') };
+    }
+    case 'batchState': {
+      const x = v as In<'batchState'>;
+      const { error } = await sb.rpc('set_batch_state', { p_batch: x.batch_id, p_state: x.state, p_date: x.date });
+      return fail(error) ?? { ok: true, msg: t('stage.ok') };
+    }
+    case 'addVacc': {
+      const x = v as In<'addVacc'>;
+      const { error } = await sb.from('vaccination_schedule').insert({ batch_id: x.batch_id, vaccine_id: x.vaccine_id, due_date: x.due });
+      return fail(error) ?? { ok: true, msg: t('addVacc.ok') };
+    }
+    case 'confirmCase': {
+      const x = v as In<'confirmCase'>;
+      const { error } = await sb.from('disease_case').update({ vet_confirmed: true }).eq('id', x.case_id);
+      return fail(error) ?? { ok: true, msg: t('case.confirmed') };
+    }
+    case 'closeCase': {
+      const x = v as In<'closeCase'>;
+      const { error } = await sb.from('disease_case').update({ status: 'resolved' }).eq('id', x.case_id);
+      return fail(error) ?? { ok: true, msg: t('case.resolved') };
+    }
+    case 'reportIssue': {
+      const x = v as In<'reportIssue'>;
+      const { error } = await sb.rpc('report_issue', { p_asset: x.asset_id, p_issue: x.issue, p_priority: x.priority, p_date: x.date });
+      return fail(error) ?? { ok: true, msg: x.priority === 'high' ? t('issue.okHigh') : t('issue.ok') };
+    }
+    case 'closeTicket': {
+      const x = v as In<'closeTicket'>;
+      const { error } = await sb.rpc('close_ticket', { p_ticket: x.ticket_id, p_date: x.date, p_cost: x.cost ?? null, p_vendor: x.vendor_id ?? null });
+      return fail(error) ?? { ok: true, msg: x.cost && x.vendor_id ? t('ticket.okBill', { amt: fmtINR(x.cost) }) : t('ticket.ok') };
+    }
+    case 'addAsset': {
+      const x = v as In<'addAsset'>;
+      const { error } = await sb.rpc('add_asset', {
+        p_farm: x.farm_id, p_name: x.name, p_category: x.category, p_cost: x.cost ?? null, p_next_service: x.next_service, p_date: x.date, p_vendor: x.vendor_id ?? null,
+      });
+      return fail(error) ?? { ok: true, msg: t('asset.ok', { name: x.name }) };
+    }
+    case 'serviceDone': {
+      const x = v as In<'serviceDone'>;
+      if (x.next_service <= x.date) return { ok: false, error: t('service.nextAfter'), fields: ['next_service'] };
+      const { error } = await sb.from('asset').update({ next_service_on: x.next_service, status: 'ok' }).eq('id', x.asset_id);
+      return fail(error) ?? { ok: true, msg: t('service.ok') };
+    }
+    case 'addItem': {
+      const x = v as In<'addItem'>;
+      const { error } = await sb.from('item').insert({ name: x.name, category: x.category, unit: x.unit, reorder_level: x.reorder, gst_pct: x.gst ?? 0 });
+      return fail(error) ?? { ok: true, msg: t('item.ok', { name: x.name }) };
+    }
+    case 'raisePO': {
+      const x = v as In<'raisePO'>;
+      const { data, error } = await sb.rpc('raise_po', { p_vendor: x.vendor_id, p_item: x.item_id, p_qty: x.qty, p_rate: x.rate, p_expected: x.expected, p_date: x.date });
+      return fail(error) ?? { ok: true, msg: t('po.ok', { no: String(data) }), href: '/more/stock' };
+    }
+    case 'grnOpen': {
+      const x = v as In<'grnOpen'>;
+      const { data, error } = await sb.rpc('receive_grn', {
+        p_po: x.po_id, p_qty: x.qty, p_bill_amount: x.bill_amount, p_date: x.date, p_lot: x.lot ?? null, p_expiry: x.expiry ?? null,
+      });
+      if (error) return fail(error)!;
+      const variance = Number(data ?? 0);
+      return { ok: true, msg: Math.abs(variance) <= 1 ? t('grn.ok', { qty: x.qty }) : t('grn.variance', { qty: x.qty, pct: variance.toFixed(1) }) };
+    }
+    case 'addRate': {
+      const x = v as In<'addRate'>;
+      const unit = x.product === 'egg' ? 'per_egg' : 'per_kg';
+      const { error } = await sb.from('market_rate').insert({ source: 'tenant', zone: x.zone, product: x.product, rate_date: x.date, rate: x.rate, unit });
+      return fail(error) ?? { ok: true, msg: t('rate.ok') };
+    }
+    case 'addDoc': {
+      const x = v as In<'addDoc'>;
+      const { error } = await sb.from('tenant_document').insert({ name: x.name, ref_no: x.ref_no, expires_on: x.expires });
+      return fail(error) ?? { ok: true, msg: t('doc.ok', { name: x.name }) };
+    }
+    case 'addAdvance': {
+      const x = v as In<'addAdvance'>;
+      const { error } = await sb.from('worker_advance').insert({ worker_id: x.worker_id, amount: x.amount, given_on: x.date, reason: x.reason });
+      return fail(error) ?? { ok: true, msg: t('advance.ok', { amt: fmtINR(x.amount) }) };
+    }
   }
   return { ok: false, error: t('unknown') };
 }

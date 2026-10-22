@@ -400,7 +400,11 @@
     "vetConfirmed": "vet confirmed",
     "awaitingVet": "awaiting vet",
     "noCases": "No cases.",
-    "diseaseCards": "Disease cards (offline)"
+    "diseaseCards": "Disease cards (offline)",
+    "docValid": "Valid",
+    "docDays": "{n} days",
+    "docExpired": "Expired",
+    "docExpires": "expires {date}"
   },
   "people": {
     "title": "People",
@@ -430,7 +434,8 @@
     "adv": "Adv.",
     "net": "Net",
     "total": "Total",
-    "payroll": "Run payroll · bank file + ledger posting"
+    "payroll": "Run payroll · bank file + ledger posting",
+    "advancesMonth": "Advances this month"
   },
   "admin": {
     "platform": "HatchPro Platform",
@@ -616,7 +621,124 @@
     "log": {
       "ok": "Daily log saved"
     },
-    "forbidden": "Your role cannot do this. Ask your farm owner."
+    "forbidden": "Your role cannot do this. Ask your farm owner.",
+    "close": {
+      "title": "Close batch",
+      "intro": "Lifting or cull. Add the buyer, total live weight and rate to raise the sale invoice now.",
+      "submit": "Close batch",
+      "customer": "Buyer (optional)",
+      "weight": "Total weight (kg)",
+      "rate": "Rate (₹/kg)",
+      "ok": "Batch closed",
+      "okSale": "Batch closed · invoice {no} raised"
+    },
+    "stage": {
+      "title": "Change stage",
+      "state": "Stage",
+      "submit": "Update stage",
+      "ok": "Stage updated"
+    },
+    "addVacc": {
+      "title": "Add vaccination",
+      "vaccine": "Vaccine",
+      "due": "Due on",
+      "ok": "Vaccination added to schedule"
+    },
+    "case": {
+      "confirmed": "Case confirmed by vet",
+      "resolved": "Case resolved"
+    },
+    "issue": {
+      "title": "Report issue · {name}",
+      "issue": "What is wrong?",
+      "priority": "Priority",
+      "submit": "Report",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High — alert owner",
+      "ok": "Ticket opened",
+      "okHigh": "Ticket opened · owner alerted"
+    },
+    "ticket": {
+      "title": "Close ticket · {name}",
+      "cost": "Repair cost (₹)",
+      "vendor": "Paid to (optional)",
+      "submit": "Close ticket",
+      "ok": "Ticket closed",
+      "okBill": "Ticket closed · {amt} equipment bill booked"
+    },
+    "asset": {
+      "title": "Add asset",
+      "intro": "A cost with a vendor books an equipment bill.",
+      "category": "Type",
+      "cost": "Cost (₹)",
+      "purchased": "Bought on",
+      "next": "Next service",
+      "ok": "Asset added · {name}"
+    },
+    "service": {
+      "title": "Service done · {name}",
+      "submit": "Save service",
+      "ok": "Service recorded",
+      "nextAfter": "Next service must be after today"
+    },
+    "item": {
+      "title": "Add stock item",
+      "category": "Category",
+      "unit": "Unit",
+      "reorder": "Reorder level",
+      "gst": "GST %",
+      "ok": "Item added · {name}"
+    },
+    "po": {
+      "title": "Raise purchase order",
+      "submit": "Raise PO",
+      "item": "Item",
+      "qty": "Quantity",
+      "rate": "Rate (₹)",
+      "expected": "Expected on",
+      "needBoth": "Add a vendor and a stock item first.",
+      "ok": "Purchase order {no} raised"
+    },
+    "grn": {
+      "title": "Receive goods (GRN)",
+      "intro": "Stock goes in, the bill is booked and checked against the PO.",
+      "submit": "Post GRN",
+      "po": "Purchase order",
+      "qty": "Received quantity",
+      "bill": "Bill amount (₹)",
+      "lot": "Lot / batch no.",
+      "expiry": "Expiry",
+      "none": "No open purchase orders.",
+      "ok": "GRN posted · stock +{qty} · bill booked · 3-way match OK",
+      "variance": "GRN posted · stock +{qty} · bill differs from PO by {pct}% — check before paying"
+    },
+    "rate": {
+      "title": "Add local rate",
+      "product": "Product",
+      "zone": "Market / zone",
+      "local": "Local",
+      "rate": "Rate (₹)",
+      "ok": "Rate saved",
+      "egg": "Egg (per egg)",
+      "broiler_farmgate": "Broiler farm-gate (per kg)",
+      "maize": "Maize (per kg)",
+      "soya": "Soya DOC (per kg)"
+    },
+    "doc": {
+      "title": "Add document",
+      "name": "Document",
+      "ref": "Reference no.",
+      "expires": "Expires on",
+      "ok": "Document added · {name}"
+    },
+    "advance": {
+      "title": "Wage advance",
+      "worker": "Worker",
+      "reason": "Reason (optional)",
+      "noWorkers": "Add a worker first.",
+      "ok": "Advance of {amt} recorded"
+    }
   },
   "billCat": {
     "chick": "Chicks",
@@ -626,6 +748,28 @@
     "equipment": "Equipment",
     "transport": "Transport",
     "labour": "Labour",
+    "fuel": "Fuel",
+    "other": "Other"
+  },
+  "assetCat": {
+    "feeder": "Feeder",
+    "drinker": "Drinker",
+    "fan": "Fan",
+    "generator": "Generator",
+    "incubator": "Incubator",
+    "grader": "Egg grader",
+    "vehicle": "Vehicle",
+    "other": "Other"
+  },
+  "itemCat": {
+    "feed": "Feed",
+    "feed_ingredient": "Feed ingredient",
+    "medicine": "Medicine",
+    "vaccine": "Vaccine",
+    "disinfectant": "Disinfectant",
+    "equipment": "Equipment",
+    "spare": "Spare part",
+    "packaging": "Packaging",
     "fuel": "Fuel",
     "other": "Other"
   }

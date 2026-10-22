@@ -135,7 +135,9 @@ test('server refuses actions outside the role (supervisor cannot place a batch)'
   await page.getByRole('button', { name: 'Verify' }).click();
   await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 }); // first hit compiles the page in dev
   await page.goto('/farm');
-  await page.getByRole('button', { name: /Shed B/ }).click();
+  // the button is hidden for supervisors; open the form the way a tampered page would, the server must still refuse
+  await expect(page.getByRole('button', { name: /Shed B/ })).toHaveCount(0);
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('hp-act', { detail: { act: 'addBatch', ctx: {} } })));
   const sheet = page.getByRole('dialog');
   await sheet.getByLabel('Batch code').fill('E2E-FORBIDDEN');
   await sheet.getByLabel('Chicks placed').fill('100');

@@ -30,5 +30,12 @@ export const ACT_ROLES: Record<string, string[]> = {
   mort: SHED, logSave: SHED,
   vaccDone: [...OWN, 'shed_supervisor', 'veterinarian'], addVisit: [...OWN, 'shed_supervisor', 'veterinarian'],
   attSet: [...OWN, 'shed_supervisor'],
+  closeBatch: OWN, batchState: OWN, addAsset: OWN, addItem: [...OWN, 'store_keeper'], addDoc: OWN,
+  addVacc: [...OWN, 'shed_supervisor', 'veterinarian'],
+  confirmCase: [...OWN, 'veterinarian'], closeCase: [...OWN, 'veterinarian'],
+  reportIssue: [...OWN, 'shed_supervisor', 'labour', 'store_keeper'],
+  closeTicket: [...OWN, 'store_keeper'], serviceDone: [...OWN, 'store_keeper'],
+  raisePO: [...MONEY, 'store_keeper'], grnOpen: [...OWN, 'store_keeper'],
+  addRate: MONEY, addAdvance: [...OWN, 'finance'],
 };
 export const canAct = (roles: string[], act: string) => (ACT_ROLES[act] ?? []).some((r) => roles.includes(r));

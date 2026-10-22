@@ -7,6 +7,7 @@ import { TAB_ICONS, BellIcon } from './icons';
 import { TenantSheet } from './TenantSheet';
 import { Toaster } from '@/components/ui/Toast';
 import { ActionHost } from '@/components/forms/ActionHost';
+import { RolesContext } from '@/components/ui/ActBtn';
 import type { FarmType } from '@/lib/farm-types';
 import type { Tab } from '@/lib/auth/permissions';
 
@@ -15,7 +16,7 @@ import type { Tab } from '@/lib/auth/permissions';
 const TE: Record<Tab, string> = { home: 'హోమ్', farm: 'ఫారం', log: 'నమోదు', money: 'డబ్బు', more: 'మరిన్ని' };
 const EN: Record<Tab, string> = { home: 'Home', farm: 'Farm', log: 'Log', money: 'Money', more: 'More' };
 
-export function AppShell({ tenantName, sub, unread, tabs, mode, modes, today, children }: {
+export function AppShell({ tenantName, sub, unread, tabs, mode, modes, today, roles, children }: {
   tenantName: string;
   sub: string;
   unread: number;
@@ -23,6 +24,7 @@ export function AppShell({ tenantName, sub, unread, tabs, mode, modes, today, ch
   mode: FarmType;
   modes: FarmType[];
   today: string;
+  roles: string[];
   children: React.ReactNode;
 }) {
   const t = useTranslations();
@@ -31,6 +33,7 @@ export function AppShell({ tenantName, sub, unread, tabs, mode, modes, today, ch
   const [open, setOpen] = useState(false);
   const initials = tenantName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   return (
+    <RolesContext.Provider value={roles}>
     <div className="app">
       <div className="col">
         <header className="topbar">
@@ -61,5 +64,6 @@ export function AppShell({ tenantName, sub, unread, tabs, mode, modes, today, ch
       <ActionHost today={today} />
       <TenantSheet open={open} onOpenChange={setOpen} modes={modes} mode={mode} />
     </div>
+    </RolesContext.Provider>
   );
 }

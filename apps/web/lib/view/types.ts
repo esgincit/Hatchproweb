@@ -32,7 +32,9 @@ export type Tenant = {
   disease_cases: { id: string; batch: string; opened: string; disease: string; confidence: number; vet_confirmed: boolean; status: string; notes: string }[];
   notifications: { id: number; kind: string; severity: string; title: string; body: string; ago_h: number; read: boolean }[];
   pos: { id: string; no: string; vendor: string; item: string; qty: number; rate: number; total: number; expected: string; status: string }[];
-  stock: { item: string; unit: string; qty: number; reorder: number }[];
+  stock: { item_id: string; item: string; unit: string; qty: number; reorder: number }[];
+  docs: { id: string; name: string; ref_no: string | null; expires: string | null }[];
+  advances: { id: string; worker_id: string; worker: string; amount: number; date: string; reason: string }[];
 };
 export type Rate = { date: string; rate: number };
 export type View = {

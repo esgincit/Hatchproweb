@@ -6,8 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { runAct } from '@/app/actions/forms';
-import { SCHEMAS, isAct, FARM_TYPES, SHED_TYPES, VENDOR_CATS, BILL_CATS, PRODUCTS, CUSTOMER_KINDS, WORKER_ROLES, PAY_MODES } from '@/lib/schemas';
-import { fmtINR } from '@/lib/format';
+import {
+  SCHEMAS, isAct, FARM_TYPES, SHED_TYPES, VENDOR_CATS, BILL_CATS, PRODUCTS, CUSTOMER_KINDS, WORKER_ROLES, PAY_MODES,
+  STAGES, PRIORITIES, ASSET_CATS, ITEM_CATS, RATE_PRODUCTS,
+} from '@/lib/schemas';
+import { addDays, fmtINR } from '@/lib/format';
 import { toast } from '@/components/ui/Toast';
 import { FormSheet, type FormSpec, type Field } from './FormSheet';
 
@@ -24,12 +27,17 @@ type Lookups = {
   batches: { id: string; code: string; shed: string; ft: string; active: boolean }[];
   diseases: { code: string; name: string }[];
   open: { kind: 'bill' | 'invoice'; id: string; no: string; party: string; out: number }[];
+  assets: { id: string; name: string }[];
+  items: { id: string; name: string; unit: string }[];
+  pos: { id: string; no: string; vendor: string; item: string; qty: number; rate: number }[];
+  vaccines: { id: string; name: string; farm_type: string; age_day: number }[];
+  workers: { id: string; name: string }[];
 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- PostgREST embeds */
 async function loadLookups(): Promise<Lookups> {
   const sb = createClient();
-  const [farms, sheds, breeds, vendors, customers, batches, diseases, bills, invoices] = await Promise.all([
+  const [farms, sheds, breeds, vendors, customers, batches, diseases, bills, invoices, assets, items, pos, vaccines, workers] = await Promise.all([
     sb.from('farm').select('id,name,farm_type').order('created_at'),
     sb.from('shed').select('id,name,farm_id,batch(state)').order('name'),
     sb.from('breed').select('id,name,farm_type').order('name'),
@@ -39,6 +47,11 @@ async function loadLookups(): Promise<Lookups> {
     sb.from('disease_master').select('code,name').order('name'),
     sb.from('bill').select('id,bill_no,total,paid,vendor(name)').neq('status', 'paid').order('due_date'),
     sb.from('invoice').select('id,invoice_no,total,paid,customer(name)').neq('status', 'paid').order('due_date'),
+    sb.from('asset').select('id,name').order('name'),
+    sb.from('item').select('id,name,unit').order('name'),
+    sb.from('purchase_order').select('id,po_no,vendor(name),po_line(qty,rate,item(name))').in('status', ['approved', 'submitted', 'partial']).order('po_date'),
+    sb.from('vaccine_master').select('id,name,farm_type,age_day').order('age_day'),
+    sb.from('worker').select('id,name').eq('active', true).order('name'),
   ]);
   const d = (r: { data: unknown }) => (r.data ?? []) as any[];
   const one = (x: any) => (Array.isArray(x) ? x[0] : x);
@@ -54,6 +67,14 @@ async function loadLookups(): Promise<Lookups> {
       ...d(bills).map((b) => ({ kind: 'bill' as const, id: b.id, no: b.bill_no, party: one(b.vendor)?.name ?? '', out: Number(b.total) - Number(b.paid) })),
       ...d(invoices).map((i) => ({ kind: 'invoice' as const, id: i.id, no: i.invoice_no, party: one(i.customer)?.name ?? '', out: Number(i.total) - Number(i.paid) })),
     ],
+    assets: d(assets),
+    items: d(items),
+    pos: d(pos).map((p) => {
+      const l = p.po_line?.[0];
+      return { id: p.id, no: p.po_no, vendor: one(p.vendor)?.name ?? '', item: one(l?.item)?.name ?? '', qty: Number(l?.qty ?? 0), rate: Number(l?.rate ?? 0) };
+    }),
+    vaccines: d(vaccines),
+    workers: d(workers),
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -69,6 +90,14 @@ export function nextBatchCode(codes: string[], year: string) {
 // Acts that reuse another form, and acts that just navigate.
 const ALIAS: Record<string, string> = { addShedPick: 'addShed', addVisitPick: 'addVisit' };
 const NAV: Record<string, string> = { attToday: '/more/people' };
+// Register grid: each tap moves the day one step P → H → A → L → P (blank days start at P).
+const NEXT_ATT: Record<string, string> = { P: 'half', H: 'absent', A: 'leave', L: 'present' };
+const DIRECT: Record<string, (c: ActCtx) => { act: string; input: Record<string, unknown> }> = {
+  attSet: (c) => ({ act: 'attSet', input: c }),
+  attCycle: (c) => ({ act: 'attSet', input: { worker_id: c.worker_id, date: c.date, status: NEXT_ATT[c.code] ?? 'present' } }),
+  confirmCase: (c) => ({ act: 'confirmCase', input: { case_id: c.case } }),
+  closeCase: (c) => ({ act: 'closeCase', input: { case_id: c.case } }),
+};
 
 export function ActionHost({ today }: { today: string }) {
   const t = useTranslations();
@@ -100,8 +129,10 @@ export function ActionHost({ today }: { today: string }) {
     const on = async (e: Event) => {
       const { act: a, ctx } = (e as CustomEvent<{ act: string; ctx: ActCtx }>).detail;
       if (NAV[a]) return router.push(NAV[a]);
-      if (a === 'attSet') { // tap P/H/A/L saves immediately, no form
-        const r = await runAct('attSet', ctx);
+      if (a === 'attSubmit') return toast(t('forms.att.ok')); // each tap already saved
+      const direct = DIRECT[a]?.(ctx);
+      if (direct) { // one tap, no form
+        const r = await runAct(direct.act, direct.input);
         return r.ok ? (toast(r.msg), router.refresh()) : toast(r.error);
       }
       lookups.current ??= await loadLookups();
@@ -278,6 +309,138 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
           { id: 'farm_id', label: f('shed.farm'), type: 'select', options: L.farms.map((x) => [x.id, x.name]), half: true },
           { id: 'wage', label: f('worker.wage'), type: 'number', half: true, required: true },
           { id: 'phone', label: f('phone'), type: 'tel', half: true },
+        ],
+      };
+    case 'closeBatch':
+      return {
+        title: f('close.title'), intro: f('close.intro'), submit: f('close.submit'), danger: true, hidden: { batch_id: ctx.batch },
+        fields: [
+          date(),
+          { id: 'customer_id', label: f('close.customer'), type: 'select', options: [none, ...L.customers.map((c): Opt => [c.id, c.name])], half: true },
+          { id: 'weight_kg', label: f('close.weight'), type: 'number', half: true },
+          { id: 'rate', label: f('close.rate'), type: 'number', half: true },
+        ],
+      };
+    case 'batchState':
+      return {
+        title: f('stage.title'), submit: f('stage.submit'), hidden: { batch_id: ctx.batch },
+        fields: [{ id: 'state', label: f('stage.state'), type: 'select', options: enumOpts(STAGES, 'state'), value: ctx.state, half: true }, date()],
+      };
+    case 'addVacc': {
+      const vs = L.vaccines.filter((v) => !ctx.ft || v.farm_type === ctx.ft);
+      return {
+        title: f('addVacc.title'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [
+          { id: 'vaccine_id', label: f('addVacc.vaccine'), type: 'select', options: vs.map((v): Opt => [v.id, `${v.name} · ${t('common.day', { n: v.age_day })}`]) },
+          { ...date('due', f('addVacc.due')), max: undefined },
+        ],
+      };
+    }
+    case 'reportIssue':
+      return {
+        title: f('issue.title', { name: ctx.name ?? '' }), submit: f('issue.submit'), hidden: { asset_id: ctx.asset },
+        fields: [
+          { id: 'issue', label: f('issue.issue'), type: 'textarea', required: true },
+          { id: 'priority', label: f('issue.priority'), type: 'select', options: enumOpts(PRIORITIES, 'forms.issue'), value: 'medium', half: true },
+          date(),
+        ],
+      };
+    case 'closeTicket':
+      return {
+        title: f('ticket.title', { name: ctx.name ?? '' }), submit: f('ticket.submit'), hidden: { ticket_id: ctx.ticket },
+        fields: [
+          date(),
+          { id: 'cost', label: f('ticket.cost'), type: 'number', half: true },
+          { id: 'vendor_id', label: f('ticket.vendor'), type: 'select', options: [none, ...vendorOpts()] },
+        ],
+      };
+    case 'addAsset':
+      if (!L.farms.length) return { title: f('asset.title'), intro: f('needFarm'), fields: [], submit: f('save') };
+      return {
+        title: f('asset.title'), intro: f('asset.intro'), submit: f('save'),
+        fields: [
+          { id: 'name', label: f('name'), required: true },
+          { id: 'farm_id', label: f('shed.farm'), type: 'select', options: L.farms.map((x): Opt => [x.id, x.name]), half: true },
+          { id: 'category', label: f('asset.category'), type: 'select', options: enumOpts(ASSET_CATS, 'assetCat'), half: true, value: 'fan' },
+          { id: 'cost', label: f('asset.cost'), type: 'number', half: true },
+          { ...date('date', f('asset.purchased')) },
+          { id: 'next_service', label: f('asset.next'), type: 'date', value: addDays(today, 90), half: true, required: true },
+          { id: 'vendor_id', label: f('ticket.vendor'), type: 'select', options: [none, ...vendorOpts()] },
+        ],
+      };
+    case 'serviceDone':
+      return {
+        title: f('service.title', { name: ctx.name ?? '' }), submit: f('service.submit'), hidden: { asset_id: ctx.asset },
+        fields: [date(), { id: 'next_service', label: f('asset.next'), type: 'date', value: addDays(today, 90), half: true, required: true }],
+      };
+    case 'addItem':
+      return {
+        title: f('item.title'), submit: f('save'),
+        fields: [
+          { id: 'name', label: f('name'), required: true },
+          { id: 'category', label: f('item.category'), type: 'select', options: enumOpts(ITEM_CATS, 'itemCat'), value: 'feed', half: true },
+          { id: 'unit', label: f('item.unit'), value: 'bag50', half: true, required: true },
+          { id: 'reorder', label: f('item.reorder'), type: 'number', half: true },
+          { id: 'gst', label: f('item.gst'), type: 'number', half: true, value: 0 },
+        ],
+      };
+    case 'raisePO':
+      if (!L.vendors.length || !L.items.length) return { title: f('po.title'), intro: f('po.needBoth'), fields: [], submit: f('save') };
+      return {
+        title: f('po.title'), submit: f('po.submit'),
+        fields: [
+          { id: 'vendor_id', label: f('bill.vendor'), type: 'select', options: vendorOpts(), value: ctx.vendor },
+          { id: 'item_id', label: f('po.item'), type: 'select', options: L.items.map((i): Opt => [i.id, `${i.name} · ${i.unit}`]), value: ctx.item },
+          { id: 'qty', label: f('po.qty'), type: 'number', half: true, required: true },
+          { id: 'rate', label: f('po.rate'), type: 'number', half: true, required: true },
+          { id: 'expected', label: f('po.expected'), type: 'date', value: addDays(today, 3), half: true, required: true },
+          date(),
+        ],
+      };
+    case 'grnOpen': {
+      if (!L.pos.length) return { title: f('grn.title'), intro: f('grn.none'), fields: [], submit: f('save') };
+      const po = L.pos.find((p) => p.id === ctx.po) ?? L.pos[0];
+      return {
+        title: f('grn.title'), intro: f('grn.intro'), submit: f('grn.submit'),
+        fields: [
+          { id: 'po_id', label: f('grn.po'), type: 'select', value: po.id,
+            options: L.pos.map((p): Opt => [p.id, `${p.no} · ${p.vendor} · ${p.item} · ${p.qty} @ ₹${p.rate}`]) },
+          { id: 'qty', label: f('grn.qty'), type: 'number', value: po.qty, half: true, required: true },
+          { id: 'bill_amount', label: f('grn.bill'), type: 'number', half: true, required: true },
+          date(),
+          { id: 'lot', label: f('grn.lot'), half: true },
+          { id: 'expiry', label: f('grn.expiry'), type: 'date', half: true },
+        ],
+      };
+    }
+    case 'addRate':
+      return {
+        title: f('rate.title'), submit: f('save'),
+        fields: [
+          { id: 'product', label: f('rate.product'), type: 'select', options: enumOpts(RATE_PRODUCTS, 'forms.rate'), value: 'egg', half: true },
+          { id: 'zone', label: f('rate.zone'), value: f('rate.local'), half: true, required: true },
+          { id: 'rate', label: f('rate.rate'), type: 'number', half: true, required: true },
+          date(),
+        ],
+      };
+    case 'addDoc':
+      return {
+        title: f('doc.title'), submit: f('save'),
+        fields: [
+          { id: 'name', label: f('doc.name'), required: true, placeholder: 'PCB consent to operate' },
+          { id: 'ref_no', label: f('doc.ref'), half: true },
+          { id: 'expires', label: f('doc.expires'), type: 'date', half: true },
+        ],
+      };
+    case 'addAdvance':
+      if (!L.workers.length) return { title: f('advance.title'), intro: f('advance.noWorkers'), fields: [], submit: f('save') };
+      return {
+        title: f('advance.title'), submit: f('save'),
+        fields: [
+          { id: 'worker_id', label: f('advance.worker'), type: 'select', options: L.workers.map((w): Opt => [w.id, w.name]), value: ctx.worker },
+          { id: 'amount', label: f('amount'), type: 'number', half: true, required: true },
+          date(),
+          { id: 'reason', label: f('advance.reason') },
         ],
       };
     default:
