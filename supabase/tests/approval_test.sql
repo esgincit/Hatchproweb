@@ -24,6 +24,16 @@ begin
     select 'out', 'vendor', vendor_id, 'bill', id, 1000, 'cash', current_date from bill where id = b;
     assert false, 'direct payment row on big bill'; exception when raise_exception then null; end;
   begin update bill set paid = total where id = b; assert false, 'direct bill.paid edit'; exception when raise_exception then null; end;
+  begin update bill set vendor_id = (select id from vendor where id <> (select vendor_id from bill where id = b) limit 1) where id = b;
+    assert false, 'redirecting a big bill'; exception when raise_exception then null; end;
+  begin insert into payment (direction, party_type, party_id, ref_type, ref_id, amount, mode, paid_on)
+    values ('out', 'vendor', (select vendor_id from bill where id = b), 'other', gen_random_uuid(), 90000, 'cash', current_date);
+    assert false, 'untied outgoing payment'; exception when raise_exception then null; end;
+  begin update payment set amount = amount + 1 where id = (select id from payment limit 1); assert false, 'editing a payment';
+  exception when raise_exception then null; end;
+  begin insert into bill (farm_id, vendor_id, bill_no, bill_date, due_date, category, total, paid, status)
+    select farm_id, vendor_id, 'X-PAID', current_date, current_date, 'feed', 90000, 90000, 'paid' from bill where id = b;
+    assert false, 'born-paid big bill'; exception when raise_exception then null; end;
   begin update bill set total = 40000 where id = b; assert false, 'lowering a big bill'; exception when raise_exception then null; end;
   begin insert into payment_approval (bill_id, amount, mode, paid_on, status, requested_by) values (b, 10, 'cash', current_date, 'approved', auth.uid());
     assert false, 'pre-approved request'; exception when insufficient_privilege then null; end;
