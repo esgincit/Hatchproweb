@@ -1,0 +1,51 @@
+# HatchPro — QA environment setup
+
+`main` holds the web app (`apps/web`, Next.js 15), the Supabase schema (`supabase/migrations` 0001–0020), edge
+functions (`supabase/functions`) and demo seed data. Nothing deploys automatically: the database workflow is manual.
+
+## 1. Supabase QA project (owner of the Supabase account)
+1. Create a project (region Mumbai `ap-south-1`) for QA — keep it separate from production.
+2. GitHub → repo **Settings → Environments → New environment `qa`**, add secrets:
+   - `SUPABASE_PROJECT_REF` — the project ref (from the project URL)
+   - `SUPABASE_ACCESS_TOKEN` — Supabase account → Access Tokens
+   - `SUPABASE_DB_PASSWORD` — the database password
+3. GitHub → **Actions → "Supabase migrate (manual)" → Run workflow → environment `qa`**. It applies every migration
+   and deploys the functions. (CLI alternative: `npx supabase@2 link --project-ref <ref>`, `npx supabase@2 db push`,
+   `npx supabase@2 functions deploy`.)
+4. Optional function secrets (features stay off without them):
+   `npx supabase@2 secrets set WHATSAPP_TOKEN=… WHATSAPP_PHONE_ID=… ANTHROPIC_API_KEY=… RAZORPAY_WEBHOOK_SECRET=…`
+5. **Authentication** settings:
+   - Providers → **Phone**: on, with an SMS provider (MSG91 / Twilio …).
+   - **Test phone numbers** (same screen) so QA can log in without SMS, e.g. `919849012345` → `123456`
+     (full list in `supabase/config.toml` under `[auth.sms.test_otp]`).
+   - Turn **off** "Allow new users to sign up" — accounts are created by approval / invite only.
+   - URL Configuration → Site URL + Redirect URLs = the QA web address.
+
+### Demo data (QA only, optional)
+- SQL editor → run `supabase/seed.sql` (two demo tenants: VKR Poultry Farms, KS Farms).
+- Create their logins: `SUPABASE_URL=https://<ref>.supabase.co SUPABASE_SERVICE_ROLE_KEY=<service key> deno run -A scripts/create_demo_users.ts`
+- The seed is dated around 2026-10-19; set `APP_TODAY=2026-10-19` on the QA web host so dashboards look current.
+
+## 2. Web app (Vercel or any Node 20+ host)
+- Root directory `apps/web`, install `pnpm install`, build `pnpm build`, start `pnpm start`.
+- Environment variables (see `apps/web/.env.example`):
+  - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the QA project's URL + anon key
+  - `APP_TODAY` — only if using the demo seed data
+  - Never set the service-role key on the web host.
+
+## 3. Smoke test checklist
+| Area | Check |
+|---|---|
+| Login | Farm login with a test number + OTP; platform login (`919000000000`) lands on /admin |
+| Onboarding | /apply → approve in admin → new owner logs in with farms/sheds pre-created |
+| Farm 3D | Farm screen shows the 3D farm; tap a shed → panel with expected vs actual; Inside / Top views; Live time |
+| Daily work | Daily log, mortality, vaccination, vet visit; the 3D panel updates within seconds |
+| Money | Sale, bill, payment; payment over ₹50,000 by finance waits for owner approval; Tally / GSTR exports |
+| Reminders | Money → Receivables → WhatsApp reminders → Send opens WhatsApp with the message; row shows "Reminded today" |
+| Roles | Supervisor has no Money tab; finance can't approve big payments |
+| Languages | Switch en / te / hi / ta / kn |
+
+## Known limits in this build
+- 3D needs hardware graphics; machines without it show "3D view isn't available on this device".
+- WhatsApp reminders use click-to-chat links; automatic sending needs a WhatsApp Business API token + approved template.
+- PDF reports and payroll bank files are not built yet.

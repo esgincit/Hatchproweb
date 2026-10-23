@@ -1,18 +1,26 @@
-name: Supabase migrate
+name: Supabase migrate (manual)
+# Runs only when someone clicks "Run workflow" in the Actions tab — never on push — and uses the secrets of the
+# chosen GitHub environment (Settings → Environments: qa / production), so each points at its own Supabase project.
+# Secrets per environment: SUPABASE_PROJECT_REF, SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD. See docs/QA.md.
 on:
-  push:
-    branches: [main]
-    paths: ['supabase/**']
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which environment's Supabase project to migrate
+        type: choice
+        options: [qa, production]
+        default: qa
 jobs:
   migrate:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with: { version: latest }
       - run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env: { SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }} }
+        env: { SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}, SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }} }
       - run: supabase db push
         env: { SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}, SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }} }
-      - run: supabase functions deploy market-rates daily-alerts sync-apply ai-triage razorpay-webhook provision-tenant
+      - run: supabase functions deploy market-rates daily-alerts sync-apply ai-triage razorpay-webhook provision-tenant invite-user
         env: { SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }} }
