@@ -12,3 +12,6 @@ supabase/.temp/
 node_modules/
 deno.lock
 apps/web/scripts/.cache/
+
+# local scratch file with credentials — never commit
+temp.txt
