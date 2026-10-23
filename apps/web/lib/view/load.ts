@@ -43,7 +43,7 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
     sb.from('maintenance_ticket').select('id,opened_on,issue,priority,status,cost,asset_id,asset(name)').order('opened_on', { ascending: false }),
     sb.from('bill').select('id,bill_no,category,bill_date,due_date,total,paid,status,batch_id,vendor(name)').order('bill_date', { ascending: false }),
     sb.from('invoice')
-      .select('id,invoice_no,product,qty,unit,rate,invoice_date,due_date,total,paid,status,batch_id,customer(name)')
+      .select('id,invoice_no,product,qty,unit,rate,invoice_date,due_date,total,paid,status,batch_id,customer_id,customer(name)')
       .order('invoice_date', { ascending: false }),
     sb.from('vet_visit').select('batch_id,visit_date,vet_name,findings,prescription').order('visit_date', { ascending: false }),
     sb.from('disease_case').select('id,batch_id,opened_on,ai_top_condition,ai_confidence,vet_confirmed,status,notes').order('opened_on', { ascending: false }),
@@ -137,7 +137,7 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
       total: n(b.total), paid: n(b.paid), status: b.status, batch: codeOf.get(b.batch_id) ?? null,
     })),
     invoices: invoices.map((i) => ({
-      id: i.id, no: i.invoice_no, customer: one<any>(i.customer)?.name ?? '', product: i.product, qty: n(i.qty), unit: i.unit, rate: n(i.rate),
+      id: i.id, no: i.invoice_no, customer_id: i.customer_id, customer: one<any>(i.customer)?.name ?? '', product: i.product, qty: n(i.qty), unit: i.unit, rate: n(i.rate),
       date: i.invoice_date, due: i.due_date, total: n(i.total), paid: n(i.paid), status: i.status, batch: codeOf.get(i.batch_id) ?? null,
     })),
     vet_visits: visits.map((v) => ({ batch: codeOf.get(v.batch_id) ?? '', date: v.visit_date, vet: v.vet_name, findings: v.findings ?? '', prescription: v.prescription ?? '' })),

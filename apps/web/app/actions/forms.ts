@@ -225,6 +225,11 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
       const { error } = await sb.from('worker_advance').insert({ worker_id: x.worker_id, amount: x.amount, given_on: x.date, reason: x.reason });
       return fail(error) ?? { ok: true, msg: t('advance.ok', { amt: fmtINR(x.amount) }) };
     }
+    case 'remind': {
+      const x = v as In<'remind'>;
+      const { error } = await sb.from('reminder_log').insert({ customer_id: x.customer_id, invoice_ids: x.invoice_ids, amount: x.amount, channel: 'wa_link', lang: x.lang });
+      return fail(error) ?? { ok: true, msg: t('remindOk') };
+    }
   }
   return { ok: false, error: t('unknown') };
 }

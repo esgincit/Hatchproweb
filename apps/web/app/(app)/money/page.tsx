@@ -1,5 +1,6 @@
 // Port of demo/index.html moneyScreen (:403-420). View chosen by ?view=overview|ap|ar|pnl|rates.
 import Link from 'next/link';
+import { createTranslator } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { loadView } from '@/lib/view/load';
 import { ageing, batchKpi, costPerEgg, rate, tenantKpi, type Ageing } from '@/lib/kpi';
@@ -7,10 +8,35 @@ import { dateFmt, daysBetween, fmtL, fmtN, monthFmt } from '@/lib/format';
 import { Chips, Header, Live, RagPill, StatusPill } from '@/components/ui/bits';
 import { ActBtn } from '@/components/ui/ActBtn';
 import { LineChart } from '@/components/charts/LineChart';
-import type { Rate } from '@/lib/view/types';
+import type { Rate, Tenant } from '@/lib/view/types';
+import { createClient } from '@/lib/supabase/server';
+import { LOCALES, type Locale } from '@/lib/i18n/locales';
+import { overdueByCustomer } from '@/lib/remind';
+import { RemindSheet, type RemindRow } from '@/components/money/RemindSheet';
 
 const dOnly = (s: string) => s.slice(5).replace('-', '/');
 const AGE_COL: Record<keyof Ageing, string> = { 'Not due': 'var(--good)', '1–30': 'var(--warn)', '31–60': 'var(--crit)', '60+': 'var(--ink)' };
+
+/** Overdue customers for the WhatsApp reminder sheet: message pre-rendered in every language + days since the last reminder. */
+async function remindRows(tn: Tenant, today: string): Promise<RemindRow[]> {
+  const dues = overdueByCustomer(tn, today);
+  if (!dues.length) return [];
+  const sb = await createClient();
+  const { data: logs } = await sb.from('reminder_log').select('customer_id,sent_at').in('customer_id', dues.map((d) => d.customer_id)).order('sent_at', { ascending: false });
+  const ist = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // real date, not APP_TODAY: logs carry real timestamps
+  const now = ist(new Date()), last = new Map<string, number>();
+  for (const l of logs ?? []) if (!last.has(l.customer_id)) last.set(l.customer_id, daysBetween(ist(new Date(l.sent_at)), now));
+  // every language, not just the viewer's: i18n/request.ts always serves the cookie's locale, so load each catalogue
+  const tls = await Promise.all(LOCALES.map(async (locale) =>
+    createTranslator({ locale, messages: (await import(`@/messages/${locale}.json`)).default, namespace: 'remind' })));
+  return dues.map((d) => ({
+    ...d,
+    last: last.get(d.customer_id) ?? null,
+    msgs: Object.fromEntries(LOCALES.map((l, k) => [l, tls[k]('msg', {
+      customer: d.name, farm: tn.name, amount: fmtN(d.amount), invoices: d.invoices.map((i) => i.no).join(', '), date: dateFmt(l)(d.oldestDue),
+    })])) as Record<Locale, string>,
+  }));
+}
 
 function AgeBar({ b, notDue }: { b: Ageing; notDue: string }) {
   const tot = Object.values(b).reduce((a, x) => a + x, 0) || 1;
@@ -86,7 +112,8 @@ export default async function Money({ searchParams }: { searchParams: Promise<{ 
       </>
     );
 
-  if (view === 'ar')
+  if (view === 'ar') {
+    const remind = await remindRows(tn, today);
     return (
       <>
         <Header title={t('money.receivables')} action={<ActBtn act="saleOpen" className="btn small">{t('money.addSale')}</ActBtn>} />
@@ -102,8 +129,10 @@ export default async function Money({ searchParams }: { searchParams: Promise<{ 
           {!open(tn.invoices).length && <div className="s">{t('money.nothingOutstanding')}</div>}
         </div></div>
         <ActBtn act="remind" className="btn secondary">{t('money.remind', { amt: fmtL(K.arOver) })}</ActBtn>
+        <RemindSheet rows={remind} lang={locale as Locale} />
       </>
     );
+  }
 
   if (view === 'rates')
     return (

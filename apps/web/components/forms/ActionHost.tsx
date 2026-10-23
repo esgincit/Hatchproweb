@@ -136,6 +136,7 @@ export function ActionHost({ today }: { today: string }) {
   useEffect(() => {
     const on = async (e: Event) => {
       const { act: a, ctx } = (e as CustomEvent<{ act: string; ctx: ActCtx }>).detail;
+      if (a === 'remind') return; // components/money/RemindSheet owns this act
       if (NAV[a]) return router.push(NAV[a]);
       if (a === 'attSubmit') return toast(t('forms.att.ok')); // each tap already saved
       const dl = DOWNLOAD[a]?.(ctx);

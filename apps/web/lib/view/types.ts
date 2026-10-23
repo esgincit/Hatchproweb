@@ -20,7 +20,7 @@ export type Farm = {
   lat: number | null; lng: number | null; feed_kg: number | null; // complete feed in this farm's store (null = not tracked)
 };
 export type Bill = { id: string; no: string; vendor: string; category: string; date: string; due: string; total: number; paid: number; status: string; batch: string | null };
-export type Invoice = { id: string; no: string; customer: string; product: string; qty: number; unit: string; rate: number; date: string; due: string; total: number; paid: number; status: string; batch: string | null };
+export type Invoice = { id: string; no: string; customer_id: string; customer: string; product: string; qty: number; unit: string; rate: number; date: string; due: string; total: number; paid: number; status: string; batch: string | null };
 export type Tenant = {
   id: string; name: string; plan: string; state: string; status: string;
   farms: Farm[]; batches: Batch[];

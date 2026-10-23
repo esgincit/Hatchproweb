@@ -782,7 +782,8 @@
       "allFarms": "All farms",
       "submit": "Send invite",
       "ok": "{name} can now log in with {phone}"
-    }
+    },
+    "remindOk": "Reminder logged"
   },
   "billCat": {
     "chick": "Chicks",
@@ -979,5 +980,18 @@
     "emptyShed": "Empty — place a batch",
     "placeBatch": "Place a batch",
     "scale": "3D shows {drawn} of {alive} birds"
+  },
+  "remind": {
+    "title": "WhatsApp reminders",
+    "hint": "Tap Send: WhatsApp opens with the message ready, then press send there. Every reminder is logged here.",
+    "lang": "Message language",
+    "due": "{amount} overdue · {count, plural, one {# invoice} other {# invoices}} · {days, plural, one {# day} other {# days}}",
+    "send": "Send on WhatsApp",
+    "noPhone": "No mobile number. Add it under Customers.",
+    "never": "Not reminded yet",
+    "today": "Reminded today",
+    "ago": "Reminded {n, plural, one {# day} other {# days}} ago",
+    "none": "No overdue payments right now.",
+    "msg": "Namaste {customer} 🙏\nGentle payment reminder from {farm}.\nPending: ₹{amount} (invoices {invoices}), due since {date}.\nPlease pay by UPI or bank transfer at the earliest. Thank you!"
   }
 }

@@ -30,6 +30,7 @@ async function dropBatch(code: string) {
 }
 
 test('place a batch in a free shed, then record mortality on it', async ({ page }, info) => {
+  test.setTimeout(60_000); // several saves, each re-rendering pages on the dev server
   const code = `E2E-${info.project.name}-${Date.now() % 100000}`;
   await login(page);
   try {
@@ -66,7 +67,7 @@ test('daily log saves and shows in the batch table', async ({ page }) => {
     await page.getByLabel('Mortality').fill('7');
     await page.getByLabel('Avg weight (g) · 50 birds').fill('1612');
     await page.getByRole('button', { name: /Save log/ }).click();
-    await expect(page).toHaveURL(/\/farm\/batch\/VKR-B-2026-14$/);
+    await expect(page).toHaveURL(/\/farm\/batch\/VKR-B-2026-14$/, { timeout: 20_000 }); // save + batch page render (dev)
     await expect(page.locator('tbody tr').first()).toContainText('1612');
   } finally {
     if (before) {

@@ -31,7 +31,7 @@ describe('attMonth + ageing', () => {
     expect([a.P, a.H, a.L, a.A, a.payable, a.days]).toEqual([1, 1, 1, 1, 2.5, 31]);
   });
   it('buckets outstanding by days past due', () => {
-    const inv = (due: string, total: number, paid = 0) => ({ id: due, no: '', customer: '', product: '', qty: 0, unit: '', rate: 0, date: due, due, total, paid, status: 'unpaid', batch: null });
+    const inv = (due: string, total: number, paid = 0) => ({ id: due, no: '', customer_id: 'c', customer: '', product: '', qty: 0, unit: '', rate: 0, date: due, due, total, paid, status: 'unpaid', batch: null });
     expect(ageing([inv('2026-10-25', 100), inv('2026-10-01', 200, 50), inv('2026-08-01', 300), inv('2026-07-01', 1, 1)], '2026-10-19'))
       .toEqual({ 'Not due': 100, '1–30': 150, '31–60': 0, '60+': 300 });
   });

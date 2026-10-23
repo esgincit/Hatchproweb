@@ -66,6 +66,8 @@ export const SCHEMAS = {
   addRate: z.object({ product: z.enum(RATE_PRODUCTS), zone: text, rate: money, date }),
   addDoc: z.object({ name: text, ref_no: opt(z.string().max(60)), expires: opt(date) }),
   addAdvance: z.object({ worker_id: id, amount: money, date, reason: opt(z.string().max(200)) }),
+  // WhatsApp payment reminder (click-to-chat): log who reminded which customer about which invoices, in which language
+  remind: z.object({ customer_id: id, invoice_ids: z.array(id).min(1).max(50), amount: money, lang: z.enum(LANGS) }),
   decidePay: z.object({ approval_id: id, approve: z.enum(['yes', 'no']) }),
   inviteUser: z.object({ name: text, phone: mobile, role: z.enum(STAFF_ROLES), language: z.enum(LANGS), farm_id: opt(id) }),
 } as const;
