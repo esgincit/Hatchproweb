@@ -1,111 +1,95 @@
-# PoultryOS — multi-tenant poultry farm SaaS (India)
+# HatchPro — poultry farm operations SaaS (India)
 
-Layer · broiler · hatchery · 360° operations on Supabase + Flutter.
+Layer · broiler · hatchery farms: daily logs, batches, health, money, people, stock, a live 3D farm view and
+WhatsApp payment reminders. Multi-tenant on Supabase (Postgres + RLS + Auth), web app in Next.js, mobile in Flutter.
+Five languages: English, Telugu, Hindi, Tamil, Kannada.
+
+> Setting up QA or production? Follow **[docs/QA.md](docs/QA.md)**.
+
+## Repository
 
 ```
-poultryos/
+├─ apps/web/                      Next.js 15 web app (React 19, TypeScript, next-intl)
+│  ├─ app/                        routes: /login, /apply, /home, /farm, /log, /money, /more, /admin (platform)
+│  ├─ components/farm3d/          live 3D farm (three.js / React Three Fiber) + viewer UI
+│  ├─ lib/                        data loader, KPIs, schemas, permissions, reminders
+│  ├─ messages/                   en / te / hi / ta / kn
+│  ├─ public/3d/                  CC0 textures, HDRI skies, Blender models (see public/3d/CREDITS.md)
+│  ├─ scripts/                    fetch_assets.py (textures), blender/*.py (3D models, rebuild in Blender 5.2)
+│  ├─ tests/unit/                 Vitest
+│  └─ e2e/                        Playwright (phone 390 px + desktop 1280 px)
 ├─ supabase/
-│  ├─ config.toml                    Supabase CLI project config
-│  ├─ migrations/0001_schema.sql     tables, enums, RLS policies, KPI views
-│  ├─ seed.sql                       demo data: VKR Poultry Farms + KS Farms (generated)
-│  └─ functions/
-│     ├─ market-rates/index.ts       scheduled: pull NECC / broiler rates into market_rate
-│     ├─ daily-alerts/index.ts       scheduled: mortality spikes, vaccinations due, low stock → notification + WhatsApp
-│     ├─ sync-apply/index.ts         mobile outbox replay (idempotent, LWW, append-only events)
-│     ├─ ai-triage/index.ts          photo → disease triage via Claude vision → disease_case
-│     └─ razorpay-webhook/index.ts   payment webhook → payment rows → bill/invoice status
-├─ mobile/                           Flutter app (Riverpod + Drift offline store + supabase_flutter)
-├─ scripts/
-│  ├─ gen_seed.py                    regenerates supabase/seed.sql and demo/data.json
-│  └─ create_demo_users.ts           creates the seed users in Supabase Auth with tenant claims
-├─ demo/index.html + data.json       clickable mobile-view demo (published as a Claude artifact)
-└─ .github/workflows/                CI: db migrate on main, Flutter build on tag
+│  ├─ migrations/                 0001–0020: schema, RLS, role + suspension policies, actions, reminders
+│  ├─ functions/                  edge functions: provision-tenant, invite-user, daily-alerts, market-rates, …
+│  ├─ tests/                      SQL tests for RLS / roles / approvals / suspension / reminders
+│  ├─ seed.sql                    demo data: VKR Poultry Farms + KS Farms
+│  └─ config.toml                 local Supabase config (phone OTP, test numbers, signups off)
+├─ mobile/                        Flutter app (Android first)
+├─ scripts/                       gen_seed.py, create_demo_users.ts
+├─ demo/                          original clickable UI spec (index.html)
+├─ docs/                          QA guide, plans, research
+└─ .github/workflows/             db.yml (manual migrate per environment), mobile.yml (Flutter build)
 ```
 
-## 1. Supabase project (10 minutes)
+## Local development
+
+Needs Node 20+, pnpm 9, Docker Desktop, and the Supabase CLI (`npx supabase@2 …`).
 
 ```bash
-npm i -g supabase
-supabase login
-supabase projects create poultryos --region ap-south-1 --org-id <your-org>   # Mumbai
-supabase link --project-ref <project-ref>
+pnpm install
+npx supabase@2 start                        # local Postgres + Auth + Storage (Docker); applies migrations + seed
+npx supabase@2 functions serve              # edge functions (restart after supabase stop/start)
+deno run -A --node-modules-dir=none scripts/create_demo_users.ts   # demo logins (needs SUPABASE_URL + SERVICE_ROLE_KEY)
 
-# apply schema + RLS + views, then the demo seed
-supabase db push                                   # runs supabase/migrations/*
-psql "$SUPABASE_DB_URL" -f supabase/seed.sql       # DB URL from Project Settings → Database
-
-# storage buckets (photos are private, served by signed URL)
-supabase storage create evidence --private
-supabase storage create documents --private
+cp apps/web/.env.example apps/web/.env.local   # fill from `npx supabase@2 status` (local values only)
+cd apps/web && pnpm dev -p 3100             # http://localhost:3100
 ```
 
-### Auth: tenant_id and roles as JWT claims
+Demo logins (local, OTP `123456`): `9849012345` VKR owner · `9000033445` VKR supervisor · `9849022334` VKR finance ·
+`9440012121` KS owner · `9000000000` platform admin (at `/platform/login`).
 
-RLS reads `request.jwt.claims -> app_metadata -> tenant_id`. Set it on each user with the
-service role (`scripts/create_demo_users.ts` does this for the seed users):
+`apps/web/.env.local` must point at the **local** database: the tests reset data with the service-role key.
+Live/QA keys go on the host (or `.env.production.local`), never in `.env.local`.
 
-```ts
-await admin.auth.admin.updateUserById(userId, {
-  app_metadata: { tenant_id: '<tenant uuid>', roles: ['farm_manager'], platform: false }
-})
-```
+New migration: add `supabase/migrations/00NN_name.sql`, then `npx supabase@2 migration up --local`.
 
-Enable **Phone (OTP)** in Authentication → Providers with MSG91 or Twilio as the SMS provider.
-Run `deno run -A scripts/create_demo_users.ts` with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
-set; demo logins are the phone numbers in `seed.sql` (OTP delivered by your SMS provider; in
-local dev use the Auth “test OTP” setting).
-
-### Edge functions
+## Tests
 
 ```bash
-supabase secrets set ANTHROPIC_API_KEY=... RAZORPAY_WEBHOOK_SECRET=... WHATSAPP_TOKEN=... WHATSAPP_PHONE_ID=...
-supabase functions deploy market-rates daily-alerts sync-apply ai-triage razorpay-webhook provision-tenant
+cd apps/web
+pnpm test                                   # unit (Vitest)
+npx tsc --noEmit -p . && pnpm lint          # types + lint
+pnpm exec playwright test                   # e2e against localhost:3100 (local Supabase running)
 
-# schedules (pg_cron + pg_net are enabled on Supabase)
-psql "$SUPABASE_DB_URL" -c "select cron.schedule('market-rates','5 7,19 * * *',
-  \$\$select net.http_post(url:='https://<ref>.functions.supabase.co/market-rates',
-  headers:='{\"Authorization\":\"Bearer <anon-key>\"}'::jsonb)\$\$);"
-psql "$SUPABASE_DB_URL" -c "select cron.schedule('daily-alerts','30 20 * * *',
-  \$\$select net.http_post(url:='https://<ref>.functions.supabase.co/daily-alerts',
-  headers:='{\"Authorization\":\"Bearer <anon-key>\"}'::jsonb)\$\$);"
+# SQL tests (local database)
+docker exec -i supabase_db_poultryos psql -U postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/roles_test.sql
 ```
 
-## 2. Mobile app (Flutter)
+Every form action needs an entry in `apps/web/lib/auth/permissions.ts` (`ACT_ROLES`, enforced by a unit test) and a
+matching database policy — the database is the real guard.
+
+## Deploy
+
+- **Database + functions:** GitHub → Actions → *Supabase migrate (manual)* → choose `qa` or `production`
+  (secrets per GitHub environment). Nothing runs on push.
+- **Web:** any Node host / Vercel with root `apps/web`, `pnpm build`, env `NEXT_PUBLIC_SUPABASE_URL` +
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- Full checklist, auth settings and smoke tests: [docs/QA.md](docs/QA.md).
+
+## Mobile (Flutter)
 
 ```bash
 cd mobile
 flutter pub get
-dart run build_runner build -d                      # Drift tables
-cp lib/env.example.dart lib/env.dart                # paste SUPABASE_URL + anon key
-flutter run                                         # Android emulator / device
+dart run build_runner build -d
+cp lib/env.example.dart lib/env.dart        # Supabase URL + anon key (never the service-role key)
+flutter run
 ```
 
-Release builds: `flutter build appbundle --release` (Play) and `flutter build ipa --release`
-(App Store); `.github/workflows/mobile.yml` does both on a `v*` tag with Fastlane lanes in
-`mobile/android/fastlane` and `mobile/ios/fastlane` (add your store credentials as secrets).
+`.github/workflows/mobile.yml` builds Android/iOS releases on a `v*` tag.
 
-## 3. Admin web (optional, Phase 1 end)
+## 3D assets
 
-`web/` is not in this scaffold. Create with `npm create vite@latest web -- --template react-ts`
-and `npm i @supabase/supabase-js @tanstack/react-query`; the same anon key + RLS apply.
-Deploy on Vercel/Netlify or Supabase-hosted static.
-
-## 4. Local development
-
-```bash
-supabase start                                      # local Postgres + Auth + Storage (Docker)
-supabase db reset                                   # migrations + seed.sql
-supabase functions serve                            # edge functions with hot reload
-```
-
-## 5. Regenerate demo data
-
-`python3 scripts/gen_seed.py` rewrites `supabase/seed.sql` and `demo/data.json` from one
-deterministic generator (same UUIDs every run). Edit tenants, vendors, items or batch shapes
-there, not in the SQL.
-
-## 6. What's verified
-
-* `0001_schema.sql` + `seed.sql` apply cleanly on PostgreSQL 16.
-* `v_batch_kpi`, `v_ap_ageing`, `v_ar_ageing`, `v_stock_balance` return expected numbers.
-* RLS: a JWT with VKR's `tenant_id` sees 5 of 9 batches and 0 KS rows; an unknown tenant sees 0 rows.
+Textures and skies are CC0 (Poly Haven) — `python apps/web/scripts/fetch_assets.py` re-downloads them. Models are built
+headless in Blender 5.2: `blender -b --factory-startup -P apps/web/scripts/blender/farm_assets.py -- all` (and
+`convert_polyhaven.py -- all`, `birds.py`). Devices without hardware graphics get a notice instead of the 3D view.
