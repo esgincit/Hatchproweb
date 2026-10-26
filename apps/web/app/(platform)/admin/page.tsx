@@ -12,6 +12,7 @@ import { dateFmt, daysBetween, fmtL, fmtN } from '@/lib/format';
 import { Applications, type AppRow } from '@/components/admin/Applications';
 import { TenantManage } from '@/components/admin/TenantManage';
 import { TEAM } from '@/lib/auth/permissions';
+import { InviteVendor, ReviewButtons } from '@/components/marketplace/Market';
 
 const PRICE: Record<string, number> = { starter: 999, growth: 2999, pro: 7999, enterprise: 25000 };
 
@@ -49,6 +50,10 @@ export default async function Admin() {
     sees('ops') ? sb.from('sync_outbox_receipt').select('tenant_id').gte('applied_at', since24) : Promise.resolve({ data: [] }),
     sees('ops') ? sb.from('push_subscription').select('tenant_id') : Promise.resolve({ data: [] }),
   ]);
+  // marketing: listings waiting for review (0032 listing_marketing policy)
+  const { data: pendingListings } = sees('marketing')
+    ? await sb.from('product_listing').select('id,title,category,price_text,advertiser(business_name)').eq('status', 'pending').order('created_at')
+    : { data: [] };
   const by = (xs: { tenant_id: string | null }[] | null) => (id: string) => (xs ?? []).filter((x) => x.tenant_id === id).length;
   const pipeCount = (s: string) => (pipe ?? []).filter((p) => p.status === s).length;
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
@@ -127,6 +132,15 @@ export default async function Admin() {
                 </div>
               );
             })}</div>
+          </div>}
+          {sees('marketing') && <div className="card" data-testid="marketplace-review">
+            <div className="row between" style={{ marginBottom: 6 }}><div className="eyebrow">{t('marketReview')}</div><InviteVendor /></div>
+            <div className="list">{(pendingListings ?? []).map((l) => (
+              <div className="item" key={l.id}>
+                <div><div className="t">{l.title}</div><div className="s">{(Array.isArray(l.advertiser) ? l.advertiser[0] : l.advertiser)?.business_name} · {l.category}{l.price_text ? ` · ${l.price_text}` : ''}</div></div>
+                <div className="r"><ReviewButtons id={l.id} /></div>
+              </div>
+            ))}{!pendingListings?.length && <div className="s">{t('noPendingListings')}</div>}</div>
           </div>}
           {sees('feeds') && <div className="card">
             <div className="eyebrow" style={{ marginBottom: 6 }}>{t('feeds')}</div>

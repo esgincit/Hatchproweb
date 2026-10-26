@@ -343,7 +343,9 @@
     "offlineCache": "Offline cache",
     "last90": "last 90 days",
     "plan": "Plan",
-    "waSummary": "Daily WhatsApp summary"
+    "waSummary": "Daily WhatsApp summary",
+    "marketplace": "🛒 Marketplace",
+    "marketplaceSub": "feed · medicine · equipment offers"
   },
   "sections": {
     "notifications": "Notifications",
@@ -534,7 +536,9 @@
     "mort": "Mortality",
     "usersH": "Users",
     "alertsH": "Critical alerts",
-    "auditH": "Audit trail"
+    "auditH": "Audit trail",
+    "marketReview": "Marketplace · listings to review",
+    "noPendingListings": "No listings waiting."
   },
   "vendorCat": {
     "doc_hatchery": "Day-old chicks",
@@ -1218,5 +1222,65 @@
     "add": "+ Contract",
     "batches": "{n} batches",
     "noneList": "No contracts. Add one if an integrator supplies chicks and feed and pays a growing charge."
+  },
+  "market": {
+    "portal": "Vendor portal",
+    "notVendor": "This login is not a marketplace vendor.",
+    "suspended": "Your account is suspended. Contact HatchPro.",
+    "liveUntil": "Your listings are visible to farmers until {date}.",
+    "notLive": "No paid plan yet — farmers can't see your listings. Choose a plan below.",
+    "plans": "Plans (30 days)",
+    "planLine": "₹{price} / 30 days · up to {n} listings",
+    "pay": "Pay ₹{price}",
+    "payNotSetUp": "Online payment is not set up yet. Please contact HatchPro to activate your plan.",
+    "payFailed": "Payment could not start ({error})",
+    "paid": "Payment received — activating your plan…",
+    "myListings": "My listings",
+    "add": "+ Listing",
+    "title": "Product / service",
+    "category": "Category",
+    "price": "Price (e.g. ₹1,850 / bag)",
+    "area": "Area served",
+    "description": "Details",
+    "submitReview": "Send for review",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "saved": "Saved — HatchPro will review it before farmers see it",
+    "deleted": "Listing deleted",
+    "invalid": "Check the fields",
+    "noListings": "No listings yet.",
+    "leads": "Farmer enquiries",
+    "noLeads": "No enquiries yet.",
+    "contact": "Contact",
+    "call": "Call",
+    "leadSent": "The vendor has your number and will call you",
+    "emptyMarket": "No offers in your area yet.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approved": "Listing approved",
+    "rejected": "Listing rejected",
+    "addAdvertiser": "+ Advertiser",
+    "business": "Business name",
+    "phone": "Mobile",
+    "district": "District",
+    "invite": "Create vendor login",
+    "invited": "{name} can now log in with OTP",
+    "inviteFailed": "Could not add vendor ({error})",
+    "cat": {
+      "feed": "Feed",
+      "medicine": "Medicines",
+      "vaccine": "Vaccines",
+      "equipment": "Equipment",
+      "chicks": "Chicks",
+      "transport": "Transport",
+      "services": "Services",
+      "other": "Other"
+    },
+    "st": {
+      "pending": "In review",
+      "approved": "Live",
+      "rejected": "Rejected"
+    }
   }
 }

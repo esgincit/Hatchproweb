@@ -8,6 +8,7 @@ import { dateFmt, daysBetween, fmtINR, fmtL, fmtN, monthFmt } from '@/lib/format
 import { Back, Chips, Header, Live, sevStripe } from '@/components/ui/bits';
 import { ActBtn } from '@/components/ui/ActBtn';
 import { PushToggle } from '@/components/shell/PushToggle';
+import { ContactButton } from '@/components/marketplace/Market';
 import type { View } from '@/lib/view/types';
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
@@ -53,6 +54,7 @@ export default async function Section({ params, searchParams }: { params: Promis
           {!v.t.docs.length && <div className="s">{t('sections.noDocs')}</div>}
         </div></div></>
     );
+    case 'marketplace': return <Marketplace c={c} B={B} />;
     case 'reports': {
       const reports: [string, string][] = [
         ['rDaily', t('sections.rDailySub')], ['rWeekly', t('sections.rWeeklySub')], ['rPnl', 'CSV'], ['rVacc', 'PDF'],
@@ -72,6 +74,32 @@ export default async function Section({ params, searchParams }: { params: Promis
     }
     default: notFound();
   }
+}
+
+// Marketplace (0032): only approved listings of vendors with a paid plan reach this query (RLS).
+async function Marketplace({ c: { t }, B }: { c: Ctx; B: React.ReactNode }) {
+  const sb = await createClient();
+  const { data: rows } = await sb.from('product_listing').select('id,title,category,description,price_text,area,advertiser(business_name,district)').order('created_at', { ascending: false }).limit(200);
+  const tm = await getTranslations('market');
+  const cats = [...new Set((rows ?? []).map((r) => r.category))];
+  return (
+    <>{B}<Header title={t('more.marketplace')} />
+      {cats.map((cat) => (
+        <div className="card" key={cat} data-testid={`market-${cat}`}><div className="eyebrow" style={{ marginBottom: 6 }}>{tm(`cat.${cat}`)}</div><div className="list">
+          {(rows ?? []).filter((r) => r.category === cat).map((r) => {
+            const a = Array.isArray(r.advertiser) ? r.advertiser[0] : r.advertiser;
+            return (
+              <div className="item" key={r.id}>
+                <div><div className="t">{r.title}</div><div className="s">{[a?.business_name, r.price_text, r.area ?? a?.district].filter(Boolean).join(' · ')}</div>{r.description && <div className="s">{r.description}</div>}</div>
+                <div className="r"><ContactButton id={r.id} /></div>
+              </div>
+            );
+          })}
+        </div></div>
+      ))}
+      {!rows?.length && <div className="card"><div className="s">{tm('emptyMarket')}</div></div>}
+    </>
+  );
 }
 
 async function Notifications({ c: { v, t }, B }: { c: Ctx; B: React.ReactNode }) {

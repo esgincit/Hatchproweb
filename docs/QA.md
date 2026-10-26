@@ -20,6 +20,9 @@ functions (`supabase/functions`) and demo seed data. Nothing deploys automatical
    **Applications (/apply):** `npx supabase@2 secrets set TURNSTILE_SECRET_KEY=<Cloudflare Turnstile secret> MSG91_AUTH_KEY=… MSG91_OTP_TEMPLATE_ID=…`
    (web host: `NEXT_PUBLIC_TURNSTILE_SITE_KEY`). QA without SMS: `APPLY_TEST_OTP=123456 APPLY_TEST_PHONES=+91…,+91…` makes those
    numbers accept the fixed code — **never set these in production**. Without MSG91 keys other numbers get "SMS not set up".
+   **Marketplace payments:** `npx supabase@2 secrets set RAZORPAY_KEY_ID=… RAZORPAY_KEY_SECRET=… RAZORPAY_WEBHOOK_SECRET=…` and in the
+   Razorpay dashboard add the webhook `https://<ref>.supabase.co/functions/v1/razorpay-webhook` (event `payment.captured`).
+   Without keys vendors see "online payment is not set up" and nothing is charged.
    Schedule it (Database → Extensions: enable `pg_cron` and `pg_net`; then SQL editor — 13:30 UTC = 7 PM IST):
    ```sql
    select cron.schedule('daily-alerts', '30 13 * * *', $$
@@ -58,6 +61,7 @@ functions (`supabase/functions`) and demo seed data. Nothing deploys automatical
 | Reports | More → Reports → Generate (daily / weekly / vaccination / mortality) → print dialog → Save as PDF |
 | Payroll | More → People → Wages → Bank details for a worker → Download salary bank file (CSV has the account) |
 | Hatchery | KS Farms owner (`919440012121`) → hatchery view → batch KS-H-2026-37 → Candling → Hatch results → Dispatch chicks; card shows fertility / hatchability / hatch of fertile; too many chicks is refused |
+| Marketplace | Platform console → + Advertiser → vendor logs in at /login → /vendor: add listing, pay plan → console approves → farmer More → Marketplace → Contact → vendor sees the enquiry |
 | Contract farming | KS owner → More → Customers → + Contract (SKR Integrators) → broiler batch → Link to a contract → card shows estimate → Settle with integrator → growing-charge invoice in Money |
 | Labour / offline | Log tab → "Simple shift entry" → +/- per shift adds to the day; turn on airplane mode, save → "saved on this phone" → back online → syncs |
 | Alerts | Run daily-alerts (curl with `x-cron-secret`) → new alerts pop up in the open app; a second run adds none |

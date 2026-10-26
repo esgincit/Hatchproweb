@@ -20,6 +20,7 @@ export default async function More() {
     ['health', t('health'), overdueV ? t('vaccOverdue', { n: overdueV }) : t('onTrack')],
     ['docs', t('docs'), t('docsSub')],
     ['reports', t('reports'), t('reportsSub')],
+    ['marketplace', t('marketplace'), t('marketplaceSub')],
     ['users', t('users'), t('nUsers', { n: tn.users.length })],
     ['notifications', t('notifications'), t('nUnread', { n: tn.notifications.filter((n) => !n.read).length })],
   ];

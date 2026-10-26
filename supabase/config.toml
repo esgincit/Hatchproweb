@@ -47,6 +47,7 @@ auth_token = "local-dev"
 919000000000 = "123456"   # Praveen G — platform admin
 919999000001 = "123456"   # e2e: new applicant (approved in onboarding.spec)
 919999000002 = "123456"   # e2e: supervisor invited by that owner
+919999000003 = "123456"   # e2e: marketplace vendor (marketplace.spec)
 
 [storage]
 enabled = true
