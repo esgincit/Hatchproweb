@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { loadView } from '@/lib/view/load';
 import { createClient } from '@/lib/supabase/server';
-import { attGet, attMonth } from '@/lib/kpi';
+import { attGet, attMonth, payslip } from '@/lib/kpi';
 import { dateFmt, daysBetween, fmtINR, fmtL, fmtN, monthFmt } from '@/lib/format';
 import { Back, Chips, Header, Live, sevStripe } from '@/components/ui/bits';
 import { ActBtn } from '@/components/ui/ActBtn';
@@ -93,7 +93,7 @@ async function Notifications({ c: { v, t }, B }: { c: Ctx; B: React.ReactNode })
   );
 }
 
-function People({ c: { v, t, dmy, locale }, tab }: { c: Ctx; tab: string }) {
+async function People({ c: { v, t, dmy, locale }, tab }: { c: Ctx; tab: string }) {
   const { t: tn, today } = v;
   const [y, m] = today.split('-');
   const days = new Date(+y, +m, 0).getDate();
@@ -148,12 +148,10 @@ function People({ c: { v, t, dmy, locale }, tab }: { c: Ctx; tab: string }) {
     );
 
   if (tab === 'wages') {
-    const rows = tn.workers.map((w) => {
-      const a = attMonth(tn, w.id, today);
-      const gross = Math.round((w.wage * a.payable) / a.days);
-      const adv = tn.advances.filter((x) => x.worker_id === w.id).reduce((s, x) => s + x.amount, 0);
-      return { w, a, adv, gross, net: gross - adv };
-    });
+    const rows = tn.workers.map((w) => ({ w, ...payslip(tn, w, today) }));
+    // RLS: only money roles read worker_bank — the only roles that see the Bank details button
+    const { data: bank } = await (await createClient()).from('worker_bank').select('worker_id');
+    const noBank = rows.filter((r) => r.net > 0 && !bank?.some((b) => b.worker_id === r.w.id)).length;
     const sum = (f: (r: (typeof rows)[number]) => number) => rows.reduce((s, r) => s + f(r), 0);
     return (
       <><Back href="/more" /><Header title={t('people.wagesTitle', { month })} action={<ActBtn act="addAdvance" className="btn small">{t('people.addAdvance')}</ActBtn>} />{chips}
@@ -172,6 +170,7 @@ function People({ c: { v, t, dmy, locale }, tab }: { c: Ctx; tab: string }) {
             {tn.advances.map((x) => <div className="item" key={x.id}><div><div className="t">{x.worker}</div><div className="s">{dmy(x.date)}{x.reason ? ' · ' + x.reason : ''}</div></div><div className="r">{fmtINR(x.amount)}</div></div>)}
           </div></div>
         )}
+        <ActBtn act="setBank" className="btn secondary">{noBank ? t('people.bankMissing', { n: noBank }) : t('people.bankDetails')}</ActBtn>
         <ActBtn act="payroll" className="btn">{t('people.payroll')}</ActBtn>
       </>
     );

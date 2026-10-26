@@ -66,6 +66,12 @@ export const SCHEMAS = {
   addRate: z.object({ product: z.enum(RATE_PRODUCTS), zone: text, rate: money, date }),
   addDoc: z.object({ name: text, ref_no: opt(z.string().max(60)), expires: opt(date) }),
   addAdvance: z.object({ worker_id: id, amount: money, date, reason: opt(z.string().max(200)) }),
+  // salary bank file (worker_bank, 0022 — same format checks)
+  setBank: z.object({
+    worker_id: id,
+    account_no: z.string().trim().regex(/^[0-9]{9,18}$/, '9–18 digits'),
+    ifsc: z.string().trim().toUpperCase().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'e.g. SBIN0001234'),
+  }),
   // WhatsApp payment reminder (click-to-chat): log who reminded which customer about which invoices, in which language
   remind: z.object({ customer_id: id, invoice_ids: z.array(id).min(1).max(50), amount: money, lang: z.enum(LANGS) }),
   decidePay: z.object({ approval_id: id, approve: z.enum(['yes', 'no']) }),

@@ -3,11 +3,12 @@
 import { createClient } from '@/lib/supabase/server';
 import { claimsFromUser } from '@/lib/auth/claims';
 import { loadView, todayIST } from '@/lib/view/load';
-import { attMonth, batchKpi, rate } from '@/lib/kpi';
+import { batchKpi, payslip, rate } from '@/lib/kpi';
 
 const MONEY = ['tenant_owner', 'farm_manager', 'finance', 'auditor'];
 const PEOPLE = ['tenant_owner', 'farm_manager', 'finance', 'shed_supervisor'];
-const KINDS: Record<string, string[]> = { tally: MONEY, gstr1: MONEY, statements: MONEY, pnl: MONEY, register: PEOPLE };
+const PAYROLL = ['tenant_owner', 'farm_manager', 'finance']; // worker_bank RLS (0022)
+const KINDS: Record<string, string[]> = { tally: MONEY, gstr1: MONEY, statements: MONEY, pnl: MONEY, register: PEOPLE, bankfile: PAYROLL };
 
 // Text cells starting with = + - @ or a control char would run as formulas in Excel (CSV injection): prefix '.
 const cell = (v: string | number | null | undefined) => {
@@ -66,13 +67,23 @@ export async function GET(_req: Request, { params }: { params: Promise<{ kind: s
       const head = ['Worker', 'Role', ...Array.from({ length: days }, (_, i) => String(i + 1)), 'P', 'H', 'A', 'L', 'Payable days', 'Gross ₹', 'Advances ₹', 'Net ₹'];
       const rows: (string | number)[][] = [head];
       for (const w of t.workers) {
-        const a = attMonth(t, w.id, today);
+        const { a, gross, adv, net } = payslip(t, w, today);
         const daysRow = Array.from({ length: days }, (_, i) => t.attendance[w.id]?.[`${y}-${m}-${String(i + 1).padStart(2, '0')}`] ?? '');
-        const gross = Math.round((w.wage * a.payable) / a.days);
-        const adv = t.advances.filter((x) => x.worker_id === w.id).reduce((s, x) => s + x.amount, 0);
-        rows.push([w.name, w.role, ...daysRow, a.P, a.H, a.A, a.L, a.payable, gross, adv, gross - adv]);
+        rows.push([w.name, w.role, ...daysRow, a.P, a.H, a.A, a.L, a.payable, gross, adv, net]);
       }
       return file(csv(rows), `${slug}-attendance-${y}-${m}.csv`, 'text/csv; charset=utf-8');
+    }
+    case 'bankfile': {
+      // Generic NEFT bulk-upload sheet: one credit per worker with net pay > 0 and bank details on file.
+      // ponytail: generic columns; map to the bank's own template (SBI/HDFC/ICICI differ) when the farm picks one.
+      const { data: bank } = await sb.from('worker_bank').select('worker_id,account_no,ifsc');
+      const by = new Map((bank ?? []).map((b) => [b.worker_id, b]));
+      const rows: (string | number)[][] = [['Beneficiary Name', 'Account Number', 'IFSC', 'Amount', 'Narration']];
+      for (const w of t.workers) {
+        const { net } = payslip(t, w, today), b = by.get(w.id);
+        if (net > 0 && b) rows.push([w.name, b.account_no, b.ifsc, net, `Salary ${month}`]);
+      }
+      return file(csv(rows), `${slug}-salary-neft-${month}.csv`, 'text/csv; charset=utf-8');
     }
     case 'pnl': {
       const rows: (string | number | null)[][] = [['Batch', 'Shed', 'Type', 'State', 'Chick cost', 'Bills', 'Revenue', 'Live value', 'Margin', 'FCR']];

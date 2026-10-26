@@ -440,8 +440,10 @@
     "adv": "Adv.",
     "net": "Net",
     "total": "Total",
-    "payroll": "Run payroll · bank file + ledger posting",
-    "advancesMonth": "Advances this month"
+    "payroll": "Download salary bank file (NEFT)",
+    "advancesMonth": "Advances this month",
+    "bankDetails": "Bank details",
+    "bankMissing": "Bank details · {n} missing"
   },
   "admin": {
     "platform": "HatchPro Platform",
@@ -783,7 +785,14 @@
       "submit": "Send invite",
       "ok": "{name} can now log in with {phone}"
     },
-    "remindOk": "Reminder logged"
+    "remindOk": "Reminder logged",
+    "bank": {
+      "title": "Worker bank details",
+      "intro": "Used for the salary bank file. Only owner, manager and finance can see these.",
+      "account": "Account number",
+      "ifsc": "IFSC",
+      "ok": "Bank details saved"
+    }
   },
   "billCat": {
     "chick": "Chicks",

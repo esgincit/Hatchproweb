@@ -80,6 +80,14 @@ export function attMonth(t: Tenant, workerId: string, today: string) {
   return { ...out, payable: out.P + out.H * 0.5 + out.L, days };
 }
 
+/** Month-to-date pay: monthly wage pro-rated by payable days, minus this month's advances (wages tab, register, bank file). */
+export function payslip(t: Tenant, w: Tenant['workers'][number], today: string) {
+  const a = attMonth(t, w.id, today);
+  const gross = Math.round((w.wage * a.payable) / a.days);
+  const adv = t.advances.filter((x) => x.worker_id === w.id).reduce((s, x) => s + x.amount, 0);
+  return { a, gross, adv, net: gross - adv };
+}
+
 export type Ageing = Record<'Not due' | '1–30' | '31–60' | '60+', number>;
 export function ageing(list: (Bill | Invoice)[], today: string): Ageing {
   const b: Ageing = { 'Not due': 0, '1–30': 0, '31–60': 0, '60+': 0 };

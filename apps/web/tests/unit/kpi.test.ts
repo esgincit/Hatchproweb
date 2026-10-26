@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { batchKpi, attMonth, ageing, stdWeight } from '@/lib/kpi';
+import { batchKpi, attMonth, ageing, payslip, stdWeight } from '@/lib/kpi';
 import type { Batch, Tenant } from '@/lib/view/types';
 
 const log = (day: number, mortality: number, extra: Partial<Batch['logs'][number]> = {}) => ({
@@ -29,6 +29,10 @@ describe('attMonth + ageing', () => {
   it('payable = P + 0.5·H + L', () => {
     const a = attMonth(t, 'w1', '2026-10-19');
     expect([a.P, a.H, a.L, a.A, a.payable, a.days]).toEqual([1, 1, 1, 1, 2.5, 31]);
+  });
+  it('payslip = wage × payable/days − advances (bank file amount)', () => {
+    const tp = { ...t, advances: [{ worker_id: 'w1', amount: 300 }, { worker_id: 'w2', amount: 999 }] } as unknown as Tenant;
+    expect(payslip(tp, { id: 'w1', name: '', role: '', wage: 12400, farm_id: null }, '2026-10-19')).toMatchObject({ gross: 1000, adv: 300, net: 700 });
   });
   it('buckets outstanding by days past due', () => {
     const inv = (due: string, total: number, paid = 0) => ({ id: due, no: '', customer_id: 'c', customer: '', product: '', qty: 0, unit: '', rate: 0, date: due, due, total, paid, status: 'unpaid', batch: null });

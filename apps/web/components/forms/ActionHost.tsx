@@ -94,7 +94,7 @@ const NAV: Record<string, string> = { attToday: '/more/people' };
 // file downloads (app/api/export/[kind]); `report` rows pass the kind they export, or the printable page (app/(app)/report/[kind])
 const DOWNLOAD: Record<string, (c: ActCtx) => string | null> = {
   tally: () => '/api/export/tally', gstr: () => '/api/export/gstr1', stmt: () => '/api/export/statements',
-  payroll: () => '/api/export/register', report: (c) => (c.kind ? `/api/export/${c.kind}` : c.page ? `/report/${c.page}` : null),
+  payroll: () => '/api/export/bankfile', report: (c) => (c.kind ? `/api/export/${c.kind}` : c.page ? `/report/${c.page}` : null),
 };
 // Register grid: each tap moves the day one step P → H → A → L → P (blank days start at P).
 const NEXT_ATT: Record<string, string> = { P: 'half', H: 'absent', A: 'leave', L: 'present' };
@@ -441,6 +441,16 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
           { id: 'name', label: f('doc.name'), required: true, placeholder: 'PCB consent to operate' },
           { id: 'ref_no', label: f('doc.ref'), half: true },
           { id: 'expires', label: f('doc.expires'), type: 'date', half: true },
+        ],
+      };
+    case 'setBank':
+      if (!L.workers.length) return { title: f('bank.title'), intro: f('advance.noWorkers'), fields: [], submit: f('save') };
+      return {
+        title: f('bank.title'), intro: f('bank.intro'), submit: f('save'),
+        fields: [
+          { id: 'worker_id', label: f('advance.worker'), type: 'select', options: L.workers.map((w): Opt => [w.id, w.name]), value: ctx.worker },
+          { id: 'account_no', label: f('bank.account'), required: true, half: true },
+          { id: 'ifsc', label: f('bank.ifsc'), required: true, half: true },
         ],
       };
     case 'addAdvance':

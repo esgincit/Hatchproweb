@@ -220,6 +220,11 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
       }
       return { ok: true, msg: t('invite.ok', { name: x.name, phone: String(data?.phone ?? '') }), href: '/more/users' };
     }
+    case 'setBank': {
+      const x = v as In<'setBank'>;
+      const { error } = await sb.from('worker_bank').upsert({ worker_id: x.worker_id, account_no: x.account_no, ifsc: x.ifsc, updated_at: new Date().toISOString() });
+      return fail(error) ?? { ok: true, msg: t('bank.ok') };
+    }
     case 'addAdvance': {
       const x = v as In<'addAdvance'>;
       const { error } = await sb.from('worker_advance').insert({ worker_id: x.worker_id, amount: x.amount, given_on: x.date, reason: x.reason });
