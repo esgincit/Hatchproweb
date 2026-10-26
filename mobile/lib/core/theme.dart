@@ -12,7 +12,7 @@ ThemeData buildTheme(Brightness b) {
     visualDensity: VisualDensity.comfortable,
     inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder(), isDense: false),
     filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52))),
-    cardTheme: CardTheme(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14),
+    cardTheme: CardThemeData(elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14),
         side: BorderSide(color: scheme.outlineVariant))),
   );
 }

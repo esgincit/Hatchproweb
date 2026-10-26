@@ -25,7 +25,7 @@ dependencies:
   geolocator: ^12.0.0
   crypto: ^3.0.3
   uuid: ^4.4.0
-  intl: ^0.19.0
+  intl: ^0.20.2 # pinned by flutter_localizations in current Flutter
   fl_chart: ^0.68.0
   flutter_local_notifications: ^17.2.1
   firebase_core: ^3.1.0

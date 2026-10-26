@@ -1,5 +1,6 @@
 // Supervisor daily entry. Works fully offline; photos staged for later upload; AI triage on demand.
 import 'dart:io';
+import 'package:drift/drift.dart' show BooleanExpressionOperators;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';

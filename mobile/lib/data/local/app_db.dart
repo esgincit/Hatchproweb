@@ -59,7 +59,7 @@ class MarketRates extends Table {
 /// Every local write lands here first; SyncService replays it to the sync-apply edge function.
 class Outbox extends Table {
   TextColumn get opId => text()();                 // client uuid = idempotency key
-  TextColumn get tableName => text()();
+  TextColumn get targetTable => text().named('table_name')(); // not 'tableName': clashes with Table.tableName
   TextColumn get action => text()();               // insert | update
   TextColumn get payloadJson => text()();
   IntColumn get baseVersion => integer().nullable()();
@@ -84,10 +84,10 @@ class PendingMedia extends Table {
 }
 
 class SyncCursors extends Table {
-  TextColumn get tableName => text()();
+  TextColumn get targetTable => text().named('table_name')(); // not 'tableName': clashes with Table.tableName
   IntColumn get lastVersion => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastPulledAt => dateTime().nullable()();
-  @override Set<Column> get primaryKey => {tableName};
+  @override Set<Column> get primaryKey => {targetTable};
 }
 
 @DriftDatabase(tables: [Batches, DailyLogs, MarketRates, Outbox, PendingMedia, SyncCursors])

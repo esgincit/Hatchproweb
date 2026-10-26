@@ -22,7 +22,7 @@ class SyncService {
   /// Called by every local write. Record is already in the local table; this queues the replay.
   Future<void> enqueue(String table, String action, Map<String, dynamic> payload, {int? baseVersion}) async {
     await _db.into(_db.outbox).insert(OutboxCompanion.insert(
-      opId: const Uuid().v4(), tableName: table, action: action,
+      opId: const Uuid().v4(), targetTable: table, action: action,
       payloadJson: jsonEncode(payload), baseVersion: Value(baseVersion)));
     if (await _online()) unawaited(pushOutbox());
   }
@@ -36,7 +36,7 @@ class SyncService {
     final deviceId = (await _sb.auth.currentUser?.id) ?? 'anon';
     final res = await _sb.functions.invoke('sync-apply', body: {
       'device_id': deviceId,
-      'ops': ops.map((o) => {'op_id': o.opId, 'table': o.tableName, 'action': o.action,
+      'ops': ops.map((o) => {'op_id': o.opId, 'table': o.targetTable, 'action': o.action,
         'payload': jsonDecode(o.payloadJson), 'base_version': o.baseVersion}).toList(),
     });
     final results = (res.data['results'] as List).cast<Map<String, dynamic>>();
@@ -60,7 +60,7 @@ class SyncService {
   /// Pull rows changed since the per-table cursor. Server tables expose sync_version / updated_at.
   Future<void> pullDeltas() async {
     for (final t in _pullTables) {
-      final cursor = await (_db.select(_db.syncCursors)..where((c) => c.tableName.equals(t))).getSingleOrNull();
+      final cursor = await (_db.select(_db.syncCursors)..where((c) => c.targetTable.equals(t))).getSingleOrNull();
       final since = cursor?.lastPulledAt?.toIso8601String() ?? '1970-01-01';
       final rows = await _sb.from(t).select().gte(t == 'market_rate' ? 'rate_date' : 'created_at', since).limit(2000);
       if (t == 'batch') {
@@ -81,7 +81,7 @@ class SyncService {
           product: r['product'], zone: r['zone'], rateDate: DateTime.parse(r['rate_date']), rate: (r['rate'] as num).toDouble())).toList()));
       }
       await _db.into(_db.syncCursors).insertOnConflictUpdate(SyncCursorsCompanion.insert(
-        tableName: t, lastPulledAt: Value(DateTime.now().toUtc())));
+        targetTable: t, lastPulledAt: Value(DateTime.now().toUtc())));
     }
   }
 
