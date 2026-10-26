@@ -29,6 +29,10 @@ export const TEAM = {
   applications: ['platform_admin', 'platform_sales', 'platform_ops'],
   billing: ['platform_admin', 'platform_finance'],
   feeds: ['platform_admin', 'platform_ops', 'platform_marketing'],
+  support: ['platform_admin', 'platform_support'], // read-only "view tenant", every view audit-logged (0031)
+  ops: ['platform_admin', 'platform_ops'],         // sync health
+  sales: ['platform_admin', 'platform_sales'],     // pipeline + usage
+  marketing: ['platform_admin', 'platform_marketing'], // marketplace listing approvals (0032)
 } as const;
 
 export const ACT_ROLES: Record<string, string[]> = {
