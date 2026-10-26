@@ -220,6 +220,16 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
       }
       return { ok: true, msg: t('invite.ok', { name: x.name, phone: String(data?.phone ?? '') }), href: '/more/users' };
     }
+    case 'hatchCandle': {
+      const x = v as In<'hatchCandle'>;
+      const { error } = await sb.from('hatch_record').upsert({ batch_id: x.batch_id, candled_on: x.date, clears: x.clears, dead_germ: x.dead_germ }, { onConflict: 'batch_id' });
+      return fail(error) ?? { ok: true, msg: t('hatch.candleOk') };
+    }
+    case 'hatchResult': {
+      const x = v as In<'hatchResult'>;
+      const { error } = await sb.from('hatch_record').upsert({ batch_id: x.batch_id, hatched_on: x.date, chicks_a: x.chicks_a, chicks_b: x.chicks_b, culls: x.culls }, { onConflict: 'batch_id' });
+      return fail(error) ?? { ok: true, msg: t('hatch.resultOk', { n: x.chicks_a + x.chicks_b }) };
+    }
     case 'setBank': {
       const x = v as In<'setBank'>;
       const { error } = await sb.from('worker_bank').upsert({ worker_id: x.worker_id, account_no: x.account_no, ifsc: x.ifsc, updated_at: new Date().toISOString() });

@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { loadView } from '@/lib/view/load';
-import { batchKpi, costPerEgg, rate, stdEggPct, stdWeight } from '@/lib/kpi';
+import { batchKpi, costPerEgg, hatchKpi, rate, stdEggPct, stdWeight } from '@/lib/kpi';
+import type { Batch, Invoice } from '@/lib/view/types';
 import { dateFmt, daysBetween, fmtL, fmtN } from '@/lib/format';
 import { Back, RagPill } from '@/components/ui/bits';
 import { ActBtn } from '@/components/ui/ActBtn';
@@ -91,6 +92,8 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
           <div className={`delta ${k.rag === 'crit' ? 'down' : 'flat'}`}>{t('batch.perDay7', { n: k.m7.toFixed(1) })}</div>
         </div>
       </div>
+
+      {hatch && <HatchCard b={b} invoices={tn.invoices} t={t} dmy={dmy} />}
 
       {chart && (
         <div className="card">
@@ -194,5 +197,35 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
       </div>
       {b.state !== 'closed' && <ActBtn act="closeBatch" ctx={{ batch: b.id }} className="btn secondary">{t('batch.closeBatch')}</ActBtn>}
     </>
+  );
+}
+
+// Hatchery setting: set → candle → hatch → dispatch (hatch_record, 0025; dispatch = 'doc' sale of this batch).
+function HatchCard({ b, invoices, t, dmy }: { b: Batch; invoices: Invoice[]; t: Awaited<ReturnType<typeof getTranslations>>; dmy: (s: string) => string }) {
+  const h = hatchKpi(b, invoices), r = b.hatch;
+  const pct = (x: number | null) => (x == null ? '—' : `${x}%`);
+  const candled: Record<string, string> = r?.candled_on ? { candled: r.candled_on, clears: String(r.clears), dead: String(r.dead_germ) } : {};
+  const hatched: Record<string, string> = r?.hatched_on ? { hatched: r.hatched_on, a: String(r.chicks_a), b: String(r.chicks_b), culls: String(r.culls) } : {};
+  return (
+    <div className="card" data-testid="hatch-card">
+      <div className="row between" style={{ marginBottom: 6 }}>
+        <div className="eyebrow">{t('hatch.title')}</div><span className={`pill ${h.stage === 'hatched' ? 'good' : 'neutral'}`}>{t(`hatch.stage.${h.stage}`)}</span>
+      </div>
+      <div className="kv">
+        <div>{t('hatch.set')}</div><div>{fmtN(h.set)} · {dmy(b.placed)}</div>
+        {r?.candled_on && <><div>{t('hatch.candled')}</div><div>{dmy(r.candled_on)} · {t('hatch.clearsDead', { c: fmtN(r.clears ?? 0), d: fmtN(r.dead_germ ?? 0) })}</div></>}
+        <div>{t('hatch.fertility')}</div><div>{pct(h.fertility)}</div>
+        {r?.hatched_on && <><div>{t('hatch.hatched')}</div><div>{dmy(r.hatched_on)} · {fmtN(h.chicks ?? 0)}</div></>}
+        <div>{t('hatch.hatchability')}</div><div>{pct(h.hatchability)}</div>
+        <div>{t('hatch.hof')}</div><div>{pct(h.hof)}</div>
+        <div>{t('hatch.gradeA')}</div><div>{pct(h.gradeA)}</div>
+        {h.chicks != null && <><div>{t('hatch.dispatched')}</div><div>{fmtN(h.dispatched)} / {fmtN(h.chicks)}</div></>}
+      </div>
+      <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+        <ActBtn act="hatchCandle" ctx={{ batch: b.id, set: fmtN(h.set), ...candled }} className="btn small secondary">{t('hatch.candleBtn')}</ActBtn>
+        <ActBtn act="hatchResult" ctx={{ batch: b.id, ...hatched }} className="btn small secondary">{t('hatch.resultBtn')}</ActBtn>
+        {!!h.inStock && h.inStock > 0 && <ActBtn act="saleOpen" ctx={{ batch: b.id, product: 'doc', unit: 'chick', qty: String(h.inStock) }} className="btn small">{t('hatch.dispatchBtn')}</ActBtn>}
+      </div>
+    </div>
   );
 }

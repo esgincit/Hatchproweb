@@ -80,6 +80,21 @@ export function attMonth(t: Tenant, workerId: string, today: string) {
   return { ...out, payable: out.P + out.H * 0.5 + out.L, days };
 }
 
+/** Hatchery setting (eggs set = b.doc): fertility = (set − clears)/set (dead germ counts as fertile),
+ *  hatchability = saleable chicks (A+B)/set, hatch of fertile = chicks/fertile; dispatched = 'doc' sales of the batch. */
+export function hatchKpi(b: Batch, invoices: Invoice[]) {
+  const h = b.hatch, set = b.doc;
+  const fertile = h?.clears != null ? set - h.clears : null;
+  const chicks = h?.chicks_a != null ? h.chicks_a + (h.chicks_b ?? 0) : null;
+  const pct = (n: number | null | undefined, d: number | null) => (n == null || !d ? null : Math.round((1000 * n) / d) / 10);
+  const dispatched = invoices.filter((i) => i.batch === b.code && i.product === 'doc').reduce((s, i) => s + i.qty, 0);
+  return {
+    stage: (chicks != null ? 'hatched' : fertile != null ? 'candled' : 'set') as 'set' | 'candled' | 'hatched',
+    set, fertile, chicks, dispatched, inStock: chicks == null ? null : chicks - dispatched,
+    fertility: pct(fertile, set), hatchability: pct(chicks, set), hof: pct(chicks, fertile), gradeA: pct(h?.chicks_a, chicks),
+  };
+}
+
 /** Month-to-date pay: monthly wage pro-rated by payable days, minus this month's advances (wages tab, register, bank file). */
 export function payslip(t: Tenant, w: Tenant['workers'][number], today: string) {
   const a = attMonth(t, w.id, today);

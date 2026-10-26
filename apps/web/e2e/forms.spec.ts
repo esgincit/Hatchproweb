@@ -42,10 +42,11 @@ test('place a batch in a free shed, then record mortality on it', async ({ page 
     await sheet.getByLabel('Chicks placed').fill('5000');
     await sheet.getByLabel('Rate per chick (₹)').fill('38');
     await sheet.getByRole('button', { name: 'Place batch' }).click();
+    // the toast lives 2.8 s and fires before navigating — check it first, not after the (slow, dev) batch page render
+    await expect(page.locator('.toast')).toContainText('vaccination schedule ready', { timeout: 20_000 });
     await expect(page).toHaveURL(new RegExp(`/farm/batch/${code}$`), { timeout: 20_000 }); // save + first render of the batch page (dev)
     await expect(page.locator('.h2', { hasText: code })).toBeVisible();
     await expect(page.locator('.eyebrow', { hasText: 'Vaccination schedule' })).toBeVisible();
-    await expect(page.locator('.toast')).toContainText('vaccination schedule ready');
     await expect(page.locator('.tile', { hasText: 'Birds' }).locator('.val')).toHaveText('5,000');
 
     await page.locator('.quick button', { hasText: 'Mortality' }).click();

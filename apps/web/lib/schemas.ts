@@ -66,6 +66,9 @@ export const SCHEMAS = {
   addRate: z.object({ product: z.enum(RATE_PRODUCTS), zone: text, rate: money, date }),
   addDoc: z.object({ name: text, ref_no: opt(z.string().max(60)), expires: opt(date) }),
   addAdvance: z.object({ worker_id: id, amount: money, date, reason: opt(z.string().max(200)) }),
+  // hatchery setting (hatch_record, 0025 — DB trigger checks counts against eggs set)
+  hatchCandle: z.object({ batch_id: id, date, clears: int(), dead_germ: int() }),
+  hatchResult: z.object({ batch_id: id, date, chicks_a: int(), chicks_b: int(), culls: int() }),
   // salary bank file (worker_bank, 0022 — same format checks)
   setBank: z.object({
     worker_id: id,

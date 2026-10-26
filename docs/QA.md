@@ -54,6 +54,7 @@ functions (`supabase/functions`) and demo seed data. Nothing deploys automatical
 | Reminders | Money → Receivables → WhatsApp reminders → Send opens WhatsApp with the message; row shows "Reminded today" |
 | Reports | More → Reports → Generate (daily / weekly / vaccination / mortality) → print dialog → Save as PDF |
 | Payroll | More → People → Wages → Bank details for a worker → Download salary bank file (CSV has the account) |
+| Hatchery | KS Farms owner (`919440012121`) → hatchery view → batch KS-H-2026-37 → Candling → Hatch results → Dispatch chicks; card shows fertility / hatchability / hatch of fertile; too many chicks is refused |
 | Alerts | Run daily-alerts (curl with `x-cron-secret`) → new alerts pop up in the open app; a second run adds none |
 | Push (by hand, real phone) | Android Chrome: More → Notifications → Turn on → allow; run daily-alerts with a critical alert (e.g. log mortality spike) → phone shows it. iPhone: Add to Home Screen first |
 | Roles | Supervisor has no Money tab; finance can't approve big payments |

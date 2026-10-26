@@ -247,9 +247,9 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
         title: f('sale.title'), intro: f('sale.intro'), submit: f('sale.submit'),
         fields: [
           { id: 'customer_id', label: f('sale.customer'), type: 'select', options: L.customers.map((c) => [c.id, c.name]) },
-          { id: 'product', label: f('sale.product'), type: 'select', options: enumOpts(PRODUCTS, 'forms.sale'), value: 'egg', half: true },
-          { id: 'unit', label: f('sale.unit'), half: true, value: 'egg', required: true },
-          { id: 'qty', label: f('sale.qty'), type: 'number', half: true, required: true },
+          { id: 'product', label: f('sale.product'), type: 'select', options: enumOpts(PRODUCTS, 'forms.sale'), value: ctx.product ?? 'egg', half: true },
+          { id: 'unit', label: f('sale.unit'), half: true, value: ctx.unit ?? 'egg', required: true },
+          { id: 'qty', label: f('sale.qty'), type: 'number', half: true, required: true, value: ctx.qty }, // hatchery dispatch prefills chicks in stock
           { id: 'rate', label: f('sale.rate'), type: 'number', half: true, required: true },
           date(),
           { id: 'batch_id', label: f('optionalBatch'), type: 'select', options: [none, ...batchOpts], half: true, value: ctx.batch ?? '' },
@@ -441,6 +441,25 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
           { id: 'name', label: f('doc.name'), required: true, placeholder: 'PCB consent to operate' },
           { id: 'ref_no', label: f('doc.ref'), half: true },
           { id: 'expires', label: f('doc.expires'), type: 'date', half: true },
+        ],
+      };
+    case 'hatchCandle':
+      return {
+        title: f('hatch.candleTitle'), intro: f('hatch.candleIntro', { set: ctx.set ?? '' }), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [
+          { ...date(), value: ctx.candled ?? today },
+          { id: 'clears', label: f('hatch.clears'), type: 'number', half: true, required: true, value: ctx.clears },
+          { id: 'dead_germ', label: f('hatch.deadGerm'), type: 'number', half: true, required: true, value: ctx.dead },
+        ],
+      };
+    case 'hatchResult':
+      return {
+        title: f('hatch.resultTitle'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [
+          { ...date(), value: ctx.hatched ?? today },
+          { id: 'chicks_a', label: f('hatch.chicksA'), type: 'number', half: true, required: true, value: ctx.a },
+          { id: 'chicks_b', label: f('hatch.chicksB'), type: 'number', half: true, required: true, value: ctx.b ?? '0' },
+          { id: 'culls', label: f('hatch.culls'), type: 'number', half: true, required: true, value: ctx.culls ?? '0' },
         ],
       };
     case 'setBank':

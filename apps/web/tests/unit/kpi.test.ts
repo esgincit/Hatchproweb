@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { batchKpi, attMonth, ageing, payslip, stdWeight } from '@/lib/kpi';
+import { batchKpi, attMonth, ageing, hatchKpi, payslip, stdWeight } from '@/lib/kpi';
 import type { Batch, Tenant } from '@/lib/view/types';
 
 const log = (day: number, mortality: number, extra: Partial<Batch['logs'][number]> = {}) => ({
@@ -29,6 +29,12 @@ describe('attMonth + ageing', () => {
   it('payable = P + 0.5·H + L', () => {
     const a = attMonth(t, 'w1', '2026-10-19');
     expect([a.P, a.H, a.L, a.A, a.payable, a.days]).toEqual([1, 1, 1, 1, 2.5, 31]);
+  });
+  it('hatchKpi matches the hand calculation (57,600 set; 4,600 clears; 48,000 A + 1,500 B)', () => {
+    const b = { code: 'H1', doc: 57600, hatch: { candled_on: '2026-10-11', clears: 4600, dead_germ: 900, hatched_on: '2026-10-25', chicks_a: 48000, chicks_b: 1500, culls: 600 } } as unknown as Batch;
+    const inv = [{ batch: 'H1', product: 'doc', qty: 10000 }, { batch: 'H1', product: 'egg', qty: 5 }, { batch: 'X', product: 'doc', qty: 7 }] as unknown as Parameters<typeof hatchKpi>[1];
+    expect(hatchKpi(b, inv)).toMatchObject({ stage: 'hatched', fertile: 53000, chicks: 49500, fertility: 92, hatchability: 85.9, hof: 93.4, gradeA: 97, dispatched: 10000, inStock: 39500 });
+    expect(hatchKpi({ ...b, hatch: null } as Batch, []).stage).toBe('set');
   });
   it('payslip = wage × payable/days − advances (bank file amount)', () => {
     const tp = { ...t, advances: [{ worker_id: 'w1', amount: 300 }, { worker_id: 'w2', amount: 999 }] } as unknown as Tenant;

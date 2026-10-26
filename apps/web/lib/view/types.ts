@@ -7,12 +7,17 @@ export type Log = {
   water: number; eggs: number; grades: Grades | null; avg_w: number | null; tmax: number | null; tmin: number | null; remarks: string | null;
   rh: number | null; by: string | null; // humidity %, app_user id of whoever logged it
 };
-export type Vacc = { id: string; name: string; due: string; done: string | null };
+export type Hatch = {
+  candled_on: string | null; clears: number | null; dead_germ: number | null;
+  hatched_on: string | null; chicks_a: number | null; chicks_b: number | null; culls: number | null;
+};
+export type Vacc ={ id: string; name: string; due: string; done: string | null };
 export type Curve = { week: number; egg: number | null; weight: number | null }[];
 export type Batch = {
   id: string; code: string; ft: FarmType; breed: string; age: number; doc: number; doc_rate: number; state: string;
   placed: string; shed_name: string; farm_name: string; logs: Log[]; vacc: Vacc[]; curve: Curve;
   cum: { dead: number; feed: number; eggs: number; saleable: number }; // from v_batch_kpi (all-time)
+  hatch?: Hatch | null; // hatchery settings only (hatch_record, 0025)
 };
 export type Shed = { id: string; name: string; type: string; capacity: number; area: number | null };
 export type Farm = {

@@ -59,10 +59,11 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
     sb.from('payment_approval').select('id,amount,paid_on,bill(bill_no,vendor(name))').eq('status', 'pending').order('created_at'),
     sb.from('worker_advance').select('id,worker_id,amount,given_on,reason,worker(name)').gte('given_on', monthStart).order('given_on', { ascending: false }),
     sb.from('store').select('id,farm_id'),
+    sb.from('hatch_record').select('batch_id,candled_on,clears,dead_germ,hatched_on,chicks_a,chicks_b,culls'),
   ]);
   const err = q.find((r) => r.error)?.error;
   if (err) throw new Error(err.message);
-  const [tenantRows, farms, batches, logs, kpi, vacc, curves, users, vendors, customers, workers, att, assets, tickets, bills, invoices, visits, cases, notifs, pos, stock, items, rates, diseases, docs, approvals, advances, stores] =
+  const [tenantRows, farms, batches, logs, kpi, vacc, curves, users, vendors, customers, workers, att, assets, tickets, bills, invoices, visits, cases, notifs, pos, stock, items, rates, diseases, docs, approvals, advances, stores, hatches] =
     q.map((r) => r.data ?? []) as any[][];
   const tenant = tenantRows as any;
 
@@ -94,6 +95,7 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
       vacc: vacc.filter((v) => v.batch_id === b.id).map((v) => ({ id: v.id, name: one<any>(v.vaccine_master)?.name ?? '', due: v.due_date, done: v.done_on })),
       curve: curves.filter((c) => c.breed_id === breed?.id).map((c) => ({ week: c.age_week, egg: c.std_egg_pct == null ? null : n(c.std_egg_pct), weight: c.std_weight_g })),
       cum: { dead: n(k?.cum_mortality), feed: n(k?.feed_kg), eggs: n(k?.eggs), saleable: n(k?.saleable_eggs) },
+      hatch: hatches.find((h) => h.batch_id === b.id) ?? null,
     };
   });
 

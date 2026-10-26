@@ -45,6 +45,7 @@ export const ACT_ROLES: Record<string, string[]> = {
   raisePO: [...MONEY, 'store_keeper'], grnOpen: [...OWN, 'store_keeper'],
   addRate: MONEY, addAdvance: [...OWN, 'finance'], remind: MONEY, // reminder_log policy (0020) mirrors this
   setBank: MONEY, // worker_bank policy (0022) mirrors this
+  hatchCandle: [...OWN, 'shed_supervisor'], hatchResult: [...OWN, 'shed_supervisor'], // hatch_record policy (0025)
   decidePay: ['tenant_owner'], // payments > ₹50,000 by others wait for the owner (0012)
   inviteUser: ['tenant_owner'], // matches invite-user edge function + user_role_assignment policy
   // downloads (app/api/export) — the route enforces the same lists

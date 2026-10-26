@@ -792,6 +792,18 @@
       "account": "Account number",
       "ifsc": "IFSC",
       "ok": "Bank details saved"
+    },
+    "hatch": {
+      "candleTitle": "Candling",
+      "candleIntro": "{set} eggs set. Clears = infertile; dead germ = embryos that died.",
+      "clears": "Clears (infertile)",
+      "deadGerm": "Dead germ",
+      "resultTitle": "Hatch results",
+      "chicksA": "Grade A chicks",
+      "chicksB": "Grade B chicks",
+      "culls": "Culls",
+      "candleOk": "Candling saved",
+      "resultOk": "{n} saleable chicks recorded"
     }
   },
   "billCat": {
@@ -1053,5 +1065,25 @@
     "failed": "Could not turn on alerts. Try again.",
     "denied": "Notifications are blocked for this site. Allow them in the browser settings to get alerts.",
     "unsupported": "This browser can't show alerts. On iPhone, first tap Share → Add to Home Screen, then open HatchPro from the home screen."
+  },
+  "hatch": {
+    "title": "Hatchery — this setting",
+    "stage": {
+      "set": "Eggs set",
+      "candled": "Candled",
+      "hatched": "Hatched"
+    },
+    "set": "Eggs set",
+    "candled": "Candled",
+    "clearsDead": "{c} clears · {d} dead germ",
+    "fertility": "Fertility",
+    "hatched": "Saleable chicks",
+    "hatchability": "Hatchability (of eggs set)",
+    "hof": "Hatch of fertile",
+    "gradeA": "Grade A",
+    "dispatched": "Chicks dispatched",
+    "candleBtn": "🔦 Candling",
+    "resultBtn": "🐣 Hatch results",
+    "dispatchBtn": "🚚 Dispatch chicks"
   }
 }
