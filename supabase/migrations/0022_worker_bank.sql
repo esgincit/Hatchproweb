@@ -15,15 +15,16 @@ create policy worker_bank_tenant_isolation on worker_bank
   using (auth_is_platform() or tenant_id = auth_tenant_id())
   with check (auth_is_platform() or tenant_id = auth_tenant_id());
 
--- owner / manager / finance only (lib/auth/permissions.ts ACT_ROLES.addWorker ∩ MONEY), for their own tenant's workers
-create policy worker_bank_roles_sel on worker_bank as restrictive for select using (auth_has_role('tenant_owner', 'farm_manager', 'finance'));
+-- owner / manager / finance only (ACT_ROLES.setBank). Not auth_has_role(): that lets every platform staff
+-- member through, and no platform team needs farm workers' account numbers.
+create policy worker_bank_roles_sel on worker_bank as restrictive for select using ((select auth_roles()) && '{tenant_owner,farm_manager,finance}');
 create policy worker_bank_roles_ins on worker_bank as restrictive for insert with check (
-  auth_has_role('tenant_owner', 'farm_manager', 'finance')
+  (select auth_roles()) && '{tenant_owner,farm_manager,finance}'
   and exists (select 1 from worker w where w.id = worker_bank.worker_id and w.tenant_id = worker_bank.tenant_id)
 );
-create policy worker_bank_roles_upd on worker_bank as restrictive for update using (auth_has_role('tenant_owner', 'farm_manager', 'finance'))
+create policy worker_bank_roles_upd on worker_bank as restrictive for update using ((select auth_roles()) && '{tenant_owner,farm_manager,finance}')
   with check (exists (select 1 from worker w where w.id = worker_bank.worker_id and w.tenant_id = worker_bank.tenant_id));
-create policy worker_bank_roles_del on worker_bank as restrictive for delete using (auth_has_role('tenant_owner', 'farm_manager', 'finance'));
+create policy worker_bank_roles_del on worker_bank as restrictive for delete using ((select auth_roles()) && '{tenant_owner,farm_manager,finance}');
 
 create policy worker_bank_active_ins on worker_bank as restrictive for insert to authenticated with check ((select auth_tenant_active()));
 create policy worker_bank_active_upd on worker_bank as restrictive for update to authenticated using ((select auth_tenant_active())) with check ((select auth_tenant_active()));

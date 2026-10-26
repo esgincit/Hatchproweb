@@ -29,6 +29,10 @@ begin
   update worker_bank set account_no = '999999999';
 end $$;
 
+-- platform staff (any team): no account numbers either
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-000000000002","app_metadata":{"roles":["platform_finance"],"platform":true}}';
+do $$ begin assert (select count(*) from worker_bank) = 0, 'platform staff read bank details'; end $$;
+
 -- KS owner: other tenant, sees nothing
 set local request.jwt.claims = '{"sub":"436f615f-c815-5957-8623-ca639dcdb5e4","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["tenant_owner"]}}';
 do $$ begin assert (select count(*) from worker_bank) = 0, 'cross-tenant read'; end $$;
