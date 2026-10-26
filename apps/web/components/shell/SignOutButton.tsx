@@ -8,7 +8,12 @@ export function SignOutButton({ to = '/login' }: { to?: string }) {
   const router = useRouter();
   return (
     <button className="btn secondary" type="button"
-      onClick={async () => { await createClient().auth.signOut(); router.replace(to); router.refresh(); }}>
+      onClick={async () => {
+        await createClient().auth.signOut();
+        // offline page copies belong to this user (sw.js); the outbox keeps entries tagged per user
+        if ('caches' in window) await Promise.all((await caches.keys()).map((k) => caches.delete(k))).catch(() => {});
+        router.replace(to); router.refresh();
+      }}>
       {t('signOut')}
     </button>
   );

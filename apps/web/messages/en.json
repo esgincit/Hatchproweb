@@ -248,7 +248,19 @@
     "remarksHint": "e.g. birds active, litter dry",
     "save": "Save log · syncs when online",
     "saved": "Saved · {shed}",
-    "savedOffline": "Saved offline · {shed} · queued for sync"
+    "savedOffline": "Saved offline · {shed} · queued for sync",
+    "queued": "No network — saved on this phone. It will sync automatically.",
+    "offlineFailed": "No network and this browser cannot store it. Try again when online.",
+    "synced": "{n} offline entries synced",
+    "syncFailed": "An offline entry was rejected: {error}",
+    "pendingSync": "{n} entries saved offline — they will sync when the network is back",
+    "photoOffline": "Photos need network. Take it again when online.",
+    "photoFailed": "Photo could not be uploaded",
+    "photoSaved": "Photo saved",
+    "aiChecking": "Photo saved · AI is checking it…",
+    "aiOff": "Photo saved · AI check is not set up yet",
+    "aiFailed": "Photo saved · AI check failed, call the vet if birds look sick",
+    "aiResult": "AI: {name} ({pct}%) — vet notified. Advisory only."
   },
   "money": {
     "title": "Money",

@@ -11,6 +11,7 @@ Deno.serve(async (req) => {
   });
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new Response("unauthorized", { status: 401 });
+  if (!Deno.env.get("ANTHROPIC_API_KEY")) return Response.json({ error: "not_configured" }, { status: 503 }); // app says "AI check not set up"
   const { batch_id, media_ids } = await req.json();
 
   const { data: media } = await supabase.from("media").select("storage_path").in("id", media_ids);
@@ -21,8 +22,12 @@ Deno.serve(async (req) => {
   for (const m of media ?? []) {
     const { data } = await supabase.storage.from("evidence").download(m.storage_path);
     if (!data) continue;
-    const b64 = btoa(String.fromCharCode(...new Uint8Array(await data.arrayBuffer())));
-    images.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } });
+    // chunked: spreading a multi-MB photo into fromCharCode overflows the call stack
+    const u = new Uint8Array(await data.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode(...u.subarray(i, i + 0x8000));
+    const ext = m.storage_path.split(".").pop()?.toLowerCase();
+    images.push({ type: "image", source: { type: "base64", media_type: ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg", data: btoa(bin) } });
   }
   const ageDays = Math.round((Date.now() - Date.parse(batch!.placed_on)) / 864e5);
   const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });

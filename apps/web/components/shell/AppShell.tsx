@@ -7,6 +7,7 @@ import { TAB_ICONS, BellIcon } from './icons';
 import { TenantSheet } from './TenantSheet';
 import { Toaster } from '@/components/ui/Toast';
 import { LiveAlerts } from './LiveAlerts';
+import { OutboxSync } from './OutboxSync';
 import { ActionHost } from '@/components/forms/ActionHost';
 import { RolesContext } from '@/components/ui/ActBtn';
 import type { FarmType } from '@/lib/farm-types';
@@ -51,7 +52,7 @@ export function AppShell({ tenantName, sub, unread, tabs, mode, modes, today, ro
             {unread > 0 && <span className="badge">{unread}</span>}
           </Link>
         </header>
-        <main className="screen"><div className="wrap">{children}</div></main>
+        <main className="screen"><div className="wrap"><OutboxSync />{children}</div></main>
       </div>
       <nav className="tabs" aria-label="Main" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
         {tabs.map((k) => (
