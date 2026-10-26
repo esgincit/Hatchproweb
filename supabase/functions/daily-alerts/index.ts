@@ -37,13 +37,18 @@ function pushHost(endpoint: string) {
 /** Web Push to every subscribed device of the tenant; drops subscriptions the push service says are gone. */
 async function push(tenantId: string, notes: { title: string; body: string }[]) {
   if (!VAPID.pub || !VAPID.priv || !notes.length) return 0;
-  const { data: subs } = await admin.from("push_subscription").select("id,endpoint,p256dh,auth").eq("tenant_id", tenantId);
+  const [{ data: subs }, { data: members }] = await Promise.all([
+    admin.from("push_subscription").select("id,user_id,endpoint,p256dh,auth").eq("tenant_id", tenantId),
+    admin.from("user_role_assignment").select("user_id").eq("tenant_id", tenantId),
+  ]);
+  const current = new Set((members ?? []).map((m) => m.user_id));
   const payload = JSON.stringify(notes.length === 1
     ? { title: notes[0].title, body: notes[0].body, url: "/more/notifications" }
     : { title: `${notes.length} critical alerts`, body: notes.map((n) => n.title).join("\n"), url: "/more/notifications" });
   let sent = 0;
   for (const s of subs ?? []) {
-    if (!pushHost(s.endpoint)) { await admin.from("push_subscription").delete().eq("id", s.id); continue; } // never POST elsewhere (SSRF)
+    // never POST elsewhere (SSRF); people removed from the farm stop getting its alerts
+    if (!pushHost(s.endpoint) || !current.has(s.user_id)) { await admin.from("push_subscription").delete().eq("id", s.id); continue; }
     try {
       await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 12 * 3600, urgency: "high" });
       sent++;

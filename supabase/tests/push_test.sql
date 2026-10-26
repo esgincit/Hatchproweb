@@ -28,9 +28,14 @@ do $$ begin
   delete from push_subscription;
 end $$;
 
+-- a tenant member can't plant or move a dedupe key (would suppress the real alert job's row)
+insert into notification (tenant_id, kind, severity, title, dedupe_key) values ('4c593c59-b79c-5b92-8601-fd7c0d7a3b4c', 'info', 'info', 'planted', 'spike:x:2026-10-20');
+update notification set dedupe_key = 'spike:y:2026-10-20' where title = 'planted';
+
 reset role;
 do $$ begin
   assert (select count(*) from push_subscription where endpoint like '%test-owner') = 1, 'finance delete removed nothing';
+  assert (select dedupe_key from notification where title = 'planted') is null, 'client set a dedupe key';
 end $$;
 
 -- dedupe: same tenant + key twice → one row

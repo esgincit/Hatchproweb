@@ -5,6 +5,17 @@
 --    own; daily-alerts (service role) reads them to send Web Push.
 alter table notification add column dedupe_key text;
 create unique index notification_dedupe on notification (tenant_id, dedupe_key);
+-- Only the alert job (service role) may set the key: any tenant member can insert notifications, and a planted
+-- key for tomorrow (e.g. 'spike:<batch>:<date>') would silently suppress that real alert.
+create function notification_dedupe_guard() returns trigger language plpgsql as $$
+begin
+  if current_user not in ('postgres', 'service_role') then
+    if tg_op = 'INSERT' then new.dedupe_key := null; else new.dedupe_key := old.dedupe_key; end if;
+  end if;
+  return new;
+end $$;
+create trigger notification_dedupe_guard before insert or update on notification
+  for each row execute function notification_dedupe_guard();
 
 alter publication supabase_realtime add table notification;
 
