@@ -9,7 +9,8 @@ import { TEAM } from '@/lib/auth/permissions';
 import { Back, Header } from '@/components/ui/bits';
 import { dateFmt, fmtN } from '@/lib/format';
 
-const mask = (p: string | null) => (p ? p.replace(/(\+91)?(\d{2})\d{6}(\d{2})/, '$1$2••••••$3') : '—');
+// last 4 digits only, whatever the stored format ("+91 98490 12345", "9849012345", …)
+const mask = (p: string | null) => { const d = (p ?? '').replace(/\D/g, ''); return d.length >= 4 ? '••••••' + d.slice(-4) : '—'; };
 
 export default async function TenantView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
