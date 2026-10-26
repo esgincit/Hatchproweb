@@ -114,6 +114,9 @@ export const APPLY = z.object({
   current_birds: count, breed: optText(60), model: z.enum(['independent', 'integrator', 'own_integration']), integrator: optText(80), monthly_volume: count,
   labour_supervisor: count, labour_worker: count, labour_vaccinator: count, labour_driver: count, labour_technician: count,
   consent: z.literal(true),
+  // 0030: verified mobile (apply-otp) + documents uploaded into that check's folder
+  phone_check_id: id,
+  documents: z.array(z.object({ path: z.string().max(200), name: z.string().trim().max(120) })).max(5).default([]),
 });
 export type Application = z.infer<typeof APPLY>;
 

@@ -1,8 +1,9 @@
 'use client';
 // Public application form (R3/R6/R9 capture): business & KYC, contact, farm site with live GPS, sheds,
 // operations, labour. Submitted for platform review — no account is created here.
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import Link from 'next/link';
+import { PhoneVerify } from './PhoneVerify';
 import { useLocale, useTranslations } from 'next-intl';
 import { submitApplication } from '@/app/actions/apply';
 import { APPLY } from '@/lib/schemas';
@@ -22,6 +23,9 @@ export function ApplyForm() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [ver, setVer] = useState<{ checkId: string | null; documents: { path: string; name: string }[] }>({ checkId: null, documents: [] });
+  const form = useRef<HTMLFormElement>(null);
+  const onVer = useCallback((v: typeof ver) => setVer(v), []);
 
   const locate = () => {
     if (!navigator.geolocation) return setGpsMsg(t('gpsUnsupported'));
@@ -36,9 +40,12 @@ export function ApplyForm() {
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = Object.fromEntries([...new FormData(e.currentTarget).entries()].map(([k, v]) => [k, String(v)]));
-    const input = { ...fd, farm_types: types, sheds, lat: gps.lat, lng: gps.lng, consent: fd.consent === 'on' };
+    const input = { ...fd, farm_types: types, sheds, lat: gps.lat, lng: gps.lng, consent: fd.consent === 'on', phone_check_id: ver.checkId ?? '', documents: ver.documents };
     const local = APPLY.safeParse(input);
-    if (!local.success) { setBad(local.error.issues.map((i) => String(i.path[0]))); setErr(t('invalid')); return; }
+    if (!local.success) {
+      const fields = local.error.issues.map((i) => String(i.path[0]));
+      setBad(fields); setErr(fields.includes('phone_check_id') ? t('verifyFirst') : t('invalid')); return;
+    }
     setBusy(true);
     const r = await submitApplication(input);
     setBusy(false);
@@ -73,7 +80,7 @@ export function ApplyForm() {
   const totalCap = sheds.reduce((a, s) => a + (Number(s.capacity) || 0), 0);
 
   return (
-    <form onSubmit={submit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <form ref={form} onSubmit={submit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div className="card"><div className="eyebrow" style={{ marginBottom: 8 }}>{t('business')}</div>
         <div style={grid}>
           {field('business_name', t('businessName'), { required: true })}
@@ -98,6 +105,7 @@ export function ApplyForm() {
           {select('language', t('language'), [['te', 'తెలుగు'], ['hi', 'हिन्दी'], ['ta', 'தமிழ்'], ['kn', 'ಕನ್ನಡ'], ['en', 'English']], { value: locale })}
         </div>
       </div>
+      <PhoneVerify phoneOf={() => String((form.current?.elements.namedItem('phone') as HTMLInputElement | null)?.value ?? '')} onChange={onVer} />
 
       <div className="card"><div className="eyebrow" style={{ marginBottom: 8 }}>{t('farm')}</div>
         <div className="s" style={{ marginBottom: 6 }}>{t('farmTypes')} *</div>

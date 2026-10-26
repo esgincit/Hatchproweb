@@ -17,6 +17,9 @@ functions (`supabase/functions`) and demo seed data. Nothing deploys automatical
    **Alerts (required for daily alerts + push):** generate push keys once with `npx web-push@3.6.7 generate-vapid-keys`, then
    `npx supabase@2 secrets set CRON_SECRET=<long random> VAPID_PUBLIC_KEY=<public> VAPID_PRIVATE_KEY=<private> VAPID_SUBJECT=mailto:<team email>`
    (QA with the demo seed also: `APP_TODAY=2026-10-19`). Without `CRON_SECRET` the function refuses every call.
+   **Applications (/apply):** `npx supabase@2 secrets set TURNSTILE_SECRET_KEY=<Cloudflare Turnstile secret> MSG91_AUTH_KEY=… MSG91_OTP_TEMPLATE_ID=…`
+   (web host: `NEXT_PUBLIC_TURNSTILE_SITE_KEY`). QA without SMS: `APPLY_TEST_OTP=123456 APPLY_TEST_PHONES=+91…,+91…` makes those
+   numbers accept the fixed code — **never set these in production**. Without MSG91 keys other numbers get "SMS not set up".
    Schedule it (Database → Extensions: enable `pg_cron` and `pg_net`; then SQL editor — 13:30 UTC = 7 PM IST):
    ```sql
    select cron.schedule('daily-alerts', '30 13 * * *', $$

@@ -31,6 +31,11 @@ export default async function Admin() {
     sb.from('market_rate').select('product,rate_date').is('tenant_id', null).order('rate_date', { ascending: false }).limit(50),
     sb.from('onboarding_application').select('*').eq('status', 'submitted').order('created_at'),
   ]);
+  // attached documents (0030): 10-minute signed links; storage policy limits reads to the applications teams
+  const docPaths = (apps ?? []).flatMap((a) => (a.documents ?? []).map((d: { path: string }) => d.path));
+  const { data: signed } = docPaths.length && sees('applications') ? await sb.storage.from('documents').createSignedUrls(docPaths, 600) : { data: [] };
+  const urlOf = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+  const appRows = (apps ?? []).map((a) => ({ ...a, documents: (a.documents ?? []).map((d: { path: string; name: string }) => ({ ...d, url: urlOf.get(d.path) ?? null })) }));
   const count = (xs: { tenant_id: string | null }[] | null, id: string) => (xs ?? []).filter((x) => x.tenant_id === id).length;
   const rows = (tenants ?? []).map((tt) => ({
     tt, farms: count(farms, tt.id), users: count(users, tt.id),
@@ -58,7 +63,7 @@ export default async function Admin() {
             <div className="tile"><div className="lbl">{t('birds')}</div><div className="val">{fmtN(rows.reduce((a, r) => a + r.birds, 0))}</div><div className="delta flat">{t('acrossFarms', { n: rows.reduce((a, r) => a + r.farms, 0) })}</div></div>
             <div className="tile"><div className="lbl">{t('users')}</div><div className="val">{rows.reduce((a, r) => a + r.users, 0)}</div><div className="delta flat">{t('farmLogins')}</div></div>
           </div>
-          {sees('applications') && <Applications rows={(apps ?? []) as AppRow[]} />}
+          {sees('applications') && <Applications rows={appRows as AppRow[]} />}
           <div className="card">
             <div className="eyebrow" style={{ marginBottom: 6 }}>{t('tenants')}</div>
             <div className="list">

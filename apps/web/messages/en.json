@@ -505,7 +505,11 @@
       "platform_sales": "Sales team",
       "platform_ops": "Operations team",
       "platform_marketing": "Marketing team"
-    }
+    },
+    "appMobile": "Mobile",
+    "appVerified": "verified by OTP",
+    "appUnverified": "not verified",
+    "appDocs": "Documents"
   },
   "vendorCat": {
     "doc_hatchery": "Day-old chicks",
@@ -971,7 +975,33 @@
       "technician": "Technicians"
     },
     "consent": "I confirm these details are correct and agree to HatchPro verifying them and contacting me.",
-    "submit": "Submit application"
+    "submit": "Submit application",
+    "verifyFirst": "Verify your mobile number first (step above the farm details).",
+    "docBad": "A document was not uploaded through this form. Please attach it again.",
+    "otp": {
+      "title": "Verify your mobile",
+      "send": "Send code by SMS",
+      "resend": "Send a new code",
+      "code": "6-digit code",
+      "verify": "Verify",
+      "verified": "✓ Mobile verified",
+      "sent": "Code sent. It is valid for 10 minutes.",
+      "bad_phone": "Enter a 10-digit Indian mobile number above first.",
+      "captcha": "Please complete the \"I am human\" check, then try again.",
+      "too_many": "Too many codes for this number. Wait 10 minutes.",
+      "sms_not_configured": "SMS is not set up yet. Please call us to apply.",
+      "expired": "That code expired. Send a new one.",
+      "wrong_code": "Wrong code. Try again.",
+      "not_verified": "Verify your mobile first.",
+      "bad_file": "Only JPG, PNG or PDF up to 10 MB.",
+      "too_many_files": "Up to 5 documents.",
+      "server": "Something went wrong. Try again."
+    },
+    "docs": {
+      "title": "Documents (optional)",
+      "hint": "PAN, licences (FSSAI, PCB, trade), cancelled cheque — photo or PDF, up to 5.",
+      "add": "📎 Attach documents"
+    }
   },
   "suspended": {
     "title": "Account suspended",

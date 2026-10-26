@@ -8,8 +8,10 @@ const APPLICANT = '+919999000001', INVITEE = '+919999000002';
 test.describe.configure({ mode: 'serial' });
 
 async function cleanup() {
-  const { data: apps } = await admin.from('onboarding_application').select('id,tenant_id').eq('phone', APPLICANT);
+  const { data: apps } = await admin.from('onboarding_application').select('id,tenant_id,documents').eq('phone', APPLICANT);
   for (const a of apps ?? []) {
+    const docs = ((a.documents ?? []) as { path: string }[]).map((d) => d.path);
+    if (docs.length) await admin.storage.from('documents').remove(docs);
     await admin.from('onboarding_application').delete().eq('id', a.id);
     if (a.tenant_id) {
       await admin.from('audit_log').delete().eq('tenant_id', a.tenant_id);
@@ -48,6 +50,15 @@ test('apply → approve → owner gets farm + sheds → invites a supervisor', a
   await page.getByLabel('PAN *').fill('abcde1234f');
   await page.getByLabel('Owner name *').fill('Ravi Teja');
   await page.getByLabel('Mobile (your login) *').fill('99990 00001');
+  // 0030: prove the mobile (Turnstile test key auto-passes; local test OTP for this number) and attach a document
+  const verify = page.getByTestId('phone-verify');
+  await page.waitForFunction(() => !!(window as unknown as { turnstile?: { getResponse: () => string } }).turnstile?.getResponse(), undefined, { timeout: 30_000 });
+  await verify.getByRole('button', { name: 'Send code by SMS' }).click();
+  await verify.getByLabel('6-digit code').fill('123456');
+  await verify.getByRole('button', { name: 'Verify' }).click();
+  await expect(verify).toContainText('Mobile verified');
+  await verify.locator('input[type=file]').setInputFiles({ name: 'pan.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF\n') });
+  await expect(verify).toContainText('pan.pdf');
   await page.getByLabel('Site name *').fill('Sunrise Broiler Unit');
   await page.getByLabel('District *').fill('Medak');
   await page.getByLabel('PIN code *').fill('502110');
@@ -58,6 +69,9 @@ test('apply → approve → owner gets farm + sheds → invites a supervisor', a
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Submit application' }).click();
   await expect(page.getByText('Application received')).toBeVisible();
+  const { data: sent } = await admin.from('onboarding_application').select('phone_verified,documents').eq('phone', APPLICANT).single();
+  expect(sent!.phone_verified).toBe(true);
+  expect((sent!.documents as unknown[]).length).toBe(1);
 
   // 2. not a login yet: OTP for the applicant is refused
   await otp(page, '/login', '9999000001');

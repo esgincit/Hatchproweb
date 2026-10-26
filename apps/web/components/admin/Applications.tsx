@@ -12,6 +12,7 @@ export type AppRow = {
   sites: { name: string; village?: string; pin?: string; lat?: number; lng?: number; land_acres?: number; sheds: { name: string; capacity: number }[] }[];
   operations: { current_birds?: number; breed?: string; model?: string; monthly_volume?: number };
   labour: Record<string, number | undefined>;
+  phone_verified?: boolean; documents?: { path: string; name: string; url: string | null }[]; // 0030
 };
 
 export function Applications({ rows }: { rows: AppRow[] }) {
@@ -56,6 +57,10 @@ export function Applications({ rows }: { rows: AppRow[] }) {
                     <div>{t('appLabour')}</div><div>{labour}</div>
                     <div>GPS</div><div>{site?.lat ? <a href={`https://maps.google.com/?q=${site.lat},${site.lng}`} target="_blank" rel="noreferrer">{site.lat}, {site.lng}</a> : '—'}</div>
                     <div>Email</div><div>{a.email ?? '—'}</div>
+                    <div>{t('appMobile')}</div><div>{a.phone_verified ? <span className="pill good">{t('appVerified')}</span> : <span className="pill warn">{t('appUnverified')}</span>}</div>
+                    <div>{t('appDocs')}</div><div>{a.documents?.length ? a.documents.map((d) => (
+                      <div key={d.path}>{d.url ? <a href={d.url} target="_blank" rel="noreferrer">📎 {d.name}</a> : `📎 ${d.name}`}</div>
+                    )) : '—'}</div>
                   </div>
                   <form className="row wrap" style={{ gap: 8, marginTop: 10 }}
                     onSubmit={(e) => {
