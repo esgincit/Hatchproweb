@@ -62,9 +62,10 @@ create table listing_lead (
 create function my_advertiser() returns uuid language sql stable security definer set search_path = public as $$
   select id from advertiser where user_id = auth.uid() and status = 'active'
 $$;
--- an advertiser with a paid plan covering today
+-- an ACTIVE (not suspended) advertiser with a paid plan covering today — suspending a vendor hides its listings at once
 create function advertiser_paid(p_adv uuid) returns boolean language sql stable security definer set search_path = public as $$
-  select exists (select 1 from ad_subscription s where s.advertiser_id = p_adv and s.status = 'active' and current_date between s.starts_on and s.ends_on)
+  select exists (select 1 from ad_subscription s join advertiser a on a.id = s.advertiser_id
+                 where s.advertiser_id = p_adv and a.status = 'active' and s.status = 'active' and current_date between s.starts_on and s.ends_on)
 $$;
 
 -- vendors can't approve their own listings: content edits go back to review; status changes need the marketing team

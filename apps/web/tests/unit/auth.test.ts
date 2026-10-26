@@ -28,6 +28,22 @@ describe('tabsFor', () => {
   it('unknown role sees nothing', () => expect(tabsFor(['nope'])).toEqual([]));
 });
 
+describe('vendor (marketplace advertiser) routing', () => {
+  const vendor = { tenantId: null, roles: ['vendor'], platform: false };
+  it('lands on /vendor and stays inside it', () => {
+    expect(landingFor(vendor)).toBe('/vendor');
+    expect(redirectFor('/vendor', vendor)).toBeNull();
+    expect(redirectFor('/home', vendor)).toBe('/vendor');
+    expect(redirectFor('/money', vendor)).toBe('/vendor');
+    expect(redirectFor('/admin', vendor)).toBe('/vendor');
+    expect(redirectFor('/login', vendor)).toBe('/vendor');
+  });
+  it('farm users and anonymous visitors are kept out of /vendor', () => {
+    expect(redirectFor('/vendor', owner)).toBe('/home');
+    expect(redirectFor('/vendor', null)).toBe('/login');
+  });
+});
+
 describe('redirectFor', () => {
   it('anonymous', () => {
     expect(redirectFor('/home', null)).toBe('/login');

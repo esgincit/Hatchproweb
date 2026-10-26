@@ -5,8 +5,12 @@ const PUBLIC = ['/login', '/platform/login', '/apply'];
 const under = (path: string, base: string) => path === base || path.startsWith(base + '/');
 const NO_ACCESS = '/login?error=no-access';
 
+// marketplace advertisers (0032): a vendor login without a farm
+const isVendor = (c: Claims) => !c.platform && !c.tenantId && c.roles.includes('vendor');
+
 export function landingFor(c: Claims): string {
   if (c.platform) return '/admin';
+  if (isVendor(c)) return '/vendor';
   const first = tabsFor(c.roles)[0];
   return c.tenantId && first ? '/' + first : NO_ACCESS;
 }
@@ -18,7 +22,8 @@ export function redirectFor(pathname: string, c: Claims | null): string | null {
   let to: string | null;
   if (!c) to = isPublic ? null : isAdmin ? '/platform/login' : '/login';
   else if (c.platform) to = isAdmin || under(pathname, '/apply') ? null : '/admin'; // staff fill /apply for farms that call in
-  else if (isAdmin || isPublic) to = landingFor(c);
+  else if (isVendor(c)) to = under(pathname, '/vendor') ? null : '/vendor'; // vendors only see their portal
+  else if (isAdmin || isPublic || under(pathname, '/vendor')) to = landingFor(c);
   else {
     const seg = pathname.split('/')[1] as Tab;
     const land = landingFor(c);

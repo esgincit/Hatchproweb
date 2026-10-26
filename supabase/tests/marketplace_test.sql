@@ -47,6 +47,16 @@ do $$ begin
   insert into listing_lead (listing_id, contact_name, message) values ('eeeeeeee-0000-4000-8000-000000000001', 'VKR', 'need 50 bags');
 end $$;
 
+-- suspending the vendor hides its paid, approved listing immediately
+reset role;
+update advertiser set status = 'suspended' where id = 'dddddddd-0000-4000-8000-000000000001';
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"d847552a-9978-5cbf-aedf-2f20c382f6c6","app_metadata":{"tenant_id":"4c593c59-b79c-5b92-8601-fd7c0d7a3b4c","roles":["tenant_owner"]}}';
+do $$ begin assert (select count(*) from product_listing) = 0, 'suspended vendor still listed'; end $$;
+reset role;
+update advertiser set status = 'active' where id = 'dddddddd-0000-4000-8000-000000000001';
+set local role authenticated;
+
 -- other vendor can't see the lead; vendor 1 can, and an edit sends the listing back to review
 set local request.jwt.claims = '{"sub":"cccccccc-0000-4000-8000-000000000002","app_metadata":{"roles":["vendor"]}}';
 do $$ begin assert (select count(*) from listing_lead) = 0, 'lead leaked to another vendor'; end $$;
