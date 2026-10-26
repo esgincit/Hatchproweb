@@ -38,6 +38,16 @@ do $$ begin
   exception when insufficient_privilege then null; end;
 end $$;
 
+-- VKR finance: can't plant a settlement on KS's batch, nor link its own batch to KS's contract
+set local request.jwt.claims = '{"sub":"8817e673-99a9-53c8-9f77-28599a17f0f5","app_metadata":{"tenant_id":"4c593c59-b79c-5b92-8601-fd7c0d7a3b4c","roles":["finance","tenant_owner"]}}';
+do $$ begin
+  begin insert into contract_settlement (batch_id, contract_id, settled_on, lifted_birds, lifted_kg, feed_kg, dead, fcr, rate, mort_charge, net)
+    values ((select id from batch where code = 'KS-B-2026-22'), current_setting('t.c')::uuid, '2026-10-19', 1, 1, 1, 0, 1, 1, 0, 1); assert false, 'cross-tenant settlement';
+  exception when insufficient_privilege then null; end;
+  begin update batch set contract_id = current_setting('t.c')::uuid where code = 'VKR-B-2026-14'; assert false, 'linked to another farm contract';
+  exception when raise_exception then null; end;
+end $$;
+
 -- VKR owner sees none of it
 set local request.jwt.claims = '{"sub":"d847552a-9978-5cbf-aedf-2f20c382f6c6","app_metadata":{"tenant_id":"4c593c59-b79c-5b92-8601-fd7c0d7a3b4c","roles":["tenant_owner"]}}';
 do $$ begin assert (select count(*) from contract) + (select count(*) from contract_settlement) = 0, 'cross-tenant read'; end $$;

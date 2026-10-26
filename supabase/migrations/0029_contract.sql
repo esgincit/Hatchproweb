@@ -62,7 +62,20 @@ create policy contract_roles_ins on contract as restrictive for insert with chec
   and exists (select 1 from customer c where c.id = contract.customer_id and c.tenant_id = contract.tenant_id));
 create policy contract_roles_upd on contract as restrictive for update using ((select auth_roles()) && '{tenant_owner,farm_manager,finance}');
 create policy contract_roles_del on contract as restrictive for delete using ((select auth_roles()) && '{tenant_owner}');
-create policy contract_settlement_roles_ins on contract_settlement as restrictive for insert with check ((select auth_roles()) && '{tenant_owner,farm_manager,finance}');
+-- batch and contract must both be this tenant's (else a guessed foreign batch id could block that tenant's settlement)
+create policy contract_settlement_roles_ins on contract_settlement as restrictive for insert with check ((select auth_roles()) && '{tenant_owner,farm_manager,finance}'
+  and exists (select 1 from batch b where b.id = contract_settlement.batch_id and b.tenant_id = auth_tenant_id())
+  and exists (select 1 from contract c where c.id = contract_settlement.contract_id and c.tenant_id = auth_tenant_id()));
+
+-- a batch may only point at a contract of its own tenant
+create function batch_contract_same_tenant() returns trigger language plpgsql as $$
+begin
+  if new.contract_id is not null and not exists (select 1 from contract c where c.id = new.contract_id and c.tenant_id = new.tenant_id) then
+    raise exception 'contract belongs to another farm';
+  end if;
+  return new;
+end $$;
+create trigger batch_contract_same_tenant before insert or update of contract_id on batch for each row execute function batch_contract_same_tenant();
 create policy contract_settlement_no_upd on contract_settlement as restrictive for update using (auth_is_platform());
 create policy contract_settlement_no_del on contract_settlement as restrictive for delete using (auth_is_platform());
 create policy contract_active_ins on contract as restrictive for insert to authenticated with check ((select auth_tenant_active()));
