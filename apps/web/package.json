@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "perf:load": "node scripts/load-test.mjs",
+    "perf:lighthouse": "npx -y lighthouse@12.4.0 http://localhost:3200/login --only-categories=performance,accessibility,best-practices --output=html --output-path=./lighthouse.html",
+    "icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.3.1",
