@@ -134,3 +134,15 @@ a.item,a.iconbtn,a.tile{color:inherit}
   --color-crit:var(--crit);--color-crit-soft:var(--crit-soft);--color-info:var(--info);--color-info-soft:var(--info-soft);--color-series2:var(--series2);
   --font-display:var(--display);--font-body:var(--body);
 }
+
+/* Printable reports (app/(app)/report/[kind]): browser "Save as PDF" gets just the report, light colours, A4 landscape */
+.report h3{font-size:13px;margin:16px 0 4px}
+@media print{
+  @page{size:A4 landscape;margin:12mm}
+  :root{--bg:#fff;--surface:#fff;--ink:#000;--ink2:#333;--muted:#555;--line:#bbb;color-scheme:light}
+  .topbar,.tabs,.back,.noprint{display:none!important}
+  .screen,.wrap,.col,.app{padding:0!important;margin:0!important;max-width:none!important;overflow:visible!important;height:auto!important}
+  .card.report{border:0;box-shadow:none;padding:0}
+  .tablewrap{overflow:visible}
+  tr{break-inside:avoid}thead{display:table-header-group}
+}

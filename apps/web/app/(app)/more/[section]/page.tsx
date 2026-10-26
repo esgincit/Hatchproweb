@@ -58,12 +58,13 @@ export default async function Section({ params, searchParams }: { params: Promis
         ['rVendor', 'CSV'], ['rTrader', 'CSV'], ['rAtt', 'CSV'], ['rMort', t('sections.rMortSub')],
       ];
       const EXPORT: Record<string, string> = { rPnl: 'pnl', rVendor: 'statements', rTrader: 'statements', rAtt: 'register' };
+      const PAGE: Record<string, string> = { rDaily: 'daily', rWeekly: 'weekly', rVacc: 'vaccination', rMort: 'mortality' };
       return (
         <>{B}<Header title={t('sections.reportsTitle')} />
           <div className="card"><div className="list">
             {reports.map(([k, sub]) => (
               <div className="item" key={k}><div><div className="t">{t(`sections.${k}`)}</div><div className="s">{sub}</div></div>
-                <div className="r"><ActBtn act="report" ctx={EXPORT[k] ? { kind: EXPORT[k] } : {}} className="btn small secondary">{t('common.generate')}</ActBtn></div></div>
+                <div className="r"><ActBtn act="report" ctx={EXPORT[k] ? { kind: EXPORT[k] } : { page: PAGE[k] }} className="btn small secondary">{t('common.generate')}</ActBtn></div></div>
             ))}
           </div></div></>
       );

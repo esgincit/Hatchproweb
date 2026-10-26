@@ -91,10 +91,10 @@ export function nextBatchCode(codes: string[], year: string) {
 // Acts that reuse another form, and acts that just navigate.
 const ALIAS: Record<string, string> = { addShedPick: 'addShed', addVisitPick: 'addVisit' };
 const NAV: Record<string, string> = { attToday: '/more/people' };
-// file downloads (app/api/export/[kind]); `report` rows pass the kind they export
+// file downloads (app/api/export/[kind]); `report` rows pass the kind they export, or the printable page (app/(app)/report/[kind])
 const DOWNLOAD: Record<string, (c: ActCtx) => string | null> = {
   tally: () => '/api/export/tally', gstr: () => '/api/export/gstr1', stmt: () => '/api/export/statements',
-  payroll: () => '/api/export/register', report: (c) => (c.kind ? `/api/export/${c.kind}` : null),
+  payroll: () => '/api/export/register', report: (c) => (c.kind ? `/api/export/${c.kind}` : c.page ? `/report/${c.page}` : null),
 };
 // Register grid: each tap moves the day one step P → H → A → L → P (blank days start at P).
 const NEXT_ATT: Record<string, string> = { P: 'half', H: 'absent', A: 'leave', L: 'present' };
