@@ -23,7 +23,7 @@ test('a new alert pops up live and push can be turned on', async ({ page, contex
     await page.getByLabel('6-digit code').fill('123456');
     await page.getByRole('button', { name: 'Verify' }).click();
     await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 });
-    await page.waitForTimeout(3000); // realtime socket joins after hydration
+    await expect(page.locator('body[data-alerts="live"]')).toHaveCount(1, { timeout: 30_000 }); // realtime joined
 
     const { data: t } = await admin.from('tenant').select('id').eq('name', 'VKR Poultry Farms').single();
     const { error } = await admin.from('notification').insert({ tenant_id: t!.id, kind: 'alert', severity: 'critical', title, dedupe_key: key });

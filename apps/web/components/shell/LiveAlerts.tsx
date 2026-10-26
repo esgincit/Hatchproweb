@@ -15,7 +15,9 @@ export function LiveAlerts() {
       router.refresh();
     });
     // RLS needs the user's token on the socket before subscribing, or every event is filtered out
-    sb.auth.getSession().then(({ data }) => { if (!live) return; sb.realtime.setAuth(data.session?.access_token ?? null); ch.subscribe(); });
+    sb.auth.getSession().then(({ data }) => { if (!live) return; sb.realtime.setAuth(data.session?.access_token ?? null);
+      ch.subscribe((st) => { if (live) document.body.dataset.alerts = st === 'SUBSCRIBED' ? 'live' : 'off'; }); // e2e waits on this
+    });
     return () => { live = false; sb.removeChannel(ch); };
   }, [router]);
   return null;

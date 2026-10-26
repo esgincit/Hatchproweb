@@ -30,12 +30,22 @@ end $$;
 
 -- a tenant member can't plant or move a dedupe key (would suppress the real alert job's row)
 insert into notification (tenant_id, kind, severity, title, dedupe_key) values ('4c593c59-b79c-5b92-8601-fd7c0d7a3b4c', 'info', 'info', 'planted', 'spike:x:2026-10-20');
-update notification set dedupe_key = 'spike:y:2026-10-20' where title = 'planted';
+-- 0024: members only mark notifications read; no editing, no deleting alerts
+do $$ begin
+  begin update notification set dedupe_key = 'spike:y:2026-10-20' where title = 'planted'; assert false, 'moved a dedupe key';
+  exception when insufficient_privilege then null; end;
+  begin update notification set severity = 'info', title = 'all good' where kind = 'alert'; assert false, 'edited an alert';
+  exception when insufficient_privilege then null; end;
+  update notification set read_at = now() where title = 'planted';
+  assert (select read_at from notification where title = 'planted') is not null, 'could not mark read';
+  delete from notification where kind = 'alert';
+end $$;
 
 reset role;
 do $$ begin
   assert (select count(*) from push_subscription where endpoint like '%test-owner') = 1, 'finance delete removed nothing';
   assert (select dedupe_key from notification where title = 'planted') is null, 'client set a dedupe key';
+  assert (select count(*) from notification where kind = 'alert') > 0, 'member deleted alerts';
 end $$;
 
 -- dedupe: same tenant + key twice → one row
