@@ -14,6 +14,15 @@ functions (`supabase/functions`) and demo seed data. Nothing deploys automatical
    `npx supabase@2 functions deploy`.)
 4. Optional function secrets (features stay off without them):
    `npx supabase@2 secrets set WHATSAPP_TOKEN=… WHATSAPP_PHONE_ID=… ANTHROPIC_API_KEY=… RAZORPAY_WEBHOOK_SECRET=…`
+   **Alerts (required for daily alerts + push):** generate push keys once with `npx web-push@3.6.7 generate-vapid-keys`, then
+   `npx supabase@2 secrets set CRON_SECRET=<long random> VAPID_PUBLIC_KEY=<public> VAPID_PRIVATE_KEY=<private> VAPID_SUBJECT=mailto:<team email>`
+   (QA with the demo seed also: `APP_TODAY=2026-10-19`). Without `CRON_SECRET` the function refuses every call.
+   Schedule it (Database → Extensions: enable `pg_cron` and `pg_net`; then SQL editor — 13:30 UTC = 7 PM IST):
+   ```sql
+   select cron.schedule('daily-alerts', '30 13 * * *', $$
+     select net.http_post(url := 'https://<ref>.supabase.co/functions/v1/daily-alerts',
+                          headers := jsonb_build_object('x-cron-secret', '<CRON_SECRET>')) $$);
+   ```
 5. **Authentication** settings:
    - Providers → **Phone**: on, with an SMS provider (MSG91 / Twilio …).
    - **Test phone numbers** (same screen) so QA can log in without SMS, e.g. `919849012345` → `123456`
@@ -31,6 +40,7 @@ functions (`supabase/functions`) and demo seed data. Nothing deploys automatical
 - Environment variables (see `apps/web/.env.example`):
   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the QA project's URL + anon key
   - `APP_TODAY` — only if using the demo seed data
+  - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — the same public key as the function's `VAPID_PUBLIC_KEY` (push alerts)
   - Never set the service-role key on the web host.
 
 ## 3. Smoke test checklist
@@ -42,10 +52,16 @@ functions (`supabase/functions`) and demo seed data. Nothing deploys automatical
 | Daily work | Daily log, mortality, vaccination, vet visit; the 3D panel updates within seconds |
 | Money | Sale, bill, payment; payment over ₹50,000 by finance waits for owner approval; Tally / GSTR exports |
 | Reminders | Money → Receivables → WhatsApp reminders → Send opens WhatsApp with the message; row shows "Reminded today" |
+| Reports | More → Reports → Generate (daily / weekly / vaccination / mortality) → print dialog → Save as PDF |
+| Payroll | More → People → Wages → Bank details for a worker → Download salary bank file (CSV has the account) |
+| Alerts | Run daily-alerts (curl with `x-cron-secret`) → new alerts pop up in the open app; a second run adds none |
+| Push (by hand, real phone) | Android Chrome: More → Notifications → Turn on → allow; run daily-alerts with a critical alert (e.g. log mortality spike) → phone shows it. iPhone: Add to Home Screen first |
 | Roles | Supervisor has no Money tab; finance can't approve big payments |
 | Languages | Switch en / te / hi / ta / kn |
 
 ## Known limits in this build
 - 3D needs hardware graphics; machines without it show "3D view isn't available on this device".
 - WhatsApp reminders use click-to-chat links; automatic sending needs a WhatsApp Business API token + approved template.
-- PDF reports and payroll bank files are not built yet.
+- Reports are generated on demand; scheduled sending (WhatsApp 7 PM / Monday) needs the WhatsApp Business API.
+- Salary bank file is a generic NEFT sheet; map columns to your bank's upload template if it differs.
+- Alert thresholds are defaults (heat stress THI ≥ 78 warns — fires often in hot, humid weeks); per-farm tuning comes later.

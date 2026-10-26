@@ -1043,5 +1043,15 @@
       "overdue": "Overdue",
       "upcoming": "Upcoming"
     }
+  },
+  "push": {
+    "why": "Get critical alerts (mortality spike, heat stress, overdue vaccination) on this phone, even when the app is closed.",
+    "turnOn": "🔔 Turn on",
+    "turnOff": "Turn off",
+    "enabled": "Alerts are on for this phone.",
+    "ok": "Alerts turned on",
+    "failed": "Could not turn on alerts. Try again.",
+    "denied": "Notifications are blocked for this site. Allow them in the browser settings to get alerts.",
+    "unsupported": "This browser can't show alerts. On iPhone, first tap Share → Add to Home Screen, then open HatchPro from the home screen."
   }
 }

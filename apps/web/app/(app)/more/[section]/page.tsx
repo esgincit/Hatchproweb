@@ -7,6 +7,7 @@ import { attGet, attMonth, payslip } from '@/lib/kpi';
 import { dateFmt, daysBetween, fmtINR, fmtL, fmtN, monthFmt } from '@/lib/format';
 import { Back, Chips, Header, Live, sevStripe } from '@/components/ui/bits';
 import { ActBtn } from '@/components/ui/ActBtn';
+import { PushToggle } from '@/components/shell/PushToggle';
 import type { View } from '@/lib/view/types';
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
@@ -81,6 +82,7 @@ async function Notifications({ c: { v, t }, B }: { c: Ctx; B: React.ReactNode })
   }
   return (
     <>{B}<Header title={t('sections.notifications')} action={<Live />} />
+      <PushToggle />
       <div className="card"><div className="list">
         {v.t.notifications.map((n) => (
           <div key={n.id} className={`item stripe ${sevStripe(n.severity)}`}><div>

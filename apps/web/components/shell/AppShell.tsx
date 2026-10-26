@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { TAB_ICONS, BellIcon } from './icons';
 import { TenantSheet } from './TenantSheet';
 import { Toaster } from '@/components/ui/Toast';
+import { LiveAlerts } from './LiveAlerts';
 import { ActionHost } from '@/components/forms/ActionHost';
 import { RolesContext } from '@/components/ui/ActBtn';
 import type { FarmType } from '@/lib/farm-types';
@@ -61,6 +62,7 @@ export function AppShell({ tenantName, sub, unread, tabs, mode, modes, today, ro
         ))}
       </nav>
       <Toaster />
+      <LiveAlerts />
       <ActionHost today={today} />
       <TenantSheet open={open} onOpenChange={setOpen} modes={modes} mode={mode} />
     </div>

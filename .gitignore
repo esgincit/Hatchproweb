@@ -15,3 +15,6 @@ apps/web/scripts/.cache/
 
 # local scratch file with credentials — never commit
 temp.txt
+
+# local edge-function secrets (CRON_SECRET, VAPID keys)
+supabase/functions/.env
