@@ -242,6 +242,14 @@ function Customers({ c: { v, t }, B }: { c: Ctx; B: React.ReactNode }) {
         })}
         {!tn.customers.length && <div className="s">{t('sections.noCustomers')}</div>}
       </div></div>
+      <Header title={t('contract.listTitle')} action={<ActBtn act="addContract" className="btn small">{t('contract.add')}</ActBtn>} />
+      <div className="card"><div className="list">
+        {tn.contracts.map((c) => (
+          <div className="item" key={c.id}><div><div className="t">{c.name}</div>
+            <div className="s">{c.customer} · {t('contract.termsVal', { rate: c.base_rate.toFixed(2), fcr: c.std_fcr.toFixed(2) })} · {t('contract.batches', { n: tn.batches.filter((b) => b.contract_id === c.id).length })}</div></div></div>
+        ))}
+        {!tn.contracts.length && <div className="s">{t('contract.noneList')}</div>}
+      </div></div>
     </>
   );
 }

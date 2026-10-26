@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { SCHEMAS, isAct, type ActKey } from '@/lib/schemas';
 import { fmtINR } from '@/lib/format';
+import { settle, type ContractTerms } from '@/lib/settlement';
 import { claimsFromUser } from '@/lib/auth/claims';
 import { canAct } from '@/lib/auth/permissions';
 
@@ -219,6 +220,35 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
         return { ok: false, error: body?.error ?? error.message };
       }
       return { ok: true, msg: t('invite.ok', { name: x.name, phone: String(data?.phone ?? '') }), href: '/more/users' };
+    }
+    case 'addContract': {
+      const x = v as In<'addContract'>;
+      const { error } = await sb.from('contract').insert(x);
+      return fail(error) ?? { ok: true, msg: t('contract.ok', { name: x.name }) };
+    }
+    case 'linkContract': {
+      const x = v as In<'linkContract'>;
+      const { error } = await sb.from('batch').update({ contract_id: x.contract_id }).eq('id', x.batch_id).eq('farm_type', 'broiler');
+      return fail(error) ?? { ok: true, msg: t('contract.linked') };
+    }
+    case 'settleContract': {
+      // computed here from the database's own placed / dead / feed — the browser only supplies what was lifted
+      const x = v as In<'settleContract'>;
+      const [{ data: b }, { data: k }] = await Promise.all([
+        sb.from('batch').select('doc_count,contract_id,contract(base_rate,std_fcr,fcr_bonus,fcr_penalty,min_rate,allowed_mort_pct,mort_penalty)').eq('id', x.batch_id).maybeSingle(),
+        sb.from('v_batch_kpi').select('cum_mortality,feed_kg').eq('batch_id', x.batch_id).maybeSingle(),
+      ]);
+      const c = b?.contract as unknown as Record<string, number> | null;
+      if (!b || !c) return { ok: false, error: t('contract.none') };
+      const terms = Object.fromEntries(Object.entries(c).map(([kk, vv]) => [kk, Number(vv)])) as unknown as ContractTerms;
+      const h = { placed: b.doc_count, dead: Number(k?.cum_mortality ?? 0), liftedBirds: x.lifted_birds, liftedKg: x.lifted_kg, feedKg: Number(k?.feed_kg ?? 0) };
+      const s = settle(terms, h);
+      if (!s || s.net <= 0) return { ok: false, error: t('contract.nothing') };
+      const { data: no, error } = await sb.rpc('record_settlement', {
+        p_batch: x.batch_id, p_date: x.date, p_lifted_birds: x.lifted_birds, p_lifted_kg: x.lifted_kg, p_feed_kg: h.feedKg,
+        p_dead: h.dead, p_fcr: s.fcr, p_rate: s.rate, p_mort_charge: s.mortCharge, p_net: s.net,
+      });
+      return fail(error) ?? { ok: true, msg: t('contract.settled', { no: String(no), amt: fmtINR(s.net) }) };
     }
     case 'shiftLog': {
       const x = v as In<'shiftLog'>;

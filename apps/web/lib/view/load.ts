@@ -27,7 +27,7 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
   const q = await Promise.all([
     sb.from('tenant').select('id,name,plan,state,status').maybeSingle(),
     sb.from('farm').select('id,name,farm_type,district,village,lat,lng,capacity_birds,shed(id,name,shed_type,capacity_birds,area_sqft)').order('created_at'),
-    sb.from('batch').select('id,code,farm_type,placed_on,doc_count,doc_rate,state,breed(id,name),farm(name),shed(name)').order('placed_on', { ascending: false }),
+    sb.from('batch').select('id,code,farm_type,placed_on,doc_count,doc_rate,state,contract_id,breed(id,name),farm(name),shed(name)').order('placed_on', { ascending: false }),
     sb.from('daily_shed_log')
       .select('id,batch_id,log_date,birds_opening,mortality,culls,feed_kg,water_litres,temp_min_c,temp_max_c,humidity_pct,avg_weight_g,remarks,created_by,egg_production(grade,count)')
       .gte('log_date', since).order('log_date'),
@@ -60,10 +60,12 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
     sb.from('worker_advance').select('id,worker_id,amount,given_on,reason,worker(name)').gte('given_on', monthStart).order('given_on', { ascending: false }),
     sb.from('store').select('id,farm_id'),
     sb.from('hatch_record').select('batch_id,candled_on,clears,dead_germ,hatched_on,chicks_a,chicks_b,culls'),
+    sb.from('contract').select('id,name,customer_id,base_rate,std_fcr,fcr_bonus,fcr_penalty,min_rate,allowed_mort_pct,mort_penalty,active,customer(name)').order('created_at'),
+    sb.from('contract_settlement').select('batch_id,settled_on,lifted_birds,lifted_kg,feed_kg,dead,fcr,rate,mort_charge,net,invoice_no'),
   ]);
   const err = q.find((r) => r.error)?.error;
   if (err) throw new Error(err.message);
-  const [tenantRows, farms, batches, logs, kpi, vacc, curves, users, vendors, customers, workers, att, assets, tickets, bills, invoices, visits, cases, notifs, pos, stock, items, rates, diseases, docs, approvals, advances, stores, hatches] =
+  const [tenantRows, farms, batches, logs, kpi, vacc, curves, users, vendors, customers, workers, att, assets, tickets, bills, invoices, visits, cases, notifs, pos, stock, items, rates, diseases, docs, approvals, advances, stores, hatches, contracts, settlements] =
     q.map((r) => r.data ?? []) as any[][];
   const tenant = tenantRows as any;
 
@@ -96,6 +98,8 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
       curve: curves.filter((c) => c.breed_id === breed?.id).map((c) => ({ week: c.age_week, egg: c.std_egg_pct == null ? null : n(c.std_egg_pct), weight: c.std_weight_g })),
       cum: { dead: n(k?.cum_mortality), feed: n(k?.feed_kg), eggs: n(k?.eggs), saleable: n(k?.saleable_eggs) },
       hatch: hatches.find((h) => h.batch_id === b.id) ?? null,
+      contract_id: b.contract_id ?? null,
+      settlement: ((s) => (s ? { ...s, lifted_kg: n(s.lifted_kg), feed_kg: n(s.feed_kg), fcr: n(s.fcr), rate: n(s.rate), mort_charge: n(s.mort_charge), net: n(s.net) } : null))(settlements.find((s) => s.batch_id === b.id)),
     };
   });
 
@@ -128,6 +132,11 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
       terms: v.payment_terms_days, rating: v.rating == null ? null : n(v.rating), gstin: v.gstin,
     })),
     customers: customers.map((c) => ({ id: c.id, name: c.name, kind: c.kind, phone: c.phone ?? '', credit_limit: n(c.credit_limit), credit_days: c.credit_days ?? 0 })),
+    contracts: contracts.map((c) => ({
+      id: c.id, name: c.name, customer_id: c.customer_id, customer: one<any>(c.customer)?.name ?? '', active: c.active,
+      base_rate: n(c.base_rate), std_fcr: n(c.std_fcr), fcr_bonus: n(c.fcr_bonus), fcr_penalty: n(c.fcr_penalty), min_rate: n(c.min_rate),
+      allowed_mort_pct: n(c.allowed_mort_pct), mort_penalty: n(c.mort_penalty),
+    })),
     workers: workers.map((w) => ({ id: w.id, name: w.name, role: w.role, wage: n(w.wage_rate), farm_id: w.farm_id ?? null })),
     attendance,
     assets: assets.map((a) => ({ id: a.id, name: a.name, category: a.category, next_service: a.next_service_on ?? today, status: a.status, farm_id: a.farm_id ?? null, shed_id: a.shed_id ?? null })),

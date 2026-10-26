@@ -1,5 +1,6 @@
 // View-model shapes = demo/data.json (what demo/index.html's screens read), filled from Supabase by load.ts.
 import type { FarmType } from '@/lib/farm-types';
+import type { ContractTerms } from '@/lib/settlement';
 
 export type Grades = Partial<Record<'jumbo' | 'large' | 'medium' | 'small' | 'cracked' | 'dirty', number>>;
 export type Log = {
@@ -18,6 +19,8 @@ export type Batch = {
   placed: string; shed_name: string; farm_name: string; logs: Log[]; vacc: Vacc[]; curve: Curve;
   cum: { dead: number; feed: number; eggs: number; saleable: number }; // from v_batch_kpi (all-time)
   hatch?: Hatch | null; // hatchery settings only (hatch_record, 0025)
+  contract_id?: string | null; // contract broiler (0029)
+  settlement?: { settled_on: string; lifted_birds: number; lifted_kg: number; feed_kg: number; dead: number; fcr: number; rate: number; mort_charge: number; net: number; invoice_no: string | null } | null;
 };
 export type Shed = { id: string; name: string; type: string; capacity: number; area: number | null };
 export type Farm = {
@@ -32,6 +35,7 @@ export type Tenant = {
   users: { id: string; name: string; role: string; phone: string }[];
   vendors: { id: string; name: string; category: string; contact: string; phone: string; terms: number; rating: number | null; gstin: string | null }[];
   customers: { id: string; name: string; kind: string; phone: string; credit_limit: number; credit_days: number }[];
+  contracts: (ContractTerms & { id: string; name: string; customer_id: string; customer: string; active: boolean })[];
   workers: { id: string; name: string; role: string; wage: number; farm_id: string | null }[];
   attendance: Record<string, Record<string, 'P' | 'H' | 'A' | 'L'>>; // worker id → date → code
   assets: { id: string; name: string; category: string; next_service: string; status: string; farm_id: string | null; shed_id: string | null }[];

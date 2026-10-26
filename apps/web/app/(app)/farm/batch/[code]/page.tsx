@@ -3,9 +3,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { loadView } from '@/lib/view/load';
-import { batchKpi, costPerEgg, hatchKpi, rate, stdEggPct, stdWeight } from '@/lib/kpi';
-import type { Batch, Invoice } from '@/lib/view/types';
-import { dateFmt, daysBetween, fmtL, fmtN } from '@/lib/format';
+import { batchKpi, costPerEgg, hatchKpi, rate, stdEggPct, stdWeight, type BatchKpi } from '@/lib/kpi';
+import { settle } from '@/lib/settlement';
+import type { Batch, Invoice, Tenant } from '@/lib/view/types';
+import { dateFmt, daysBetween, fmtINR, fmtL, fmtN } from '@/lib/format';
 import { Back, RagPill } from '@/components/ui/bits';
 import { ActBtn } from '@/components/ui/ActBtn';
 import { LineChart } from '@/components/charts/LineChart';
@@ -94,6 +95,7 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
       </div>
 
       {hatch && <HatchCard b={b} invoices={tn.invoices} t={t} dmy={dmy} />}
+      {b.ft === 'broiler' && <ContractCard b={b} tn={tn} k={k} t={t} dmy={dmy} />}
 
       {chart && (
         <div className="card">
@@ -197,6 +199,43 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
       </div>
       {b.state !== 'closed' && <ActBtn act="closeBatch" ctx={{ batch: b.id }} className="btn secondary">{t('batch.closeBatch')}</ActBtn>}
     </>
+  );
+}
+
+// Contract broiler (0029): integrator terms, a live estimate of the growing charge, then the settlement statement.
+function ContractCard({ b, tn, k, t, dmy }: { b: Batch; tn: Tenant; k: BatchKpi; t: Awaited<ReturnType<typeof getTranslations>>; dmy: (s: string) => string }) {
+  const c = tn.contracts.find((x) => x.id === b.contract_id);
+  if (!c) return b.state !== 'closed' && tn.contracts.length
+    ? <ActBtn act="linkContract" ctx={{ batch: b.id }} className="btn secondary">{t('contract.link')}</ActBtn> : null;
+  const s = b.settlement;
+  const kg = k.last?.avg_w ? Math.round((k.alive * k.last.avg_w) / 1000) : 0;
+  const est = s ? null : settle(c, { placed: b.doc, dead: k.dead, liftedBirds: k.alive, liftedKg: kg, feedKg: k.feed });
+  const row = (label: string, value: React.ReactNode) => <><div>{label}</div><div>{value}</div></>;
+  return (
+    <div className="card" data-testid="contract-card">
+      <div className="row between" style={{ marginBottom: 6 }}>
+        <div className="eyebrow">{t('contract.title', { name: c.customer })}</div>
+        <span className={`pill ${s ? 'good' : 'neutral'}`}>{s ? t('contract.settled', { date: dmy(s.settled_on) }) : t('contract.estimate')}</span>
+      </div>
+      <div className="kv">
+        {row(t('contract.terms'), t('contract.termsVal', { rate: c.base_rate.toFixed(2), fcr: c.std_fcr.toFixed(2) }))}
+        {s ? <>
+          {row(t('contract.lifted'), t('contract.liftedVal', { birds: fmtN(s.lifted_birds), kg: fmtN(s.lifted_kg) }))}
+          {row('FCR', s.fcr.toFixed(3))}
+          {row(t('contract.rate'), `₹${s.rate.toFixed(2)}/kg`)}
+          {row(t('contract.mortCharge'), fmtINR(s.mort_charge))}
+          {row(t('contract.net'), <b>{fmtINR(s.net)}</b>)}
+          {row(t('contract.invoice'), s.invoice_no ?? '—')}
+        </> : est ? <>
+          {row(t('contract.lifted'), t('contract.liftedVal', { birds: fmtN(k.alive), kg: fmtN(kg) }))}
+          {row('FCR', est.fcr.toFixed(3))}
+          {row(t('contract.rate'), `₹${est.rate.toFixed(2)}/kg`)}
+          {row(t('contract.mortCharge'), fmtINR(est.mortCharge))}
+          {row(t('contract.net'), <b>{fmtINR(est.net)}</b>)}
+        </> : row(t('contract.lifted'), t('contract.noWeight'))}
+      </div>
+      {!s && <ActBtn act="settleContract" ctx={{ batch: b.id, birds: String(k.alive), kg: kg ? String(kg) : '' }} className="btn small" style={{ marginTop: 10 }}>{t('contract.settleBtn')}</ActBtn>}
+    </div>
   );
 }
 

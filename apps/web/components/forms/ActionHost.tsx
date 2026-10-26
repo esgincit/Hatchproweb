@@ -33,12 +33,13 @@ type Lookups = {
   pos: { id: string; no: string; vendor: string; item: string; qty: number; rate: number }[];
   vaccines: { id: string; name: string; farm_type: string; age_day: number }[];
   workers: { id: string; name: string }[];
+  contracts: { id: string; name: string }[];
 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- PostgREST embeds */
 async function loadLookups(): Promise<Lookups> {
   const sb = createClient();
-  const [farms, sheds, breeds, vendors, customers, batches, diseases, bills, invoices, assets, items, pos, vaccines, workers] = await Promise.all([
+  const [farms, sheds, breeds, vendors, customers, batches, diseases, bills, invoices, assets, items, pos, vaccines, workers, contracts] = await Promise.all([
     sb.from('farm').select('id,name,farm_type').order('created_at'),
     sb.from('shed').select('id,name,farm_id,batch(state)').order('name'),
     sb.from('breed').select('id,name,farm_type').order('name'),
@@ -53,6 +54,7 @@ async function loadLookups(): Promise<Lookups> {
     sb.from('purchase_order').select('id,po_no,vendor(name),po_line(qty,rate,item(name))').in('status', ['approved', 'submitted', 'partial']).order('po_date'),
     sb.from('vaccine_master').select('id,name,farm_type,age_day').order('age_day'),
     sb.from('worker').select('id,name').eq('active', true).order('name'),
+    sb.from('contract').select('id,name').eq('active', true).order('created_at'),
   ]);
   const d = (r: { data: unknown }) => (r.data ?? []) as any[];
   const one = (x: any) => (Array.isArray(x) ? x[0] : x);
@@ -76,6 +78,7 @@ async function loadLookups(): Promise<Lookups> {
     }),
     vaccines: d(vaccines),
     workers: d(workers),
+    contracts: d(contracts),
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -441,6 +444,37 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
           { id: 'name', label: f('doc.name'), required: true, placeholder: 'PCB consent to operate' },
           { id: 'ref_no', label: f('doc.ref'), half: true },
           { id: 'expires', label: f('doc.expires'), type: 'date', half: true },
+        ],
+      };
+    case 'addContract':
+      if (!L.customers.length) return { title: f('contract.title'), intro: f('needCustomer'), fields: [], submit: f('save') };
+      return {
+        title: f('contract.title'), intro: f('contract.intro'), submit: f('save'),
+        fields: [
+          { id: 'customer_id', label: f('contract.integrator'), type: 'select', options: L.customers.map((c): Opt => [c.id, c.name]) },
+          { id: 'name', label: f('name'), required: true, value: `${today.slice(0, 4)} growing charge` },
+          { id: 'base_rate', label: f('contract.base'), type: 'number', half: true, required: true },
+          { id: 'std_fcr', label: f('contract.stdFcr'), type: 'number', half: true, required: true, value: '1.7' },
+          { id: 'fcr_bonus', label: f('contract.bonus'), type: 'number', half: true, value: '0.1' },
+          { id: 'fcr_penalty', label: f('contract.penalty'), type: 'number', half: true, value: '0.1' },
+          { id: 'min_rate', label: f('contract.floor'), type: 'number', half: true, value: '0' },
+          { id: 'allowed_mort_pct', label: f('contract.allowedMort'), type: 'number', half: true, value: '5' },
+          { id: 'mort_penalty', label: f('contract.mortPenalty'), type: 'number', half: true, value: '0' },
+        ],
+      };
+    case 'linkContract':
+      if (!L.contracts.length) return { title: f('contract.linkTitle'), intro: f('contract.noneYet'), fields: [], submit: f('save') };
+      return {
+        title: f('contract.linkTitle'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [{ id: 'contract_id', label: f('contract.label'), type: 'select', options: L.contracts.map((c): Opt => [c.id, c.name]) }],
+      };
+    case 'settleContract':
+      return {
+        title: f('contract.settleTitle'), intro: f('contract.settleIntro'), submit: f('contract.settleSubmit'), hidden: { batch_id: ctx.batch },
+        fields: [
+          date(),
+          { id: 'lifted_birds', label: f('contract.liftedBirds'), type: 'number', half: true, required: true, value: ctx.birds },
+          { id: 'lifted_kg', label: f('contract.liftedKg'), type: 'number', half: true, required: true, value: ctx.kg },
         ],
       };
     case 'hatchCandle':

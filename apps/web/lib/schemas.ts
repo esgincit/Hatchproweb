@@ -13,7 +13,7 @@ export const FARM_TYPES = ['broiler', 'layer', 'hatchery', 'breeder'] as const;
 export const SHED_TYPES = ['cage', 'deep_litter', 'environment_controlled'] as const;
 export const VENDOR_CATS = ['doc_hatchery', 'feed', 'feed_ingredient', 'medicine', 'vaccine', 'equipment', 'transport', 'labour_contractor', 'packaging', 'fuel', 'other'] as const;
 export const BILL_CATS = ['chick', 'feed', 'medicine', 'vaccine', 'equipment', 'transport', 'labour', 'fuel', 'other'] as const;
-export const PRODUCTS = ['egg', 'bird', 'manure', 'spent_hen', 'doc'] as const;
+export const PRODUCTS = ['egg', 'bird', 'manure', 'spent_hen', 'doc', 'gc'] as const; // gc = growing charge (contract farming)
 export const CUSTOMER_KINDS = ['trader', 'retailer', 'integrator', 'wholesaler'] as const;
 export const WORKER_ROLES = ['supervisor', 'helper', 'driver', 'security'] as const;
 export const PAY_MODES = ['upi', 'neft', 'cash', 'cheque'] as const;
@@ -66,6 +66,14 @@ export const SCHEMAS = {
   addRate: z.object({ product: z.enum(RATE_PRODUCTS), zone: text, rate: money, date }),
   addDoc: z.object({ name: text, ref_no: opt(z.string().max(60)), expires: opt(date) }),
   addAdvance: z.object({ worker_id: id, amount: money, date, reason: opt(z.string().max(200)) }),
+  // contract broiler (0029): terms, link a batch, settle at harvest (the server computes the charge — lib/settlement.ts)
+  addContract: z.object({
+    customer_id: id, name: text, base_rate: money, std_fcr: z.coerce.number().min(1).max(4),
+    fcr_bonus: z.coerce.number().min(0).max(100), fcr_penalty: z.coerce.number().min(0).max(100), min_rate: z.coerce.number().min(0).max(1000),
+    allowed_mort_pct: z.coerce.number().min(0).max(100), mort_penalty: z.coerce.number().min(0).max(10000),
+  }),
+  linkContract: z.object({ batch_id: id, contract_id: id }),
+  settleContract: z.object({ batch_id: id, date, lifted_birds: int(1), lifted_kg: money }),
   // labour shift entry: ADDS to the day (add_shift_log, 0028); op_id makes an offline replay a no-op
   shiftLog: z.object({
     op_id: id, batch_id: id, date, shift: z.enum(['morning', 'evening', 'night']),

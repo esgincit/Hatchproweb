@@ -607,7 +607,8 @@
       "bird": "Live birds",
       "manure": "Manure",
       "spent_hen": "Spent hens",
-      "doc": "Day-old chicks"
+      "doc": "Day-old chicks",
+      "gc": "Growing charge"
     },
     "bill": {
       "title": "New bill / expense",
@@ -819,6 +820,31 @@
     },
     "shift": {
       "ok": "Shift entry saved"
+    },
+    "contract": {
+      "title": "Contract terms",
+      "intro": "Growing charge the integrator pays per kg lifted, adjusted for FCR and mortality.",
+      "integrator": "Integrator",
+      "base": "Base rate (₹/kg)",
+      "stdFcr": "Standard FCR",
+      "bonus": "Bonus ₹/kg per 0.01 better FCR",
+      "penalty": "Cut ₹/kg per 0.01 worse FCR",
+      "floor": "Minimum rate (₹/kg)",
+      "allowedMort": "Allowed mortality %",
+      "mortPenalty": "Charge per extra dead bird (₹)",
+      "linkTitle": "Link batch to a contract",
+      "noneYet": "Add contract terms first (More → Customers).",
+      "label": "Contract",
+      "settleTitle": "Settle with integrator",
+      "settleIntro": "Enter what the integrator lifted. Feed and mortality come from the logs; the growing-charge invoice is raised to the integrator.",
+      "settleSubmit": "Settle & invoice",
+      "liftedBirds": "Birds lifted",
+      "liftedKg": "Live weight lifted (kg)",
+      "ok": "Contract saved · {name}",
+      "linked": "Batch linked to the contract",
+      "settled": "Settled · invoice {no} for {amt}",
+      "none": "This batch has no contract",
+      "nothing": "Nothing to invoice for these numbers"
     }
   },
   "billCat": {
@@ -1117,5 +1143,25 @@
     "offlineFailed": "No network and this browser cannot store it. Try again when online.",
     "toShift": "› Simple shift entry",
     "toFull": "› Full daily log"
+  },
+  "contract": {
+    "title": "Contract · {name}",
+    "estimate": "Estimate if lifted today",
+    "settled": "Settled {date}",
+    "terms": "Terms",
+    "termsVal": "₹{rate}/kg at FCR {fcr}",
+    "lifted": "Lifted",
+    "liftedVal": "{birds} birds · {kg} kg",
+    "noWeight": "Log an average weight to see the estimate",
+    "rate": "Growing charge rate",
+    "mortCharge": "Mortality charge",
+    "net": "Net payable to farm",
+    "invoice": "Invoice",
+    "settleBtn": "Settle with integrator",
+    "link": "Link to a contract (integrator)",
+    "listTitle": "Contracts (integrators)",
+    "add": "+ Contract",
+    "batches": "{n} batches",
+    "noneList": "No contracts. Add one if an integrator supplies chicks and feed and pays a growing charge."
   }
 }
