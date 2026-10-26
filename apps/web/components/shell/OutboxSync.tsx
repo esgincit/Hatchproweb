@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { runAct } from '@/app/actions/forms';
-import { drop, OUTBOX_EVENT, pending } from '@/lib/outbox';
+import { clearOfflineCopies, drop, OUTBOX_EVENT, pending } from '@/lib/outbox';
 import { toast } from '@/components/ui/Toast';
 
 export function OutboxSync() {
@@ -38,6 +38,9 @@ export function OutboxSync() {
       if (ok) { toast(t('synced', { n: ok })); router.refresh(); }
     };
     navigator.serviceWorker?.register('/sw.js').catch(() => {});
+    user().then((u) => { // another person signed in on this phone: drop the previous user's offline pages
+      try { if (u && localStorage.getItem('hp-last-user') !== u) { clearOfflineCopies(); localStorage.setItem('hp-last-user', u); } } catch { /* storage blocked */ }
+    });
     flush();
     window.addEventListener('online', flush);
     window.addEventListener(OUTBOX_EVENT, count);

@@ -29,3 +29,10 @@ export async function queue(user: string, act: string, input: Record<string, unk
 }
 export const pending = async (user: string) => (await run<Queued[]>('readonly', (s) => s.getAll())).filter((q) => q.user === user);
 export const drop = (id: number) => run('readwrite', (s) => s.delete(id));
+
+/** Offline page copies (sw.js) belong to one signed-in user: cleared at sign-out, on the login page and when a
+ *  different user signs in on the same phone. Queued entries stay — they are tagged per user. */
+export async function clearOfflineCopies() {
+  if (typeof caches === 'undefined') return;
+  await Promise.all((await caches.keys()).map((k) => caches.delete(k))).catch(() => {});
+}

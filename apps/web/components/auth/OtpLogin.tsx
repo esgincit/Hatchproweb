@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { clearOfflineCopies } from '@/lib/outbox';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { claimsFromUser } from '@/lib/auth/claims';
@@ -16,6 +17,7 @@ export function OtpLogin({ portal }: { portal: 'farm' | 'platform' }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const e164 = '+91' + phone.replace(/\D/g, '').slice(-10);
+  useEffect(() => { clearOfflineCopies(); }, []); // session ended (expired or signed out): drop the last user's offline pages
 
   async function send(e: React.FormEvent) {
     e.preventDefault();

@@ -13,7 +13,11 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(fetch(r).then((res) => {
     if (res.ok && !res.redirected) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(r, copy)); }
     return res;
-  }).catch(() => caches.match(r).then((hit) => hit || Response.error())));
+  }).catch(() => caches.match(r).then((hit) => {
+    // offline copies older than 3 days are not shown (stale farm data; shared phones) — app code has no Date limit
+    const age = hit && page ? Date.now() - Date.parse(hit.headers.get('date') || 0) : 0;
+    return hit && !(age > 3 * 864e5) ? hit : Response.error();
+  })));
 });
 
 self.addEventListener('push', (e) => {
