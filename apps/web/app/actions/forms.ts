@@ -220,6 +220,14 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
       }
       return { ok: true, msg: t('invite.ok', { name: x.name, phone: String(data?.phone ?? '') }), href: '/more/users' };
     }
+    case 'shiftLog': {
+      const x = v as In<'shiftLog'>;
+      const { error } = await sb.rpc('add_shift_log', {
+        p_op: x.op_id, p_batch: x.batch_id, p_date: x.date, p_shift: x.shift,
+        p: { mortality: x.mortality, culls: x.culls, feed_kg: Math.round(x.feed_bags * 50 * 10) / 10, water: x.water },
+      });
+      return fail(error) ?? { ok: true, msg: t('shift.ok') }; // 'duplicate' (offline replay) is also fine
+    }
     case 'hatchCandle': {
       const x = v as In<'hatchCandle'>;
       const { error } = await sb.from('hatch_record').upsert({ batch_id: x.batch_id, candled_on: x.date, clears: x.clears, dead_germ: x.dead_germ }, { onConflict: 'batch_id' });

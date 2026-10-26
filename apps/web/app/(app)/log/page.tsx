@@ -6,10 +6,17 @@ import { batchKpi } from '@/lib/kpi';
 import { dateFmt, fmtN } from '@/lib/format';
 import { Chips, Header, Live } from '@/components/ui/bits';
 import { LogForm } from '@/components/log/LogForm';
+import { ShiftForm } from '@/components/log/ShiftForm';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/server';
+import { claimsFromUser } from '@/lib/auth/claims';
 
-export default async function LogPage({ searchParams }: { searchParams: Promise<{ batch?: string }> }) {
-  const { batch } = await searchParams;
-  const [{ t: tn, today }, t, locale] = await Promise.all([currentMode().then(loadView), getTranslations(), getLocale()]);
+export default async function LogPage({ searchParams }: { searchParams: Promise<{ batch?: string; mode?: string }> }) {
+  const { batch, mode } = await searchParams;
+  const [{ t: tn, today }, t, locale, roles] = await Promise.all([currentMode().then(loadView), getTranslations(), getLocale(),
+    createClient().then((sb) => sb.auth.getUser()).then(({ data }) => (data.user ? claimsFromUser(data.user).roles : []))]);
+  // labour gets the big-button shift screen; anyone can switch with ?mode=shift / ?mode=full
+  const shiftMode = mode ? mode === 'shift' : roles.length > 0 && roles.every((r) => r === 'labour');
   const active = tn.batches.filter((b) => b.state !== 'closed' && b.ft !== 'hatchery');
   if (!active.length)
     return (
@@ -29,7 +36,13 @@ export default async function LogPage({ searchParams }: { searchParams: Promise<
         <div className="t" style={{ fontWeight: 700 }}>{b.code}</div>
         <div className="s">{b.ft === 'layer' ? t('common.week', { n: Math.floor(b.age / 7) }) : t('common.day', { n: b.age })} · {t('log.opening')} <b className="mono">{fmtN(k.alive)}</b> · {sup}</div>
       </div>
-      <LogForm key={b.code} batchId={b.id} today={today} isLayer={b.ft === 'layer'} alive={k.alive} std={k.std} last={k.last ?? null} />
+      <Link className="back" href={`/log?batch=${encodeURIComponent(b.code)}&mode=${shiftMode ? 'full' : 'shift'}`}>{t(shiftMode ? 'shift.toFull' : 'shift.toShift')}</Link>
+      {shiftMode ? (
+        <ShiftForm key={b.code} batchId={b.id} today={today}
+          sofar={k.last?.date === today ? { dead: k.last.mortality, culls: k.last.culls, bags: Math.round(k.last.feed_kg / 50) } : { dead: 0, culls: 0, bags: 0 }} />
+      ) : (
+        <LogForm key={b.code} batchId={b.id} today={today} isLayer={b.ft === 'layer'} alive={k.alive} std={k.std} last={k.last ?? null} />
+      )}
     </>
   );
 }

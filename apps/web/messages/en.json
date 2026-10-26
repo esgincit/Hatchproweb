@@ -816,6 +816,9 @@
       "culls": "Culls",
       "candleOk": "Candling saved",
       "resultOk": "{n} saleable chicks recorded"
+    },
+    "shift": {
+      "ok": "Shift entry saved"
     }
   },
   "billCat": {
@@ -1097,5 +1100,22 @@
     "candleBtn": "🔦 Candling",
     "resultBtn": "🐣 Hatch results",
     "dispatchBtn": "🚚 Dispatch chicks"
+  },
+  "shift": {
+    "title": "Shift",
+    "morning": "Morning",
+    "evening": "Evening",
+    "night": "Night",
+    "dead": "Dead birds",
+    "culls": "Culls",
+    "bags": "Feed bags (50 kg)",
+    "water": "Water (litres)",
+    "sofar": "Today so far: {dead} dead · {culls} culls · {bags} bags",
+    "save": "Save {shift} entry",
+    "ok": "{shift} entry saved",
+    "queued": "No network — saved on this phone. It will sync automatically.",
+    "offlineFailed": "No network and this browser cannot store it. Try again when online.",
+    "toShift": "› Simple shift entry",
+    "toFull": "› Full daily log"
   }
 }

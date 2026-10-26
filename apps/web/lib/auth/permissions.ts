@@ -34,7 +34,7 @@ export const TEAM = {
 export const ACT_ROLES: Record<string, string[]> = {
   addFarm: OWN, addShed: OWN, addBatch: OWN, addWorker: OWN,
   saleOpen: MONEY, addBill: MONEY, payOpen: MONEY, addCustomer: MONEY, addVendor: MONEY,
-  mort: SHED, logSave: SHED,
+  mort: SHED, logSave: SHED, shiftLog: SHED,
   vaccDone: [...OWN, 'shed_supervisor', 'veterinarian'], addVisit: [...OWN, 'shed_supervisor', 'veterinarian'],
   attSet: [...OWN, 'shed_supervisor'],
   closeBatch: OWN, batchState: OWN, addAsset: OWN, addItem: [...OWN, 'store_keeper'], addDoc: OWN,

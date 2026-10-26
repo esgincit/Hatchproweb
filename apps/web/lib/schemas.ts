@@ -66,6 +66,11 @@ export const SCHEMAS = {
   addRate: z.object({ product: z.enum(RATE_PRODUCTS), zone: text, rate: money, date }),
   addDoc: z.object({ name: text, ref_no: opt(z.string().max(60)), expires: opt(date) }),
   addAdvance: z.object({ worker_id: id, amount: money, date, reason: opt(z.string().max(200)) }),
+  // labour shift entry: ADDS to the day (add_shift_log, 0028); op_id makes an offline replay a no-op
+  shiftLog: z.object({
+    op_id: id, batch_id: id, date, shift: z.enum(['morning', 'evening', 'night']),
+    mortality: int(0), culls: int(0), feed_bags: z.coerce.number().min(0).max(500), water: opt(z.coerce.number().min(0).max(100000)),
+  }),
   // hatchery setting (hatch_record, 0025 — DB trigger checks counts against eggs set)
   hatchCandle: z.object({ batch_id: id, date, clears: int(), dead_germ: int() }),
   hatchResult: z.object({ batch_id: id, date, chicks_a: int(), chicks_b: int(), culls: int() }),
