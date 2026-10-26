@@ -64,11 +64,12 @@ Deno.serve(async (req) => {
   }
 
   if (b.action === "verify") {
-    const { data: c } = await admin.from("apply_phone_check").select("*").eq("id", String(b.check_id ?? "")).maybeSingle();
-    if (!c || c.used_at || Date.parse(c.expires_at) < Date.now() || c.attempts >= 5) return json({ error: "expired" }, 400);
-    await admin.from("apply_phone_check").update({ attempts: c.attempts + 1 }).eq("id", c.id);
-    if ((await sha(c.id + String(b.code ?? ""))) !== c.code_hash) return json({ error: "wrong_code" }, 400);
-    await admin.from("apply_phone_check").update({ verified_at: new Date().toISOString() }).eq("id", c.id);
+    const id = String(b.check_id ?? "");
+    if (!/^[0-9a-f-]{36}$/.test(id)) return json({ error: "expired" }, 400);
+    const { data: hash } = await admin.rpc("apply_check_attempt", { p_id: id }); // atomic: counts the guess first (0030)
+    if (!hash) return json({ error: "expired" }, 400);
+    if ((await sha(id + String(b.code ?? ""))) !== hash) return json({ error: "wrong_code" }, 400);
+    await admin.from("apply_phone_check").update({ verified_at: new Date().toISOString() }).eq("id", id).is("verified_at", null);
     return json({ ok: true });
   }
 

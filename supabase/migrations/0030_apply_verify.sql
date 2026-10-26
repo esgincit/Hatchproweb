@@ -16,6 +16,16 @@ create table apply_phone_check (
 create index apply_phone_check_phone on apply_phone_check (phone, created_at desc);
 alter table apply_phone_check enable row level security; -- no policies: only the service role (apply-otp) touches it
 
+-- one guess = one atomic increment (parallel verify calls can't all slip under the 5-attempt cap); returns the stored
+-- hash only while the check is still guessable
+create function apply_check_attempt(p_id uuid) returns text language sql security definer set search_path = public as $$
+  update apply_phone_check set attempts = attempts + 1
+  where id = p_id and attempts < 5 and used_at is null and verified_at is null and expires_at > now()
+  returning code_hash
+$$;
+revoke all on function apply_check_attempt(uuid) from public, anon, authenticated;
+grant execute on function apply_check_attempt(uuid) to service_role;
+
 alter table onboarding_application
   add column phone_check_id uuid references apply_phone_check(id),
   add column phone_verified boolean not null default false,
