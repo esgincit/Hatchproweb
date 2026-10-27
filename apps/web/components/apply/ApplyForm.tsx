@@ -43,7 +43,7 @@ export function ApplyForm() {
     const input = { ...fd, farm_types: types, sheds, lat: gps.lat, lng: gps.lng, consent: fd.consent === 'on', phone_check_id: ver.checkId ?? '', documents: ver.documents };
     const local = APPLY.safeParse(input);
     if (!local.success) {
-      const fields = local.error.issues.map((i) => String(i.path[0]));
+      const fields = local.error.issues.flatMap((i) => { const p = i.path.map(String); return [p[0], p.join('.')]; }); // 'sheds' and 'sheds.0.name'
       setBad(fields); setErr(fields.includes('phone_check_id') ? t('verifyFirst') : t('invalid')); return;
     }
     setBusy(true);
@@ -109,7 +109,7 @@ export function ApplyForm() {
 
       <div className="card"><div className="eyebrow" style={{ marginBottom: 8 }}>{t('farm')}</div>
         <div className="s" style={{ marginBottom: 6 }}>{t('farmTypes')} *</div>
-        <div className="chips" style={{ flexWrap: 'wrap', marginBottom: 10 }}>
+        <div className="chips" style={{ flexWrap: 'wrap', marginBottom: 10, ...(bad.includes('farm_types') ? { outline: '2px solid var(--crit)', outlineOffset: 3, borderRadius: 10 } : {}) }} data-invalid={bad.includes('farm_types') || undefined}>
           {(['broiler', 'layer', 'hatchery', 'breeder'] as const).map((k) => (
             <button key={k} type="button" className={`chip ${types.includes(k) ? 'active' : ''}`} aria-pressed={types.includes(k)}
               onClick={() => setTypes(types.includes(k) ? types.filter((x) => x !== k) : [...types, k])}>{tf(k)}</button>
@@ -146,10 +146,10 @@ export function ApplyForm() {
             <div className="field" style={{ gridColumn: '1/-1' }}>
               <div className="row between"><label htmlFor={`s_${i}_name`}>{t('shedName')}</label>
                 {sheds.length > 1 && <button type="button" className="back" onClick={() => setSheds(sheds.filter((_, j) => j !== i))}>✕ {t('remove')}</button>}</div>
-              <input id={`s_${i}_name`} value={s.name} onChange={(e) => setShed(i, 'name', e.target.value)} />
+              <input id={`s_${i}_name`} value={s.name} onChange={(e) => setShed(i, 'name', e.target.value)} style={inv(`sheds.${i}.name`)} aria-invalid={bad.includes(`sheds.${i}.name`) || undefined} />
             </div>
-            <div className="field"><label htmlFor={`s_${i}_l`}>{t('length')}</label><input id={`s_${i}_l`} type="number" inputMode="decimal" value={s.length_ft} onChange={(e) => setShed(i, 'length_ft', e.target.value)} /></div>
-            <div className="field"><label htmlFor={`s_${i}_w`}>{t('width')}</label><input id={`s_${i}_w`} type="number" inputMode="decimal" value={s.width_ft} onChange={(e) => setShed(i, 'width_ft', e.target.value)} /></div>
+            <div className="field"><label htmlFor={`s_${i}_l`}>{t('length')}</label><input id={`s_${i}_l`} type="number" inputMode="decimal" value={s.length_ft} onChange={(e) => setShed(i, 'length_ft', e.target.value)} style={inv(`sheds.${i}.length_ft`)} aria-invalid={bad.includes(`sheds.${i}.length_ft`) || undefined} /></div>
+            <div className="field"><label htmlFor={`s_${i}_w`}>{t('width')}</label><input id={`s_${i}_w`} type="number" inputMode="decimal" value={s.width_ft} onChange={(e) => setShed(i, 'width_ft', e.target.value)} style={inv(`sheds.${i}.width_ft`)} aria-invalid={bad.includes(`sheds.${i}.width_ft`) || undefined} /></div>
             <div className="field"><label htmlFor={`s_${i}_t`}>{t('housing')}</label>
               <select id={`s_${i}_t`} value={s.type} onChange={(e) => setShed(i, 'type', e.target.value)}>
                 {(['open', 'semi_ec', 'environment_controlled'] as const).map((k) => <option key={k} value={k}>{t(`housingType.${k}`)}</option>)}
@@ -160,7 +160,7 @@ export function ApplyForm() {
               </select></div>
             <div className="field" style={{ gridColumn: '1/-1' }}><label htmlFor={`s_${i}_c`}>{t('maxBirds')} *</label>
               <input id={`s_${i}_c`} type="number" inputMode="numeric" value={s.capacity} onChange={(e) => setShed(i, 'capacity', e.target.value)}
-                style={bad.includes('sheds') && !(Number(s.capacity) > 0) ? { borderColor: 'var(--crit)' } : undefined} /></div>
+                style={inv(`sheds.${i}.capacity`)} aria-invalid={bad.includes(`sheds.${i}.capacity`) || undefined} /></div>
           </div>
         ))}
       </div>
@@ -179,7 +179,7 @@ export function ApplyForm() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
           {(['supervisor', 'worker', 'vaccinator', 'driver', 'technician'] as const).map((k) => (
             <div className="field" key={k}><label htmlFor={'a_labour_' + k}>{t(`labourRole.${k}`)}</label>
-              <input id={'a_labour_' + k} name={'labour_' + k} type="number" inputMode="numeric" min={0} /></div>
+              <input id={'a_labour_' + k} name={'labour_' + k} type="number" inputMode="numeric" min={0} style={inv('labour_' + k)} aria-invalid={bad.includes('labour_' + k) || undefined} /></div>
           ))}
         </div>
       </div>

@@ -52,7 +52,7 @@ test('MON-48: tally and GSTR-1 exports for a month with no data are valid empty 
   const tally = await page.request.get('/api/export/tally');
   expect(tally.status()).toBe(200);
   const xml = await tally.text();
-  expect(xml).toMatch(/^<\?xml[^>]*\?>\s*<ENVELOPE>.*<REQUESTDATA><\/REQUESTDATA>.*<\/ENVELOPE>\s*$/s);
+  expect(xml).toMatch(/^<\?xml[^>]*\?>\s*<ENVELOPE>[\s\S]*<REQUESTDATA><\/REQUESTDATA>[\s\S]*<\/ENVELOPE>\s*$/);
   const g = await page.request.get('/api/export/gstr1');
   expect(g.status()).toBe(200);
   expect((await g.json()).totals).toEqual({ count: 0, value: 0, nil_rated: 0 });
