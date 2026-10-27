@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { admin, PHONES, login, otp, openAct, vkr, TODAY } from './helpers';
+import { admin, PHONES, login, otp, openAct, vkr } from './helpers';
 import { LOCALES, SCREENS, englishOnly, findEnglish, openForm } from './p3-helpers';
 
 // Test plan P3: language coverage. I18N-02 (no English left on screens and forms), I18N-03 (errors), I18N-04 (toast with the
@@ -62,28 +62,38 @@ test('I18N-03: a refused form and a forbidden action answer in Hindi', async ({ 
   expect((await admin.from('tenant_document').select('id').like('name', 'E2E-hindi%')).data).toEqual([]);
 });
 
-test('I18N-04: the toast after saving a sale is Tamil and carries the rupee amount', async ({ page }) => {
+test('I18N-04: the toasts after saving a sale and a payment are Tamil, and the payment one carries the rupee amount', async ({ page }) => {
   test.setTimeout(180_000);
   const t = await vkr();
-  await inLocale(page, PHONES.owner, 'ta');
-  await page.goto('/money');
-  const sheet = await openAct(page, 'saleOpen');
-  await sheet.locator('[name=qty]').fill('100');
-  await sheet.locator('[name=rate]').fill('6.25');
-  await sheet.locator('button[type=submit]').click();
-  const toast = page.locator('.toast').last();
-  await expect(toast).toBeVisible({ timeout: 20_000 });
-  const text = (await toast.textContent()) ?? '';
+  let no: string | undefined;
   try {
-    expect(text).toMatch(/[஀-௿]/); // Tamil script
-    expect(text).toMatch(/₹\s?625/);
+    await inLocale(page, PHONES.owner, 'ta');
+    await page.goto('/money');
+    const sale = await openAct(page, 'saleOpen');
+    await sale.locator('[name=qty]').fill('100');
+    await sale.locator('[name=rate]').fill('6.25');
+    await sale.locator('button[type=submit]').click();
+    const toast = page.locator('.toast').last();
+    await expect(toast).toBeVisible({ timeout: 20_000 });
+    const text = (await toast.textContent()) ?? '';
+    no = text.match(/INV\d+/)?.[0];
+    expect(text).toMatch(/[\u0B80-\u0BFF]/); // Tamil script
     expect(text).not.toMatch(/Invoice|raised/i);
+    await expect(sale).toBeHidden();
+
+    const pay = await openAct(page, 'payOpen');
+    const value = await pay.locator('[name=doc] option', { hasText: no! }).getAttribute('value');
+    await pay.locator('[name=doc]').selectOption(value!);
+    await pay.locator('button[type=submit]').click();
+    await expect(page.locator('.toast').filter({ hasText: '625' }).last()).toBeVisible({ timeout: 20_000 });
+    const paid = (await page.locator('.toast').filter({ hasText: '625' }).last().textContent()) ?? '';
+    expect(paid).toMatch(/[\u0B80-\u0BFF]/);
+    expect(paid).toMatch(/₹\s?625/);
+    expect(paid).not.toMatch(/Payment|recorded/i);
   } finally {
-    const no = text.match(/INV\d+/)?.[0];
     const { data: inv } = no ? await admin.from('invoice').select('id').eq('invoice_no', no).eq('tenant_id', t.tenantId) : { data: [] as { id: string }[] };
     for (const i of inv ?? []) { await admin.from('payment').delete().eq('ref_id', i.id); await admin.from('invoice').delete().eq('id', i.id); }
   }
-  void TODAY;
 });
 
 for (const loc of LOCALES) {

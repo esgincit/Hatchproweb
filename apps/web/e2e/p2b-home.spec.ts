@@ -112,7 +112,7 @@ test('batch page: the Vaccinate quick action exists only while a vaccination is 
   await login(page, PHONES.owner);
   const { data: all } = await admin.from('vaccination_schedule').select('batch_id,done_on');
   const open = new Set((all ?? []).filter((v) => !v.done_on).map((v) => v.batch_id));
-  const { data: batches } = await admin.from('batch').select('id,code').neq('state', 'closed').in('code', ['VKR-L-2026-01', 'VKR-B-2026-14']);
+  const { data: batches } = await admin.from('batch').select('id,code').neq('state', 'closed').in('code', ['VKR-L-2026-01', 'VKR-P-2026-03']);
   expect(batches!.some((b) => open.has(b.id)) && batches!.some((b) => !open.has(b.id)), 'seed has one of each').toBe(true);
   for (const b of batches!) {
     await page.goto(`/farm/batch/${b.code}`);
@@ -123,6 +123,21 @@ test('batch page: the Vaccinate quick action exists only while a vaccination is 
       await expect(page.getByRole('dialog')).toBeVisible();
       await page.keyboard.press('Escape');
     }
+  }
+});
+
+test('payment form: picking another bill or invoice fills in what that one still owes (found while writing I18N-04: the first one\'s amount stayed)', async ({ page }) => {
+  await login(page, PHONES.finance);
+  await page.goto('/money');
+  const sheet = await openAct(page, 'payOpen');
+  const options = await sheet.locator('[name=doc] option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
+  expect(options.length).toBeGreaterThan(2);
+  const amount = sheet.locator('[name=amount]');
+  for (const value of [options[2], options[1], options[0]]) {
+    const [kind, id] = value.split(':');
+    const { data } = await admin.from(kind === 'bill' ? 'bill' : 'invoice').select('total,paid').eq('id', id).single();
+    await sheet.locator('[name=doc]').selectOption(value);
+    await expect(amount).toHaveValue(String(Math.round((Number(data!.total) - Number(data!.paid)) * 100) / 100));
   }
 });
 

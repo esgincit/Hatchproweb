@@ -17,6 +17,8 @@ export type Field = {
   placeholder?: string;
   hint?: string;
   max?: string;
+  /** picking an option of this select fills another field: `{ target: field id, values: option value → what to put there }` */
+  follow?: { target: string; values: Record<string, string | number> };
 };
 
 export type FormSpec = {
@@ -72,7 +74,8 @@ export function FormSheet({ spec, open, onOpenChange, onSubmit }: {
                 {f.hint && <span style={{ color: 'var(--muted)', fontWeight: 500 }}> {f.hint}</span>}
               </label>
               {f.type === 'select' ? (
-                <select {...common} defaultValue={f.value === undefined ? '' : String(f.value)}>
+                <select {...common} defaultValue={f.value === undefined ? '' : String(f.value)}
+                  onChange={f.follow ? (e) => { const t = e.currentTarget.form?.elements.namedItem(f.follow!.target) as HTMLInputElement | null; if (t) t.value = String(f.follow!.values[e.currentTarget.value] ?? ''); } : undefined}>
                   {f.options?.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               ) : f.type === 'textarea' ? (

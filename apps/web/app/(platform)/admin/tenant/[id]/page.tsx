@@ -50,7 +50,7 @@ export default async function TenantView({ params }: { params: Promise<{ id: str
         {(farms ?? []).map((f) => <div className="item" key={f.id}><div><div className="t">{f.name}</div><div className="s">{f.farm_type} · {f.district ?? ''} · {t('shedsN', { n: (f.shed ?? []).length })}</div></div></div>)}
       </div></div>
       <div className="card"><div className="eyebrow" style={{ marginBottom: 6 }}>{t('batchesH')}</div><div className="tablewrap"><table>
-        <thead><tr><th>Batch</th><th className="n">{t('age')}</th><th className="n">{t('birdsCol')}</th><th className="n">{t('mort')}</th></tr></thead>
+        <thead><tr><th>{t('batchCol')}</th><th className="n">{t('age')}</th><th className="n">{t('birdsCol')}</th><th className="n">{t('mort')}</th></tr></thead>
         <tbody>{(kpi ?? []).map((k) => <tr key={k.code}><td>{k.code} · {k.state}</td><td className="n">{k.age_days}</td><td className="n">{fmtN(Number(k.birds_alive))}</td><td className="n">{Number(k.mortality_pct).toFixed(2)}%</td></tr>)}</tbody>
       </table></div></div>
       <div className="card"><div className="eyebrow" style={{ marginBottom: 6 }}>{t('usersH')}</div><div className="list">

@@ -532,6 +532,7 @@
     "farmsH": "Farms",
     "shedsN": "{n} sheds",
     "batchesH": "Live batches",
+    "batchCol": "Batch",
     "age": "Age (d)",
     "birdsCol": "Birds",
     "mort": "Mortality",

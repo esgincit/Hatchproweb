@@ -281,6 +281,7 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
         submit: f('pay.submit'),
         fields: [
           { id: 'doc', label: f('pay.doc'), type: 'select', value: `${first.kind}:${first.id}`,
+            follow: { target: 'amount', values: Object.fromEntries(docs.map((d) => [`${d.kind}:${d.id}`, Math.round(d.out * 100) / 100])) }, // the amount is what that document still owes
             options: docs.map((d): Opt => [`${d.kind}:${d.id}`, `${d.kind === 'bill' ? '↗' : '↙'} ${d.party} · ${d.no} · ${fmtINR(d.out)}`]) },
           { id: 'amount', label: f('amount'), type: 'number', half: true, value: Math.round(first.out * 100) / 100, required: true },
           { id: 'mode', label: f('pay.mode'), type: 'select', options: enumOpts(PAY_MODES, 'forms.pay'), value: 'upi', half: true },

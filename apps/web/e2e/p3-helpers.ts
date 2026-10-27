@@ -11,6 +11,8 @@ export const SCREENS = [
   '/more/health', '/more/users', '/more/docs', '/more/reports', '/more/notifications', '/more/marketplace', '/report/daily', '/report/weekly', '/report/mortality',
 ];
 
+// seed data that happens to read like a label (a vendor's contact is called Manager; an item is Soya DOC 46%): not a translation gap
+const DATA_LOOKALIKES = new Set(['Manager', 'Soya DOC 46%']);
 type Tree = { [k: string]: string | Tree };
 const load = (l: string) => JSON.parse(readFileSync(`messages/${l}.json`, 'utf8')) as Tree;
 const flat = (t: Tree, p = ''): [string, string][] => Object.entries(t).flatMap(([k, v]) => (typeof v === 'string' ? [[p + k, v] as [string, string]] : flat(v, `${p}${k}.`)));
@@ -21,7 +23,7 @@ const flat = (t: Tree, p = ''): [string, string][] => Object.entries(t).flatMap(
  */
 export function englishOnly(locale: string, namespace = ''): string[] {
   const loc = new Map(flat(load(locale)));
-  return flat(load('en')).filter(([k, v]) => k.startsWith(namespace) && loc.has(k) && loc.get(k) !== v && !v.includes('{') && /[A-Za-z]{3}/.test(v) && v.trim().length >= 3).map(([, v]) => v);
+  return flat(load('en')).filter(([k, v]) => !DATA_LOOKALIKES.has(v) && k.startsWith(namespace) && loc.has(k) && loc.get(k) !== v && !v.includes('{') && /[A-Za-z]{3}/.test(v) && v.trim().length >= 3).map(([, v]) => v);
 }
 
 /** Visible text (and placeholder / aria-label / title) on the page that is exactly one of `english`. */

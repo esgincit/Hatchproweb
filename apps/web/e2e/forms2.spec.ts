@@ -73,7 +73,7 @@ test('equipment: high-priority issue alerts the owner; closing with a cost books
     await sheet.getByLabel('What is wrong?').fill('E2E fan bearing noise');
     await sheet.getByLabel('Priority').selectOption('high');
     await sheet.getByRole('button', { name: 'Report' }).click();
-    await expect(page.locator('.toast')).toContainText('owner alerted');
+    await expect(page.locator('.toast', { hasText: 'owner alerted' })).toBeVisible(); // the live alert pops its own toast too
     const { data: tk } = await admin.from('maintenance_ticket').select('id').eq('issue', 'E2E fan bearing noise').single();
     ticketId = tk!.id;
     const { count } = await admin.from('notification').select('id', { count: 'exact', head: true }).eq('entity_id', ticketId).eq('severity', 'critical');
@@ -84,7 +84,7 @@ test('equipment: high-priority issue alerts the owner; closing with a cost books
     await sheet.getByLabel('Repair cost (₹)').fill('4321');
     await sheet.getByLabel('Paid to (optional)').selectOption({ index: 1 });
     await sheet.getByRole('button', { name: 'Close ticket' }).click();
-    await expect(page.locator('.toast')).toContainText('₹4,321 equipment bill booked');
+    await expect(page.locator('.toast', { hasText: '₹4,321 equipment bill booked' })).toBeVisible();
     const { data: bill } = await admin.from('bill').select('id,category').eq('total', 4321).single();
     expect(bill!.category).toBe('equipment');
     await admin.from('bill').delete().eq('id', bill!.id);
