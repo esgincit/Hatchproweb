@@ -69,18 +69,19 @@ export async function tamper(page: Page, act: string, input: Record<string, unkn
 
 async function tamperOnce(page: Page, act: string, input: Record<string, unknown>): Promise<ActReply> {
   const sheet = await openSheet(page);
+  let reply = '';
   const handler = async (route: import('@playwright/test').Route) => {
     const r = route.request();
-    if (r.method() === 'POST' && r.headers()['next-action']) await route.continue({ postData: JSON.stringify([act, input]) });
-    else await route.fallback();
+    if (r.method() !== 'POST' || !r.headers()['next-action']) return route.fallback();
+    const res = await route.fetch({ postData: JSON.stringify([act, input]) }); // read the body here: a success refreshes the page
+    reply = await res.text();
+    await route.fulfill({ response: res, body: reply });
   };
   await page.route('**/*', handler);
   try {
-    const [res] = await Promise.all([
-      page.waitForResponse((r) => r.request().method() === 'POST' && !!r.request().headers()['next-action']),
-      sheet.getByRole('button', { name: 'Save' }).click(),
-    ]);
-    const line = (await res.text()).split('\n').find((l) => /^1:\{/.test(l));
+    await sheet.getByRole('button', { name: 'Save' }).click();
+    await expect.poll(() => reply, { timeout: 20_000 }).not.toBe('');
+    const line = reply.split('\n').find((l) => /^1:\{/.test(l));
     return JSON.parse(line!.slice(2)) as ActReply;
   } finally {
     await page.unroute('**/*', handler);

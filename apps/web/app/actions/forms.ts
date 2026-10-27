@@ -36,6 +36,8 @@ type T = Awaited<ReturnType<typeof getTranslations>>;
 type In<K extends ActKey> = import('zod').infer<(typeof SCHEMAS)[K]>;
 
 const fail = (e: { message: string } | null): ActResult | null => (e ? { ok: false, error: e.message } : null);
+/** An UPDATE that RLS filters to zero rows (someone else's id) is not an error to PostgREST: say so instead of a false success. */
+const touched = (r: { data: unknown[] | null; error: { message: string } | null }, ok: ActResult, t: T): ActResult => fail(r.error) ?? (r.data?.length ? ok : { ok: false, error: t('notFound') });
 
 async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<ActResult> {
   switch (act) {
@@ -64,8 +66,7 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
     case 'vaccDone': {
       const x = v as In<'vaccDone'>;
       const { data: { user } } = await sb.auth.getUser();
-      const { error } = await sb.from('vaccination_schedule').update({ done_on: x.date, done_by: user?.id }).eq('id', x.vacc_id);
-      return fail(error) ?? { ok: true, msg: t('vacc.ok') };
+      return touched(await sb.from('vaccination_schedule').update({ done_on: x.date, done_by: user?.id }).eq('id', x.vacc_id).select('id'), { ok: true, msg: t('vacc.ok') }, t);
     }
     case 'addVisit': {
       const x = v as In<'addVisit'>;
@@ -150,13 +151,11 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
     }
     case 'confirmCase': {
       const x = v as In<'confirmCase'>;
-      const { error } = await sb.from('disease_case').update({ vet_confirmed: true }).eq('id', x.case_id);
-      return fail(error) ?? { ok: true, msg: t('case.confirmed') };
+      return touched(await sb.from('disease_case').update({ vet_confirmed: true }).eq('id', x.case_id).select('id'), { ok: true, msg: t('case.confirmed') }, t);
     }
     case 'closeCase': {
       const x = v as In<'closeCase'>;
-      const { error } = await sb.from('disease_case').update({ status: 'resolved' }).eq('id', x.case_id);
-      return fail(error) ?? { ok: true, msg: t('case.resolved') };
+      return touched(await sb.from('disease_case').update({ status: 'resolved' }).eq('id', x.case_id).select('id'), { ok: true, msg: t('case.resolved') }, t);
     }
     case 'reportIssue': {
       const x = v as In<'reportIssue'>;
@@ -178,8 +177,7 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
     case 'serviceDone': {
       const x = v as In<'serviceDone'>;
       if (x.next_service <= x.date) return { ok: false, error: t('service.nextAfter'), fields: ['next_service'] };
-      const { error } = await sb.from('asset').update({ next_service_on: x.next_service, status: 'ok' }).eq('id', x.asset_id);
-      return fail(error) ?? { ok: true, msg: t('service.ok') };
+      return touched(await sb.from('asset').update({ next_service_on: x.next_service, status: 'ok' }).eq('id', x.asset_id).select('id'), { ok: true, msg: t('service.ok') }, t);
     }
     case 'addItem': {
       const x = v as In<'addItem'>;
