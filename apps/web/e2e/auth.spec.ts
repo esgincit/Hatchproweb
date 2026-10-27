@@ -59,7 +59,7 @@ test('platform admin uses the staff login; farm login rejects them', async ({ pa
   await expect(page.locator('.pill[role=alert]')).toContainText('/platform/login');
   await login(page, '/platform/login', '9000000000');
   await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.getByText('KS Farms')).toBeVisible();
+  await expect(page.getByText('KS Farms').first()).toBeVisible();
 });
 
 test('unknown number cannot self-register', async ({ page }) => {
