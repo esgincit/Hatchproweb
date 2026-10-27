@@ -157,3 +157,32 @@ export async function cleanTemp() {
   }
   if (tempSheds.length) await admin.from('shed').delete().in('id', tempSheds.splice(0));
 }
+
+const FRESH_PHONE = '+919999000001'; // has a local test OTP
+/** A brand-new tenant (one broiler farm, two sheds, no batches, no customers) approved the way the console does it. Owner logs in as 9999000001. */
+export async function freshTenant(name = 'E2E Fresh Farm') {
+  await dropFresh();
+  const sheds = [{ name: 'North', capacity: 1000 }, { name: 'South', capacity: 1000 }];
+  const { data: app, error } = await admin.from('onboarding_application').insert({
+    business_name: name, owner_name: 'Fresh Owner', phone: FRESH_PHONE, whatsapp: FRESH_PHONE, language: 'en', farm_types: ['broiler'], state: 'Telangana',
+    district: 'Medak', consent: true, sites: [{ name: 'Fresh Unit', district: 'Medak', state: 'Telangana', pin: '502110', sheds }],
+  }).select('id').single();
+  if (error) throw error;
+  const pa = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+  await pa.auth.signInWithOtp({ phone: '+919000000000' });
+  const v = await pa.auth.verifyOtp({ phone: '+919000000000', token: '123456', type: 'sms' });
+  if (v.error) throw v.error;
+  const r = await pa.functions.invoke('provision-tenant', { body: { application_id: app!.id, plan: 'starter', trial_days: 14 } });
+  if (r.error) throw r.error;
+  return (await admin.from('tenant').select('id').eq('name', name).single()).data!.id as string;
+}
+/** Remove what `freshTenant` made (cascades farms, sheds, users, roles, subscription). */
+export async function dropFresh() {
+  const { data: apps } = await admin.from('onboarding_application').select('id,tenant_id').eq('phone', FRESH_PHONE);
+  for (const a of apps ?? []) {
+    await admin.from('onboarding_application').delete().eq('id', a.id);
+    if (a.tenant_id) { await admin.from('audit_log').delete().eq('tenant_id', a.tenant_id); await admin.from('tenant').delete().eq('id', a.tenant_id); }
+  }
+  const { data } = await admin.auth.admin.listUsers({ perPage: 200 });
+  for (const u of data?.users ?? []) if (u.phone && '+' + u.phone.replace(/^\+/, '') === FRESH_PHONE) await admin.auth.admin.deleteUser(u.id);
+}
