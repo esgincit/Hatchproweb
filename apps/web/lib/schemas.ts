@@ -5,7 +5,9 @@ const blank = (v: unknown) => (v === '' || v === null ? undefined : v);
 const opt = <T extends z.ZodTypeAny>(s: T) => z.preprocess(blank, s.optional());
 const id = z.string().uuid();
 const text = z.string().trim().min(1).max(120);
-const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+// real calendar days only: 2026-02-30 would otherwise roll over to 2 March
+const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => !Number.isNaN(Date.parse(d)) && new Date(d + 'T00:00:00Z').toISOString().startsWith(d));
+const phone = opt(z.string().trim().regex(/^\+?[\d\s-]{10,16}$/)); // mobile or STD landline
 const int = (min = 0) => z.coerce.number().int().min(min);
 const money = z.coerce.number().positive().max(1e10);
 
@@ -39,12 +41,12 @@ export const SCHEMAS = {
   saleOpen: z.object({ customer_id: id, product: z.enum(PRODUCTS), qty: money, unit: text, rate: money, date, batch_id: opt(id) }),
   addBill: z.object({ vendor_id: id, category: z.enum(BILL_CATS), total: money, date, batch_id: opt(id), bill_no: opt(z.string().max(40)) }),
   payOpen: z.object({ kind: z.enum(['bill', 'invoice']), id, amount: money, mode: z.enum(PAY_MODES), date, utr: opt(z.string().max(40)) }),
-  addCustomer: z.object({ name: text, kind: z.enum(CUSTOMER_KINDS), phone: opt(z.string().max(20)), credit_limit: z.coerce.number().min(0), credit_days: int(0) }),
+  addCustomer: z.object({ name: text, kind: z.enum(CUSTOMER_KINDS), phone, credit_limit: z.coerce.number().min(0), credit_days: int(0) }),
   addVendor: z.object({
-    name: text, category: z.enum(VENDOR_CATS), contact: opt(text), phone: opt(z.string().max(20)),
+    name: text, category: z.enum(VENDOR_CATS), contact: opt(text), phone,
     gstin: opt(z.string().trim().toUpperCase().regex(/^[0-9A-Z]{15}$/)), terms: int(0),
   }),
-  addWorker: z.object({ name: text, role: z.enum(WORKER_ROLES), farm_id: id, wage: money, phone: opt(z.string().max(20)) }),
+  addWorker: z.object({ name: text, role: z.enum(WORKER_ROLES), farm_id: id, wage: money, phone }),
   attSet: z.object({ worker_id: id, date, status: z.enum(ATT) }),
   logSave: z.object({
     batch_id: id, date, mortality: int(0), culls: int(0), feed_bags: z.coerce.number().min(0), water: opt(z.coerce.number().min(0)),

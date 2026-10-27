@@ -877,8 +877,10 @@
       "linked": "Batch linked to the contract",
       "settled": "Settled · invoice {no} for {amt}",
       "none": "This batch has no contract",
-      "nothing": "Nothing to invoice for these numbers"
-    }
+      "nothing": "Nothing to invoice for these numbers",
+      "broilerOnly": "Only broiler batches can be linked to a contract."
+    },
+    "duplicate": "This code or name is already used — pick another."
   },
   "billCat": {
     "chick": "Chicks",

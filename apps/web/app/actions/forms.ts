@@ -26,6 +26,7 @@ export async function runAct(act: string, input: Record<string, unknown>): Promi
   if (ten?.status === 'suspended') return { ok: false, error: t('forbidden') }; // ponytail: app-level; DB-level block if suspension must stop raw API writes
 
   const res = await write(act, parsed.data as never, sb, t);
+  if (!res.ok && /duplicate key/.test(res.error)) return { ok: false, error: t('duplicate') }; // unique code / name already used
   if (res.ok) revalidatePath('/', 'layout');
   return res;
 }
@@ -228,8 +229,8 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
     }
     case 'linkContract': {
       const x = v as In<'linkContract'>;
-      const { error } = await sb.from('batch').update({ contract_id: x.contract_id }).eq('id', x.batch_id).eq('farm_type', 'broiler');
-      return fail(error) ?? { ok: true, msg: t('contract.linked') };
+      const { data, error } = await sb.from('batch').update({ contract_id: x.contract_id }).eq('id', x.batch_id).eq('farm_type', 'broiler').select('id');
+      return fail(error) ?? (data?.length ? { ok: true, msg: t('contract.linked') } : { ok: false, error: t('contract.broilerOnly') });
     }
     case 'settleContract': {
       // computed here from the database's own placed / dead / feed — the browser only supplies what was lifted
