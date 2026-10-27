@@ -46,7 +46,7 @@ begin
   insert into hatch_record (batch_id, candled_on, clears, dead_germ, hatched_on, chicks_a, chicks_b, culls) values (h, '2026-10-11', 4600, 900, '2026-10-25', 48000, 1500, 600);
   perform create_sale(cu, 'doc', 49000, 'chick', 30, '2026-10-26', h);           -- ok
   begin perform create_sale(cu, 'doc', 501, 'chick', 30, '2026-10-26', h); assert false, 'oversold';  -- 500 left
-  exception when sqlstate 'HP466' then null; end;
+  exception when sqlstate 'HP466' then assert sqlerrm = 'only 500 chicks left in stock for this setting', 'whole-number message: ' || sqlerrm; end;  -- 0034
   perform create_sale(cu, 'doc', 500, 'chick', 30, '2026-10-26', h);             -- exactly the rest: ok
 end $$;
 rollback;
