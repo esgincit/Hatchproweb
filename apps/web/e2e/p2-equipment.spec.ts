@@ -78,6 +78,7 @@ test('EQP-07 / EQP-08: a supervisor logs a low issue (no critical alert); too sh
 });
 
 test('EQP-11 / EQP-12 / EQP-13: a store keeper closes tickets with and without cost; twice and negative cost refused', async ({ page }) => {
+  test.setTimeout(90_000);
   const a = await newAsset();
   const costly = await newTicket(a.id), plain = await newTicket(a.id);
   const restore = await setRole(PHONES.finance, 'store_keeper');
@@ -101,8 +102,10 @@ test('EQP-11 / EQP-12 / EQP-13: a store keeper closes tickets with and without c
     expect((await ticket(plain)).cost).toBeNull();
     expect((await admin.from('asset').select('status').eq('id', a.id).single()).data!.status).toBe('ok'); // last open ticket gone
 
+    await expect(page.getByRole('dialog')).toBeHidden(); // the close form must be gone before a tampered call borrows the dialog
     expect(await tamper(page, 'closeTicket', { ticket_id: plain, date: TODAY })).toMatchObject({ ok: false, error: 'ticket already closed' });
     const open = await newTicket(a.id);
+    await page.keyboard.press('Escape'); // close the carrier form the previous tampered call left open
     expect(await tamper(page, 'closeTicket', { ticket_id: open, date: TODAY, cost: -1 })).toMatchObject({ ok: false, error: INVALID });
     expect((await ticket(open)).status).toBe('open');
   } finally { await restore(); }

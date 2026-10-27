@@ -76,7 +76,7 @@ test('VEN-05 / VEN-06 / VEN-07: vendor B: bad listing fields refused; editing a 
   await otp(page, '/login', '9999000003');
   await expect(page).toHaveURL(/\/vendor$/, { timeout: 30_000 });
   const list = page.getByTestId('listings');
-  const add = async (fields: Record<string, string>) => {
+  const add = async (fields: { title: string; price?: string; description?: string }) => {
     await list.getByRole('button', { name: '+ Listing' }).click();
     await list.getByLabel('Product / service').fill(fields.title);
     if (fields.price) await list.getByLabel('Price (e.g. ₹1,850 / bag)').fill(fields.price);

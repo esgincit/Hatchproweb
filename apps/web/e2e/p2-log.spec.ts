@@ -50,6 +50,7 @@ test('LOG-03: saving the same day twice keeps one row with the latest values', a
 });
 
 test('LOG-07 / 08 / 10 / 11 / 12: out-of-range numbers are refused in the form; the edge values are accepted', async ({ page }) => {
+  test.setTimeout(150_000); // eleven reloads on the dev server
   const b = await tempBatch('broiler');
   await openLog(page, b.code);
   const toast = page.locator('.toast');

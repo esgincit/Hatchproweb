@@ -44,7 +44,10 @@ export async function setRole(mobile: string, role: string) {
 
 async function openSheet(page: Page) {
   const sheet = page.getByRole('dialog');
-  if (await sheet.isVisible()) return sheet;
+  if (await sheet.isVisible()) {
+    if (await sheet.getByLabel('Document').isVisible()) return sheet; // our carrier, left open by an earlier refused call
+    await expect(sheet).toBeHidden({ timeout: 10_000 }); // a real form is still closing after its save: let it go first
+  }
   await expect(async () => { // the form host listens only once the page has hydrated
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('hp-act', { detail: { act: 'addDoc', ctx: {} } })));
     await expect(sheet.getByLabel('Document')).toBeVisible({ timeout: 2_000 });
