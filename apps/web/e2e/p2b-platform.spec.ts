@@ -95,6 +95,7 @@ test.describe('console, desktop', () => {
     const { data: u } = await admin.auth.admin.createUser({ phone: VENDOR, phone_confirm: true, app_metadata: { roles: ['vendor'], platform: false } });
     const { data: adv } = await admin.from('advertiser').insert({ user_id: u.user!.id, business_name: 'E2E Reject Vendor', phone: VENDOR, category: 'feed' }).select('id').single();
     const { data: l } = await admin.from('product_listing').insert({ advertiser_id: adv!.id, title: LISTING, category: 'feed' }).select('id').single();
+    await admin.from('product_listing').insert({ advertiser_id: adv!.id, title: 'E2E approved listing', category: 'feed', status: 'approved' });
     await platformLogin(page);
     const row = page.getByTestId('marketplace-review').locator('.item', { hasText: LISTING });
     await row.getByLabel('Reason for rejecting (shown to the vendor, optional)').fill('Photo missing');
@@ -106,6 +107,9 @@ test.describe('console, desktop', () => {
     await otp(page, '/login', '9999000003');
     await expect(page).toHaveURL(/\/vendor$/, { timeout: 30_000 });
     await expect(page.getByTestId('listings')).toContainText('Photo missing');
+    // approved but no paid plan: farmers cannot see it, so it must not say Live (found while walking the vendor portal)
+    await expect(page.getByTestId('listings').locator('.item', { hasText: 'E2E approved listing' })).toContainText('Approved · needs a plan');
+    await expect(page.getByTestId('listings')).not.toContainText('Live');
   });
 
   test('PLT-17: + Advertiser refuses a bad or already used mobile in plain words and creates nothing', async ({ page }) => {

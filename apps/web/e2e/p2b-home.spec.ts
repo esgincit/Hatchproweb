@@ -108,6 +108,24 @@ test('HOME-07 / HOME-08: a mortality spike turns the tile red and names the shed
   await expect(page).toHaveURL(/\/more\/notifications$/);
 });
 
+test('batch page: the Vaccinate quick action exists only while a vaccination is still to do (found by the walk-through: it was a dead button)', async ({ page }) => {
+  await login(page, PHONES.owner);
+  const { data: all } = await admin.from('vaccination_schedule').select('batch_id,done_on');
+  const open = new Set((all ?? []).filter((v) => !v.done_on).map((v) => v.batch_id));
+  const { data: batches } = await admin.from('batch').select('id,code').neq('state', 'closed').in('code', ['VKR-L-2026-01', 'VKR-B-2026-14']);
+  expect(batches!.some((b) => open.has(b.id)) && batches!.some((b) => !open.has(b.id)), 'seed has one of each').toBe(true);
+  for (const b of batches!) {
+    await page.goto(`/farm/batch/${b.code}`);
+    await expect(page.locator('.quick').getByRole('button', { name: 'Mortality' })).toBeVisible();
+    await expect(page.locator('.quick').getByRole('button', { name: 'Vaccinate' }), b.code).toHaveCount(open.has(b.id) ? 1 : 0);
+    if (open.has(b.id)) { // and it does open the form for the next vaccine
+      await page.locator('.quick').getByRole('button', { name: 'Vaccinate' }).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.keyboard.press('Escape');
+    }
+  }
+});
+
 test('REP-04 / REP-06: a supervisor can open a report; an unknown report is a 404', async ({ page }) => {
   await login(page, PHONES.supervisor);
   await page.goto('/report/daily');

@@ -76,9 +76,8 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
       </div>
       {b.state !== 'closed' && (
         <div className="quick">
-          {([['mort', '☠️', 'home.qMortality'], ['vaccDone', '💉', 'batch.vaccinate'], ['addVisit', '🩺', 'batch.vetVisit'], ['batchState', '🔁', 'batch.stateBtn']] as const).map(([a, i, l]) => (
-            <ActBtn key={a} act={a} ctx={quickCtx[a]}><span>{i}</span>{t(l)}</ActBtn>
-          ))}
+          {([['mort', '☠️', 'home.qMortality'], ['vaccDone', '💉', 'batch.vaccinate'], ['addVisit', '🩺', 'batch.vetVisit'], ['batchState', '🔁', 'batch.stateBtn']] as const).filter(([a]) => a !== 'vaccDone' || nextVacc) // nothing left to vaccinate: the form has nothing to open, so no dead button
+            .map(([a, i, l]) => <ActBtn key={a} act={a} ctx={quickCtx[a]}><span>{i}</span>{t(l)}</ActBtn>)}
         </div>
       )}
       <div className="grid3">

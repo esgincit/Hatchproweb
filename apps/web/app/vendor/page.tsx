@@ -35,7 +35,7 @@ export default async function Vendor() {
         <div className={`card stripe ${live ? 'good' : 'warn'}`} data-testid="plan-status">
           {adv.status !== 'active' ? t('suspended') : live ? t('liveUntil', { date: dmy(live.ends_on) }) : t('notLive')}
         </div>
-        <VendorPortal plans={(plans ?? []).map((p) => ({ ...p, price_month: Number(p.price_month) }))} listings={listings ?? []} />
+        <VendorPortal plans={(plans ?? []).map((p) => ({ ...p, price_month: Number(p.price_month) }))} listings={listings ?? []} live={!!live && adv.status === 'active'} />
         <div className="card" data-testid="leads"><div className="eyebrow" style={{ marginBottom: 6 }}>{t('leads')}</div><div className="list">
           {(leads ?? []).map((l) => (
             <div className="item" key={l.id}><div>

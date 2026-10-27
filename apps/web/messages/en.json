@@ -1271,6 +1271,7 @@
     "invite": "Create vendor login",
     "invited": "{name} can now log in with OTP",
     "inviteFailed": "Could not add vendor ({error})",
+    "st_approvedWait": "Approved · needs a plan",
     "err_invalid": "enter a business name and a valid 10-digit mobile number",
     "err_phone_in_use": "this mobile number already has a login",
     "err_forbidden": "your team cannot do this",

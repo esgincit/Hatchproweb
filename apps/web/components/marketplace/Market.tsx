@@ -25,7 +25,7 @@ function openCheckout(d: { key_id: string; order_id: string; amount: number; nam
   document.head.appendChild(s);
 }
 
-export function VendorPortal({ plans, listings }: { plans: Plan[]; listings: Listing[] }) {
+export function VendorPortal({ plans, listings, live }: { plans: Plan[]; listings: Listing[]; live: boolean }) {
   const t = useTranslations('market');
   const router = useRouter();
   const [edit, setEdit] = useState<Partial<Listing> | null>(null);
@@ -83,8 +83,8 @@ export function VendorPortal({ plans, listings }: { plans: Plan[]; listings: Lis
         <div className="list">{listings.map((l) => (
           <div className="item" key={l.id}>
             <div><div className="t">{l.title}</div><div className="s">{t(`cat.${l.category}`)}{l.price_text ? ` · ${l.price_text}` : ''}{l.review_note ? ` · ${l.review_note}` : ''}</div></div>
-            <div className="r" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <span className={`pill ${l.status === 'approved' ? 'good' : l.status === 'rejected' ? 'crit' : 'warn'}`}>{t(`st.${l.status}`)}</span>
+            <div className="r" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <span className={`pill ${l.status === 'approved' && live ? 'good' : l.status === 'rejected' ? 'crit' : 'warn'}`}>{l.status === 'approved' && !live ? t('st_approvedWait') : t(`st.${l.status}`)}</span>
               <button className="btn small secondary" onClick={() => setEdit(l)}>{t('edit')}</button>
               <button className="btn small secondary" onClick={async () => done(await deleteListing(l.id), t('deleted'))}>{t('delete')}</button>
             </div>
