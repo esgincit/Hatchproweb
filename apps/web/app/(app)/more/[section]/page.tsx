@@ -291,7 +291,7 @@ function Stock({ c: { v, t, dmy }, B }: { c: Ctx; B: React.ReactNode }) {
         <thead><tr><th>{t('sections.item')}</th><th className="n">{t('sections.onHand')}</th><th className="n">{t('sections.reorder')}</th><th /></tr></thead>
         <tbody>
           {tn.stock.map((s) => {
-            const low = s.qty <= s.reorder;
+            const low = s.reorder > 0 && s.qty <= s.reorder; // an item with no reorder level is never "low"
             const days = s.unit.startsWith('bag') && s.qty > 0 ? Math.round(s.qty / 38) : null;
             return (
               <tr key={s.item}>

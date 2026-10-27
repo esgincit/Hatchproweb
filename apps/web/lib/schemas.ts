@@ -65,7 +65,8 @@ export const SCHEMAS = {
   serviceDone: z.object({ asset_id: id, date, next_service: date }),
   addItem: z.object({ name: text, category: z.enum(ITEM_CATS), unit: z.string().trim().min(1).max(20), reorder: opt(z.coerce.number().min(0)), gst: opt(z.coerce.number().min(0).max(28)) }),
   raisePO: z.object({ vendor_id: id, item_id: id, qty: money, rate: money, expected: date, date }).refine((x) => x.expected >= x.date, { path: ['expected'] }),
-  grnOpen: z.object({ po_id: id, qty: money, bill_amount: money, date, lot: opt(z.string().max(40)), expiry: opt(date) }),
+  grnOpen: z.object({ po_id: id, qty: money, bill_amount: money, date, lot: opt(z.string().max(40)), expiry: opt(date) })
+    .refine((x) => !x.expiry || x.expiry >= x.date, { path: ['expiry'] }), // goods that arrive already expired are refused
   addRate: z.object({ product: z.enum(RATE_PRODUCTS), zone: text, rate: money, date }),
   addDoc: z.object({ name: text, ref_no: opt(z.string().max(60)), expires: opt(date) }),
   addAdvance: z.object({ worker_id: id, amount: money, date, reason: opt(z.string().max(200)) }),

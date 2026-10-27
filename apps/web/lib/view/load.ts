@@ -165,7 +165,6 @@ export const loadView = cache(async (mode?: FarmType): Promise<View> => {
       return { id: p.id, no: p.po_no, vendor: one<any>(p.vendor)?.name ?? '', item: one<any>(l?.item)?.name ?? '', qty: n(l?.qty), rate: n(l?.rate), total: n(p.total), expected: p.expected_on ?? today, status: p.status };
     }),
     stock: items
-      .filter((i) => qty.has(i.id))
       .map((i) => ({ item_id: i.id, item: i.name, unit: i.unit, qty: Math.round((qty.get(i.id) ?? 0) * 10) / 10, reorder: n(i.reorder_level) })),
     docs: docs.map((d) => ({ id: d.id, name: d.name, ref_no: d.ref_no, expires: d.expires_on })),
     approvals: approvals.map((a) => { const bl = one<any>(a.bill); return { id: a.id, bill_no: bl?.bill_no ?? '', vendor: one<any>(bl?.vendor)?.name ?? '', amount: n(a.amount), date: a.paid_on }; }),

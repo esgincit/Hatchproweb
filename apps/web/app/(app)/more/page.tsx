@@ -9,7 +9,7 @@ import { LanguagePicker } from '@/components/i18n/LanguagePicker';
 export default async function More() {
   const [{ t: tn, today }, t] = await Promise.all([loadView(), getTranslations('more')]);
   const openT = tn.tickets.filter((k) => k.status === 'open').length;
-  const low = tn.stock.filter((s) => s.qty <= s.reorder).length;
+  const low = tn.stock.filter((s) => s.reorder > 0 && s.qty <= s.reorder).length;
   const overdueV = tn.batches.flatMap((b) => b.vacc).filter((x) => !x.done && daysBetween(x.due, today) > 0).length;
   const items: [string, string, string][] = [
     ['people', t('people'), t('peopleSub', { n: tn.workers.length })],
