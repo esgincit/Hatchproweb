@@ -24,7 +24,7 @@ test('all tenant screens render with data and no horizontal overflow', async ({ 
   if (await limited.isVisible()) { await page.waitForTimeout(1500); await page.getByRole('button', { name: 'Send OTP' }).click(); }
   await page.getByLabel('6-digit code').fill('123456');
   await page.getByRole('button', { name: 'Verify' }).click();
-  await expect(page).toHaveURL(/\/home$/);
+  await expect(page).toHaveURL(/\/home$/, { timeout: 60_000 }); // first compile of /home on a cold dev server
   await expect(page.getByText('Birds alive')).toBeVisible();
 
   for (const [path, heading] of SCREENS) {
