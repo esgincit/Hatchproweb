@@ -14,6 +14,12 @@ describe('form schemas', () => {
     const ok = (d: string) => SCHEMAS.mort.safeParse({ batch_id: U, date: d, count: 1 }).success;
     expect([ok('2026-02-30'), ok('2026-13-01'), ok('2026-04-31'), ok('2024-02-29'), ok('2026-02-28')]).toEqual([false, false, false, true, true]);
   });
+  it('no future placement; PO expected on/after the PO date', () => {
+    const b = (placed: string) => SCHEMAS.addBatch.safeParse({ shed_id: U, code: 'x', placed, doc: 1, doc_rate: 1 }).success;
+    expect([b('2026-10-19'), b('2999-01-01')]).toEqual([true, false]);
+    const po = (expected: string) => SCHEMAS.raisePO.safeParse({ vendor_id: U, item_id: U, qty: 1, rate: 1, expected, date: '2026-10-19' }).success;
+    expect([po('2026-10-19'), po('2026-10-25'), po('2026-10-18')]).toEqual([true, true, false]);
+  });
   it('phone: digits (mobile or landline), blank allowed, letters rejected', () => {
     const ok = (phone: string) => SCHEMAS.addCustomer.safeParse({ name: 'A', kind: 'trader', phone, credit_limit: 0, credit_days: 0 }).success;
     expect([ok('abcd'), ok('12345'), ok('98490 12345'), ok('+91-9849012345'), ok('040-23456789'), ok('')]).toEqual([false, false, true, true, true, true]);

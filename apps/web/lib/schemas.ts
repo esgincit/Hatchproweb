@@ -7,6 +7,7 @@ const id = z.string().uuid();
 const text = z.string().trim().min(1).max(120);
 // real calendar days only: 2026-02-30 would otherwise roll over to 2 March
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => !Number.isNaN(Date.parse(d)) && new Date(d + 'T00:00:00Z').toISOString().startsWith(d));
+const notFuture = date.refine((d) => d <= new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })); // IST, same as the DB guard
 const phone = opt(z.string().trim().regex(/^\+?[\d\s-]{10,16}$/)); // mobile or STD landline
 const int = (min = 0) => z.coerce.number().int().min(min);
 const money = z.coerce.number().positive().max(1e10);
@@ -34,7 +35,7 @@ const mobile = z.string().transform((s) => s.replace(/\D/g, '').slice(-10)).pipe
 export const SCHEMAS = {
   addFarm: z.object({ name: text, farm_type: z.enum(FARM_TYPES), district: opt(text), village: opt(text), capacity: opt(int(1)) }),
   addShed: z.object({ farm_id: id, name: text, shed_type: z.enum(SHED_TYPES), capacity: int(1), area_sqft: opt(int(1)) }),
-  addBatch: z.object({ shed_id: id, code: text, breed_id: opt(id), placed: date, doc: int(1), doc_rate: z.coerce.number().min(0), vendor_id: opt(id) }),
+  addBatch: z.object({ shed_id: id, code: text, breed_id: opt(id), placed: notFuture, doc: int(1), doc_rate: z.coerce.number().min(0), vendor_id: opt(id) }),
   mort: z.object({ batch_id: id, date, count: int(1), cause: opt(z.string().max(20)), notes: opt(z.string().max(500)) }),
   vaccDone: z.object({ vacc_id: id, date }),
   addVisit: z.object({ batch_id: id, date, vet: text, findings: opt(z.string().max(1000)), prescription: opt(z.string().max(1000)) }),
@@ -63,7 +64,7 @@ export const SCHEMAS = {
   addAsset: z.object({ farm_id: id, name: text, category: z.enum(ASSET_CATS), cost: opt(z.coerce.number().min(0)), next_service: date, date, vendor_id: opt(id) }),
   serviceDone: z.object({ asset_id: id, date, next_service: date }),
   addItem: z.object({ name: text, category: z.enum(ITEM_CATS), unit: z.string().trim().min(1).max(20), reorder: opt(z.coerce.number().min(0)), gst: opt(z.coerce.number().min(0).max(28)) }),
-  raisePO: z.object({ vendor_id: id, item_id: id, qty: money, rate: money, expected: date, date }),
+  raisePO: z.object({ vendor_id: id, item_id: id, qty: money, rate: money, expected: date, date }).refine((x) => x.expected >= x.date, { path: ['expected'] }),
   grnOpen: z.object({ po_id: id, qty: money, bill_amount: money, date, lot: opt(z.string().max(40)), expiry: opt(date) }),
   addRate: z.object({ product: z.enum(RATE_PRODUCTS), zone: text, rate: money, date }),
   addDoc: z.object({ name: text, ref_no: opt(z.string().max(60)), expires: opt(date) }),
