@@ -58,6 +58,16 @@ test('CON-04: a contract cannot point at another tenant\'s customer', async ({ p
   } finally { await admin.from('contract').delete().eq('name', 'E2E-XT contract'); }
 });
 
+test('LOG-28 (UI side of the 0033 guard): a log or mortality on a closed batch shows the error, not success', async ({ page }) => {
+  const { data: b } = await admin.from('batch').select('id').eq('code', 'VKR-B-2026-13').eq('state', 'closed').single();
+  await login(page);
+  const log = await tamper(page, 'logSave', { batch_id: b!.id, date: D, mortality: 1, culls: 0, feed_bags: 1 });
+  expect(log.ok).toBe(false);
+  expect(log.error).toContain('batch is closed');
+  const mort = await tamper(page, 'mort', { batch_id: b!.id, date: D, count: 1 });
+  expect(mort.ok).toBe(false);
+});
+
 test('AUTH-39 / 40 / 41: a suspended tenant cannot write through tampered forms; the other tenant can; reactivating restores access', async ({ page, browser }) => {
   test.setTimeout(120_000);
   const { data: before } = await admin.from('tenant').select('plan,status').eq('id', KS).single();
