@@ -108,8 +108,14 @@ export function ContactButton({ id }: { id: string }) {
 export function ReviewButtons({ id }: { id: string }) {
   const t = useTranslations('market');
   const router = useRouter();
-  const act = async (ok: boolean) => { const r = await reviewListing(id, ok); if (!r.ok) return toast(r.error); toast(ok ? t('approved') : t('rejected')); router.refresh(); };
-  return <span className="row" style={{ gap: 6 }}><button className="btn small" onClick={() => act(true)}>{t('approve')}</button><button className="btn small secondary" onClick={() => act(false)}>{t('reject')}</button></span>;
+  const [note, setNote] = useState('');
+  const act = async (ok: boolean) => { const r = await reviewListing(id, ok, ok ? undefined : note.trim() || undefined); if (!r.ok) return toast(r.error); toast(ok ? t('approved') : t('rejected')); router.refresh(); };
+  return (
+    <span className="row wrap" style={{ gap: 6 }}>
+      <input value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} aria-label={t('rejectNote')} placeholder={t('rejectNote')} style={{ flex: '1 1 200px' }} />
+      <button className="btn small" onClick={() => act(true)}>{t('approve')}</button><button className="btn small secondary" onClick={() => act(false)}>{t('reject')}</button>
+    </span>
+  );
 }
 
 export function InviteVendor() {
@@ -120,7 +126,10 @@ export function InviteVendor() {
     e.preventDefault();
     const body = Object.fromEntries([...new FormData(e.currentTarget).entries()].map(([k, v]) => [k, String(v)]));
     const r = await createClient().functions.invoke('invite-vendor', { body });
-    if (r.error) return toast(t('inviteFailed', { error: await fnError(r.error) }));
+    if (r.error) {
+      const code = await fnError(r.error); // the function answers with a short code; show it in the user's language
+      return toast(t('inviteFailed', { error: t.has(`err_${code}`) ? t(`err_${code}`) : code }));
+    }
     toast(t('invited', { name: body.business_name })); setOpen(false); router.refresh();
   }
   if (!open) return <button className="btn small" onClick={() => setOpen(true)}>{t('addAdvertiser')}</button>;

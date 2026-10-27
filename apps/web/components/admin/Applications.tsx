@@ -75,7 +75,9 @@ export function Applications({ rows }: { rows: AppRow[] }) {
                       {[0, 14, 30, 60].map((d) => <option key={d} value={d}>{t('trialDays', { n: d })}</option>)}
                     </select>
                     <button className="btn small" disabled={pending}>{t('approve')}</button>
-                    <button type="button" className="btn small danger" disabled={pending} onClick={() => run(rejectApplication(a.id, ''), t('rejected'))}>{t('reject')}</button>
+                    <input name="note" maxLength={500} aria-label={t('rejectNote')} placeholder={t('rejectNote')} style={{ flex: '1 1 220px' }} />
+                    <button type="button" className="btn small danger" disabled={pending}
+                      onClick={(e) => run(rejectApplication(a.id, String(new FormData(e.currentTarget.form!).get('note') ?? '')), t('rejected'))}>{t('reject')}</button>
                   </form>
                 </div>
               )}
