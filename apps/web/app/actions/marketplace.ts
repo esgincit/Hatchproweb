@@ -22,15 +22,15 @@ export async function saveListing(input: unknown): Promise<Res> {
   const { data: adv } = await sb.from('advertiser').select('id').eq('user_id', user.id).maybeSingle();
   if (!adv) return { ok: false, error: 'not a vendor' };
   const { id, ...v } = p.data;
-  const { error } = id ? await sb.from('product_listing').update(v).eq('id', id) : await sb.from('product_listing').insert({ ...v, advertiser_id: adv.id });
-  return fail(error) ?? { ok: true };
+  const { data, error } = id ? await sb.from('product_listing').update(v).eq('id', id).select('id') : await sb.from('product_listing').insert({ ...v, advertiser_id: adv.id }).select('id');
+  return fail(error) ?? (data?.length ? { ok: true } : { ok: false, error: 'not found' }); // RLS: another vendor's id updates 0 rows
 }
 
 export async function deleteListing(id: string): Promise<Res> {
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: 'invalid' };
   const sb = await createClient();
-  const { error } = await sb.from('product_listing').delete().eq('id', id);
-  return fail(error) ?? { ok: true };
+  const { data, error } = await sb.from('product_listing').delete().eq('id', id).select('id');
+  return fail(error) ?? (data?.length ? { ok: true } : { ok: false, error: 'not found' });
 }
 
 export async function reviewListing(id: string, approve: boolean, note?: string): Promise<Res> {
