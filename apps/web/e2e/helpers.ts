@@ -129,3 +129,28 @@ export async function dropBatch(code: string) {
   await admin.from('daily_shed_log').delete().eq('batch_id', b.id);
   await admin.from('batch').delete().eq('id', b.id);
 }
+
+const tempCodes: string[] = [];
+const tempSheds: string[] = [];
+/** A running batch placed 30 days before APP_TODAY, in its own new shed (service role). Remove with `cleanTemp()`. */
+export async function tempBatch(type: 'broiler' | 'layer') {
+  const t = await vkr();
+  const farm = (await admin.from('farm').select('id').eq('tenant_id', t.tenantId).eq('farm_type', type).limit(1).single()).data!.id;
+  const { data: s } = await admin.from('shed').insert({ tenant_id: t.tenantId, farm_id: farm, name: `E2E-${uniq()}`, shed_type: 'cage', capacity_birds: 5000 }).select('id').single();
+  tempSheds.push(s!.id);
+  const code = `E2E-${type[0].toUpperCase()}-${uniq()}`;
+  tempCodes.push(code);
+  const placed = new Date(Date.parse(TODAY) - 30 * 864e5).toISOString().slice(0, 10);
+  const { data: b } = await admin.from('batch').insert({
+    tenant_id: t.tenantId, farm_id: farm, shed_id: s!.id, code, farm_type: type, placed_on: placed, doc_count: 1000, state: type === 'layer' ? 'laying' : 'growing',
+  }).select('id').single();
+  return { id: b!.id, code, tenantId: t.tenantId, farmId: farm };
+}
+export async function cleanTemp() {
+  for (const c of tempCodes.splice(0)) {
+    const { data: b } = await admin.from('batch').select('id').eq('code', c).maybeSingle();
+    if (b) await admin.from('disease_case').delete().eq('batch_id', b.id);
+    await dropBatch(c);
+  }
+  if (tempSheds.length) await admin.from('shed').delete().in('id', tempSheds.splice(0));
+}

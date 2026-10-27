@@ -1,34 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
-import { admin, TODAY, PHONES, login, tamper, uniq, dropBatch, vkr } from './helpers';
+import { admin, PHONES, login, tamper, tempBatch, cleanTemp } from './helpers';
 
 // Test plan P2 #15: the daily log form as a shed supervisor uses it: layer egg grades, overwrite on re-save, field
 // bounds, the DB temperature rule, invalid dates, several offline entries, feed photo. Runs on throw-away batches
 // (so no seed log is touched); each is removed afterwards.
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 const INVALID = 'Please check the highlighted fields';
-let I: Awaited<ReturnType<typeof vkr>>;
-const codes: string[] = [];
-const sheds: string[] = [];
 
-test.beforeAll(async () => { I = await vkr(); });
-test.afterEach(async () => {
-  for (const c of codes.splice(0)) await dropBatch(c);
-  if (sheds.length) await admin.from('shed').delete().in('id', sheds.splice(0));
-});
+test.afterEach(cleanTemp);
 
-/** A running batch placed 30 days before today, in its own new shed, made with the service role. */
-async function tempBatch(type: 'broiler' | 'layer') {
-  const farm = (await admin.from('farm').select('id').eq('tenant_id', I.tenantId).eq('farm_type', type).limit(1).single()).data!.id;
-  const { data: s } = await admin.from('shed').insert({ tenant_id: I.tenantId, farm_id: farm, name: `E2E-${uniq()}`, shed_type: 'cage', capacity_birds: 5000 }).select('id').single();
-  sheds.push(s!.id);
-  const code = `E2E-LOG-${type[0]}-${uniq()}`;
-  codes.push(code);
-  const placed = new Date(Date.parse(TODAY) - 30 * 864e5).toISOString().slice(0, 10);
-  const { data: b } = await admin.from('batch').insert({
-    tenant_id: I.tenantId, farm_id: farm, shed_id: s!.id, code, farm_type: type, placed_on: placed, doc_count: 1000, state: type === 'layer' ? 'laying' : 'growing',
-  }).select('id').single();
-  return { id: b!.id, code };
-}
 const rows = async (batchId: string) => (await admin.from('daily_shed_log').select('*').eq('batch_id', batchId)).data!;
 
 async function openLog(page: Page, code: string, mode: 'broiler' | 'layer' = 'broiler') {
