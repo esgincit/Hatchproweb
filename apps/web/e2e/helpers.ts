@@ -111,3 +111,21 @@ export async function vkr() {
     tenantId: (await admin.from('tenant').select('id').eq('name', 'VKR Poultry Farms').single()).data!.id,
   };
 }
+
+/** Unique, readable suffix for rows a test creates (the suite re-runs on the same database). */
+export const uniq = () => `${Date.now() % 1e7}`;
+
+/** Remove a test batch and everything hanging off it (service role). Safe if it is already gone. */
+export async function dropBatch(code: string) {
+  const { data: b } = await admin.from('batch').select('id').eq('code', code).maybeSingle();
+  if (!b) return;
+  const { data: inv } = await admin.from('invoice').select('id').eq('batch_id', b.id);
+  if (inv?.length) await admin.from('payment').delete().in('ref_id', inv.map((i) => i.id));
+  const { data: bills } = await admin.from('bill').select('id').eq('batch_id', b.id);
+  if (bills?.length) await admin.from('payment').delete().in('ref_id', bills.map((i) => i.id));
+  for (const t of ['vaccination_schedule', 'mortality_event', 'bill', 'invoice', 'vet_visit', 'batch_state_history']) await admin.from(t).delete().eq('batch_id', b.id);
+  const { data: logs } = await admin.from('daily_shed_log').select('id').eq('batch_id', b.id);
+  if (logs?.length) await admin.from('egg_production').delete().in('daily_log_id', logs.map((l) => l.id));
+  await admin.from('daily_shed_log').delete().eq('batch_id', b.id);
+  await admin.from('batch').delete().eq('id', b.id);
+}

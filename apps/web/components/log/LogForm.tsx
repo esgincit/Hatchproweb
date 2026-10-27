@@ -146,7 +146,8 @@ export function LogForm({ batchId, today, isLayer, alive, std, last }: {
       </div>
       <div className="field">
         <label htmlFor="f_rem">{t('remarks')}</label>
-        <input id="f_rem" name="remarks" type="text" defaultValue={isToday ? (last?.remarks ?? '') : ''} placeholder={t('remarksHint')} />
+        <input id="f_rem" name="remarks" type="text" defaultValue={isToday ? (last?.remarks ?? '') : ''} placeholder={t('remarksHint')}
+          aria-invalid={bad.includes('remarks') || undefined} style={bad.includes('remarks') ? { borderColor: 'var(--crit)' } : undefined} />
       </div>
       <button className="btn" type="submit" disabled={busy}>{t('save')}</button>
     </form>
