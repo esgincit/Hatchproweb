@@ -46,10 +46,11 @@ export async function rejectApplication(id: string, note: string): Promise<Resul
   const sb = await platformClient('applications');
   if (!sb) return { ok: false, error: 'forbidden' };
   const { data: { user } } = await sb.auth.getUser();
-  const { error } = await sb.from('onboarding_application')
+  const { data, error } = await sb.from('onboarding_application')
     .update({ status: 'rejected', review_note: note.slice(0, 500), reviewed_by: user!.id, reviewed_at: new Date().toISOString() })
-    .eq('id', id).eq('status', 'submitted');
+    .eq('id', id).eq('status', 'submitted').select('id');
   if (error) return { ok: false, error: error.message };
+  if (!data?.length) return { ok: false, error: 'not found or already decided' }; // else a second reject would say "rejected" for nothing
   revalidatePath('/admin');
   return { ok: true };
 }

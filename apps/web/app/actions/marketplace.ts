@@ -38,8 +38,8 @@ export async function reviewListing(id: string, approve: boolean, note?: string)
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!claimsFromUser(user).platform) return { ok: false, error: 'forbidden' };
-  const { error } = await sb.from('product_listing').update({ status: approve ? 'approved' : 'rejected', review_note: note?.slice(0, 300) ?? null }).eq('id', id);
-  return fail(error) ?? { ok: true };
+  const { data, error } = await sb.from('product_listing').update({ status: approve ? 'approved' : 'rejected', review_note: note?.slice(0, 300) ?? null }).eq('id', id).select('id');
+  return fail(error) ?? (data?.length ? { ok: true } : { ok: false, error: 'forbidden' }); // RLS (0032): only the marketing team updates; other staff match 0 rows
 }
 
 /** Farmer taps "Contact": record the lead for the vendor, then hand back the vendor's phone for call / WhatsApp. */
