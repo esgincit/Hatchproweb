@@ -30,8 +30,9 @@ test('owner picks a farm type once, then lands on Home directly', async ({ page,
   await expect(page).toHaveURL(/\/welcome$/);
   await page.getByRole('button', { name: /Layer/ }).click();
   await expect(page).toHaveURL(/\/home$/);
-  await expect(page.getByText('VKR Poultry Farms')).toBeVisible();
-  await expect(page.getByText(/Layer view/)).toBeVisible();
+  await page.getByRole('button', { name: 'Switch view' }).click();
+  await expect(page.getByRole('dialog').getByText('VKR Poultry Farms')).toBeVisible();
+  await expect(page.getByRole('dialog').getByText(/Layer view/)).toBeVisible();
   await context.clearCookies();
   await login(page, '/login', '9849012345');
   await expect(page).toHaveURL(/\/home$/); // picker not shown again
@@ -42,7 +43,9 @@ test('view can be switched from the tenant chip', async ({ page }) => {
   await page.getByRole('button', { name: /Layer/ }).click();
   await page.getByRole('button', { name: 'Switch view' }).click();
   await page.getByRole('dialog').getByRole('button', { name: /Broiler/ }).click();
-  await expect(page.getByText(/Broiler view/)).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Switch view' }).click();
+  await expect(page.getByRole('dialog').getByText(/Broiler view/)).toBeVisible();
 });
 
 test('supervisor has no Money tab and is bounced from /money', async ({ page }) => {

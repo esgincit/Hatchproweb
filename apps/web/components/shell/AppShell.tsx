@@ -14,8 +14,7 @@ import type { FarmType } from '@/lib/farm-types';
 import type { Tab } from '@/lib/auth/permissions';
 
 // Markup mirrors demo/index.html:137-143 and renderTabs/renderHeader (:222-227).
-// Tab sub-label: Telugu under English (as the demo) when the UI is English, English under the local label otherwise.
-const TE: Record<Tab, string> = { home: 'హోమ్', farm: 'ఫారం', log: 'నమోదు', money: 'డబ్బు', more: 'మరిన్ని' };
+// Tab sub-label: English under the local label when the UI isn't English; none in English.
 const EN: Record<Tab, string> = { home: 'Home', farm: 'Farm', log: 'Log', money: 'Money', more: 'More' };
 
 export function AppShell({ tenantName, sub, unread, tabs, mode, modes, today, roles, children }: {
@@ -39,18 +38,14 @@ export function AppShell({ tenantName, sub, unread, tabs, mode, modes, today, ro
     <div className="app">
       <div className="col">
         <header className="topbar">
-          <button className="tenant" aria-label={t('shell.switchView')} onClick={() => setOpen(true)}>
-            <span className="avatar">{initials}</span>
-            <span style={{ minWidth: 0 }}>
-              <div className="name">{tenantName}</div>
-              <div className="sub">{t('shell.view', { type: t(`farmType.${mode}`) })} · {sub}</div>
-            </span>
-            <span style={{ marginLeft: 'auto', color: 'var(--muted)' }}>▾</span>
-          </button>
           <Link className="iconbtn" href="/more/notifications" aria-label={t('shell.notifications')}>
             <BellIcon />
             {unread > 0 && <span className="badge">{unread}</span>}
           </Link>
+          <button className="tenant" aria-label={t('shell.switchView')} title={tenantName} onClick={() => setOpen(true)}>
+            <span className="name">{tenantName}</span>
+            <span className="avatar">{initials}</span>
+          </button>
         </header>
         <main className="screen"><div className="wrap"><OutboxSync />{children}</div></main>
       </div>
@@ -58,14 +53,15 @@ export function AppShell({ tenantName, sub, unread, tabs, mode, modes, today, ro
         {tabs.map((k) => (
           <Link key={k} href={'/' + k} aria-label={t(`tabs.${k}`)}
             className={`tab ${path === '/' + k || path.startsWith('/' + k + '/') ? 'active' : ''}`}>
-            {TAB_ICONS[k]}<span>{t(`tabs.${k}`)}</span><small>{locale === 'en' ? TE[k] : EN[k]}</small>
+            {TAB_ICONS[k]}<span>{t(`tabs.${k}`)}</span>{locale !== 'en' && <small>{EN[k]}</small>}
           </Link>
         ))}
       </nav>
       <Toaster />
       <LiveAlerts />
       <ActionHost today={today} />
-      <TenantSheet open={open} onOpenChange={setOpen} modes={modes} mode={mode} />
+      <TenantSheet open={open} onOpenChange={setOpen} modes={modes} mode={mode}
+        name={tenantName} initials={initials} sub={`${t('shell.view', { type: t(`farmType.${mode}`) })} · ${sub}`} />
     </div>
     </RolesContext.Provider>
   );
