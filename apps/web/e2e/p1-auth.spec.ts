@@ -49,7 +49,7 @@ async function signOut(page: Page) {
 
 test('AUTH-35: sign out ends the session; Back and direct URLs go to the login page', async ({ page }) => {
   await login(page);
-  await expect(page.getByText('VKR Poultry Farms').first()).toBeVisible();
+  await expect(page.locator('.topbar .tenant')).toHaveAttribute('title', 'VKR Poultry Farms'); // name is hidden at phone width
   await signOut(page);
   await expect(page).toHaveURL(/\/login$/, { timeout: 20_000 });
   for (const path of ['/home', '/money', '/farm']) {

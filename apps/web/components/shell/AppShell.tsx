@@ -37,12 +37,12 @@ export function AppShell({ tenantName, sub, unread, tabs, mode, modes, today, ro
     <RolesContext.Provider value={roles}>
     <div className="app">
       <div className="col">
-        <header className="topbar">
+        <header className="topbar me">
           <Link className="iconbtn" href="/more/notifications" aria-label={t('shell.notifications')}>
             <BellIcon />
             {unread > 0 && <span className="badge">{unread}</span>}
           </Link>
-          <button className="tenant" aria-label={t('shell.switchView')} title={tenantName} onClick={() => setOpen(true)}>
+          <button className="tenant me" aria-label={t('shell.switchView')} title={tenantName} onClick={() => setOpen(true)}>
             <span className="name">{tenantName}</span>
             <span className="avatar">{initials}</span>
           </button>
