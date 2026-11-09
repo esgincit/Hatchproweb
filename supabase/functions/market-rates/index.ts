@@ -12,12 +12,13 @@ interface RateSource { name: string; fetch(): Promise<Array<{ zone: string; prod
 const neccSource: RateSource = {
   name: "NECC",
   async fetch() {
-    const html = await (await fetch("https://www.necc.org.in/")).text();
+    // necc.org.in no longer resolves; e2necc.com (NECC's price site) has a ticker
+    // "Hyderabad : 660.00   Bengaluru (CC) : 720.00" in rupees per 100 eggs. 0.00 = not declared today.
+    const html = await (await fetch("https://www.e2necc.com/")).text();
     const out = [];
     for (const zone of ZONES) {
-      // table cell pattern: <td>Hyderabad</td><td>595</td>  (paise per egg)
-      const m = html.match(new RegExp(`${zone}[^<]*</t[dh]>\\s*<t[dh][^>]*>\\s*(\\d{3})`, "i"));
-      if (m) out.push({ zone, product: "egg", rate: Number(m[1]) / 100, unit: "per_egg" });
+      const m = html.match(new RegExp(`${zone}\\s*(?:\\([A-Z]+\\))?\\s*:\\s*(\\d+(?:\\.\\d+)?)`, "i"));
+      if (m && Number(m[1]) > 0) out.push({ zone, product: "egg", rate: Number(m[1]) / 100, unit: "per_egg" });
     }
     return out;
   },
