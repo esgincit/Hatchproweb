@@ -22,5 +22,5 @@ jobs:
         env: { SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}, SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }} }
       - run: supabase db push
         env: { SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}, SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }} }
-      - run: supabase functions deploy market-rates daily-alerts sync-apply ai-triage razorpay-webhook provision-tenant invite-user
+      - run: supabase functions deploy --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}  # every folder in supabase/functions
         env: { SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }} }

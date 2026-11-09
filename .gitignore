@@ -18,3 +18,4 @@ temp.txt
 
 # local edge-function secrets (CRON_SECRET, VAPID keys)
 supabase/functions/.env
+supabase/.env.qa
