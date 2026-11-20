@@ -90,7 +90,7 @@ export const ACT_ROLES: Record<string, string[]> = {
   addRefund: ['tenant_owner', 'finance'], decideRefund: ['tenant_owner', 'finance'], setLock: ['tenant_owner'], setLimit: ['tenant_owner'],
   addReq: ['tenant_owner', 'farm_manager', 'store_keeper', 'shed_supervisor', 'hatchery_technician', 'hatchery_ops_manager', 'procurement_officer'],
   submitReq: ['tenant_owner', 'farm_manager', 'store_keeper', 'hatchery_ops_manager', 'procurement_officer'], decideReq: ['tenant_owner', 'farm_manager', 'store_keeper', 'hatchery_ops_manager'],
-  approvePO: ['tenant_owner'], cancelPO: ['tenant_owner', 'farm_manager', 'finance', 'store_keeper'], // 0053 lets procurement_officer approve, but 0006 gives them no PO update right
+  approvePO: ['tenant_owner', 'procurement_officer'], cancelPO: ['tenant_owner', 'farm_manager', 'finance', 'store_keeper', 'procurement_officer'], // 0053 + 0057
   addCount: STORE, submitCount: STORE, decideCount: STORE, addStockXfer: STORE, decideStockXfer: STORE, sendStockXfer: STORE, receiveStockXfer: STORE,
   addBranch: ['tenant_owner'], toggleBranch: ['tenant_owner'], setFarmBranch: ['tenant_owner'], grantSupport: ['tenant_owner'], revokeSupport: ['tenant_owner'],
   toggleWebhook: ['tenant_owner'], revokeApiKey: ['tenant_owner'], createApiKey: ['tenant_owner'], createWebhook: ['tenant_owner'],

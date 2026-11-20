@@ -24,6 +24,8 @@ begin
   begin perform receive_grn(po, 100, 3000, current_date); assert false, 'received unapproved PO';
   exception when raise_exception then null; end;
   perform set_config('t.po', po::text, true);
+  no := raise_po(current_setting('t.v')::uuid, current_setting('t.i')::uuid, 100, 30, current_date + 5, current_date);
+  perform set_config('t.po2', (select id::text from purchase_order where po_no = no), true);
   begin perform tenant_modules('4c593c59-b79c-5b92-8601-fd7c0d7a3b4c'); assert false, 'read another tenant''s plan';
   exception when insufficient_privilege then null; end;
   begin perform create_api_key('iot gateway', '{readings:write}'); assert false, 'api without module';
@@ -41,6 +43,9 @@ do $$ begin
   begin insert into approval_delegation (to_user, roles, ends_at, reason) values ('9a7b4e00-d286-5aa1-9627-b38cdd6051a3', '{finance}', now() + interval '1 day', 'leave');
     assert false, 'delegated a role not held'; exception when raise_exception then null; end;
   insert into approval_delegation (to_user, roles, ends_at, reason) values ('9a7b4e00-d286-5aa1-9627-b38cdd6051a3', '{procurement_officer}', now() + interval '1 day', 'on leave');
+  -- 0057: the officer's own approval gets through the table's write policies
+  update purchase_order set status = 'approved' where id = current_setting('t.po2')::uuid;
+  assert (select status from purchase_order where id = current_setting('t.po2')::uuid) = 'approved', 'procurement officer approved PO';
 end $$;
 set local request.jwt.claims = '{"sub":"9a7b4e00-d286-5aa1-9627-b38cdd6051a3","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["farm_manager"]}}';
 update purchase_order set status = 'approved' where id = current_setting('t.po')::uuid;

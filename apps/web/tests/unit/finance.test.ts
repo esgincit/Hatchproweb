@@ -66,6 +66,10 @@ describe('finance / procurement / settings permissions', () => {
       expect(ACT_ROLES[a], a).toEqual(['tenant_owner']);
     }
   });
+  it('the procurement officer approves POs (0057), a farm manager does not', () => {
+    expect(canAct(['procurement_officer'], 'approvePO')).toBe(true);
+    expect(canAct(['farm_manager'], 'approvePO')).toBe(false);
+  });
   it('finance approves credit notes, a sales officer only raises them', () => {
     expect(canAct(['finance'], 'decideCreditNote')).toBe(true);
     expect(canAct(['sales_officer'], 'addCreditNote')).toBe(true);
