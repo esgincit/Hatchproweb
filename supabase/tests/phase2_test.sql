@@ -90,5 +90,25 @@ do $$ begin
   begin perform portal_submit_payment('SO-OTHER', 'UTR777', 'x'); assert false, 'paid someone else''s order';
   exception when raise_exception then null; end;
 end $$;
+
+-- 0056: owner links a signed-up customer login by email; staff logins and other roles are refused
+reset role;
+insert into auth.users (id, email, aud, role) values ('00000000-0000-0000-0000-0000000005a2', 'Portal-Two@example.invalid', 'authenticated', 'authenticated');
+select set_config('t.staffmail', (select u.email from auth.users u join app_user a on a.id = u.id where u.email is not null limit 1), true);
+set local request.jwt.claims = '{"sub":"436f615f-c815-5957-8623-ca639dcdb5e4","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["tenant_owner"]}}';
+set local role authenticated;
+do $$ begin
+  perform link_portal_user(current_setting('t.cust')::uuid, ' portal-two@example.invalid ');
+  assert (select customer_id from customer_portal_user where user_id = '00000000-0000-0000-0000-0000000005a2') = current_setting('t.cust')::uuid, 'linked';
+  begin perform link_portal_user(current_setting('t.cust')::uuid, current_setting('t.staffmail')); assert false, 'linked a staff login';
+  exception when raise_exception then null; end;
+  begin perform link_portal_user(current_setting('t.cust')::uuid, 'nobody@example.invalid'); assert false, 'linked unknown email';
+  exception when raise_exception then null; end;
+end $$;
+set local request.jwt.claims = '{"sub":"e6ba8ba8-f28f-568d-86d6-09dc87b5cb59","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["finance"]}}';
+do $$ begin
+  begin perform link_portal_user(current_setting('t.cust')::uuid, 'portal-two@example.invalid'); assert false, 'finance linked';
+  exception when raise_exception then null; end;
+end $$;
 rollback;
 \echo phase2_test OK
