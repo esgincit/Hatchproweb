@@ -1,6 +1,6 @@
 # HatchPro — QA environment setup
 
-`main` holds the web app (`apps/web`, Next.js 15), the Supabase schema (`supabase/migrations` 0001–0060), edge
+`main` holds the web app (`apps/web`, Next.js 15), the Supabase schema (`supabase/migrations` 0001–0061), edge
 functions (`supabase/functions`) and demo seed data. Nothing deploys automatically: the database workflow is manual.
 
 ## 1. Supabase QA project (owner of the Supabase account)
@@ -36,7 +36,7 @@ functions (`supabase/functions`) and demo seed data. Nothing deploys automatical
    - Turn **off** "Allow new users to sign up" — accounts are created by approval / invite only.
    - URL Configuration → Site URL + Redirect URLs = the QA web address.
 
-### ERP layer (migrations 0035–0060, merged to `main` 2026-11-20)
+### ERP layer (migrations 0035–0061, merged to `main` 2026-11-20)
 Breeder → egg transfer → hatchery → sales → dispatch chain, approvals, rules, Phase 2–5 (plan:
 `docs/superpowers/plans/2026-11-18-volume1-erp-plan.md`). The manual migrate workflow applies these with the rest.
 - **Functions:** `erp-api` (machines/partners, header `x-api-key` from an owner's API key) and `erp-cron` (scheduler,
