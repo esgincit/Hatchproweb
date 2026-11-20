@@ -47,6 +47,13 @@ begin
   assert (select available from chick_availability where product_id = p and week = date_trunc('week', d)::date) = 0, 'week full';
   begin update sales_order set status = 'confirmed' where order_no = 'SO-A'; assert false, 'confirmed without deposit';
   exception when raise_exception then null; end;
+  -- 0047: no client-side deposit games, no self-granted credit, no under-list price
+  begin update sales_order set deposit_pct = 0, deposit_due = 0, payment_status = 'waived' where order_no = 'SO-A'; assert false, 'sales waived deposit';
+  exception when raise_exception then null; end;
+  begin update sales_order set credit_override_reason = 'trusted' where order_no = 'SO-A'; assert false, 'sales granted credit';
+  exception when raise_exception then null; end;
+  begin update sales_order set price = 30 where order_no = 'SO-A'; assert false, 'sales priced under list';
+  exception when raise_exception then null; end;
   begin update sales_order set payment_status = 'verified', deposit_paid = 12000 where order_no = 'SO-A'; assert false, 'sales verified payment';
   exception when raise_exception then null; end;
   update sales_order set status = 'confirmed' where order_no = 'SO-C';                 -- credit customer: no deposit needed
@@ -114,6 +121,11 @@ do $$ begin
   assert (select dispatched_at is not null from dispatch where id = current_setting('t.d')::uuid), 'stamped';
   assert (select status from sales_order where order_no = 'SO-A') = 'dispatched', 'order dispatched';
   assert (select total from invoice i join dispatch_line l on l.id = i.dispatch_line_id where l.dispatch_id = current_setting('t.d')::uuid) = 24000, 'invoice at dispatch';
+end $$;
+set local request.jwt.claims = '{"sub":"436f615f-c815-5957-8623-ca639dcdb5e4","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["hatchery_manager"]}}';
+do $$ begin
+  begin update order_allocation set status = 'released' where order_id = (select id from sales_order where order_no = 'SO-A'); assert false, 'released dispatched chicks';
+  exception when raise_exception then null; end;
 end $$;
 
 -- delivery + POD, DOA claim, completion
