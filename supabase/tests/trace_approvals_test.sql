@@ -62,6 +62,14 @@ begin
   assert (select count(*) from egg_transfer where status = 'received') = 2, 'received';
   begin update egg_transfer set received_qty = 650 where ref = 'TRF-T1'; assert false, 'changed confirmed receipt';
   exception when raise_exception then null; end;
+  begin update egg_transfer set status = 'cancelled' where ref = 'TRF-T1'; assert false, 'received -> cancelled';
+  exception when raise_exception then null; end;
+  begin update egg_transfer set status = 'approved' where ref = 'TRF-T1'; assert false, 'received -> approved';
+  exception when raise_exception then null; end;
+  -- 0037: no forged audit rows, no reading another tenant's rules
+  begin perform audit_add('4c593c59-b79c-5b92-8601-fd7c0d7a3b4c', 'approved', 'x', null, null, null); assert false, 'called audit_add';
+  exception when insufficient_privilege then null; end;
+  assert tenant_rule_value('4c593c59-b79c-5b92-8601-fd7c0d7a3b4c', 'egg_max_storage_days', '99') = '99', 'read other tenant rule';
   select id into t1 from egg_transfer where ref = 'TRF-T1';
   select id into t2 from egg_transfer where ref = 'TRF-T2';
   begin insert into setting_lot (batch_id, transfer_id, qty) values (st, t1, 681); assert false, 'set more than settable (680)';
@@ -95,8 +103,14 @@ end $$;
 
 set local request.jwt.claims = '{"sub":"9a7b4e00-d286-5aa1-9627-b38cdd6051a3","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["farm_manager"]}}';
 do $$ begin
-  insert into egg_transfer (ref, flock_id, to_farm_id, laid_from, laid_to, sent_on, qty, status)
-    values ('TRF-T3', current_setting('t.fl')::uuid, '72c46a7d-d72c-5676-bc8a-70c996df7088', '2026-10-20', '2026-10-21', '2026-10-22', 100, 'submitted');
+  -- forged submitter is ignored: the row is stamped with the caller, so the self-approval rule still bites
+  insert into egg_transfer (ref, flock_id, to_farm_id, laid_from, laid_to, sent_on, qty, status, submitted_by)
+    values ('TRF-T3', current_setting('t.fl')::uuid, '72c46a7d-d72c-5676-bc8a-70c996df7088', '2026-10-20', '2026-10-21', '2026-10-22', 100, 'submitted',
+            '436f615f-c815-5957-8623-ca639dcdb5e4');
+  assert (select submitted_by from egg_transfer where ref = 'TRF-T3') = '9a7b4e00-d286-5aa1-9627-b38cdd6051a3', 'submitter stamped';
+  begin update egg_transfer set submitted_by = '436f615f-c815-5957-8623-ca639dcdb5e4' where ref = 'TRF-T3';
+    assert (select submitted_by from egg_transfer where ref = 'TRF-T3') = '9a7b4e00-d286-5aa1-9627-b38cdd6051a3', 'submitter rewritten';
+  end;
   begin update egg_transfer set status = 'approved' where ref = 'TRF-T3'; assert false, 'self-approved with rule off';
   exception when raise_exception then null; end;
   begin insert into tenant_rule (key, value) values ('egg_max_storage_days', '30'); assert false, 'manager changed rules';
