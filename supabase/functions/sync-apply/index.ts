@@ -22,11 +22,17 @@ Deno.serve(async (req) => {
   const { device_id, ops } = (await req.json()) as { device_id: string; ops: Op[] };
 
   const results: Array<{ op_id: string; status: "applied" | "duplicate" | "conflict" | "error"; detail?: unknown }> = [];
+  // a rejected or conflicting op must stay retryable: drop its receipt, otherwise the retry is swallowed as "duplicate"
+  const fail = async (op: Op, status: "error" | "conflict", detail: unknown) => {
+    await supabase.from("sync_outbox_receipt").delete().eq("client_op_id", op.op_id).eq("tenant_id", tenantId);
+    results.push({ op_id: op.op_id, status, detail });
+  };
   for (const op of ops) {
     // idempotency receipt
     const { error: rErr } = await supabase.from("sync_outbox_receipt").insert({ client_op_id: op.op_id, tenant_id: tenantId, device_id });
     if (rErr?.code === "23505") { results.push({ op_id: op.op_id, status: "duplicate" }); continue; }
-    if (!APPEND_ONLY.has(op.table) && !LWW.has(op.table)) { results.push({ op_id: op.op_id, status: "error", detail: "table not syncable" }); continue; }
+    if (rErr) { results.push({ op_id: op.op_id, status: "error", detail: rErr.message }); continue; }
+    if (!APPEND_ONLY.has(op.table) && !LWW.has(op.table)) { await fail(op, "error", "table not syncable"); continue; }
     const row: Record<string, unknown> = { ...op.payload, tenant_id: tenantId, ...(NO_CREATED_BY.has(op.table) ? {} : { created_by: user.id }) };
     // the phone knows the farm and the feed name, not store/item ids: resolve them here
     if (op.table === "stock_movement" && row.farm_id && row.item_name_hint) {
@@ -36,17 +42,17 @@ Deno.serve(async (req) => {
     }
     if (APPEND_ONLY.has(op.table) || op.action === "insert") {
       const { error } = await supabase.from(op.table).insert(row);
-      results.push(error ? { op_id: op.op_id, status: "error", detail: error.message } : { op_id: op.op_id, status: "applied" });
+      if (error) await fail(op, "error", error.message); else results.push({ op_id: op.op_id, status: "applied" });
       continue;
     }
     // LWW update guarded by version
     const { data: current } = await supabase.from(op.table).select("sync_version").eq("id", row.id as string).maybeSingle();
     if (current && op.base_version !== undefined && current.sync_version !== op.base_version) {
-      results.push({ op_id: op.op_id, status: "conflict", detail: { server_version: current.sync_version } });
+      await fail(op, "conflict", { server_version: current.sync_version });
       continue;
     }
     const { error } = await supabase.from(op.table).update({ ...row, sync_version: (current?.sync_version ?? 0) + 1 }).eq("id", row.id as string);
-    results.push(error ? { op_id: op.op_id, status: "error", detail: error.message } : { op_id: op.op_id, status: "applied" });
+    if (error) await fail(op, "error", error.message); else results.push({ op_id: op.op_id, status: "applied" });
   }
   return Response.json({ results });
 });
