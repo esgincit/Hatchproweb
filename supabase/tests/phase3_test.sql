@@ -123,6 +123,17 @@ do $$ begin
   assert (select status from purchase_order where id = current_setting('t.po3')::uuid) = 'approved', 'other approver approved';
   begin update purchase_order set created_by = auth.uid() where id = current_setting('t.po3')::uuid; assert false, 'creator rewritten';
   exception when raise_exception then null; end;
+  -- 0060: an approved PO keeps its vendor and amount
+  begin update purchase_order set total = total + 1 where id = current_setting('t.po3')::uuid; assert false, 'approved total changed';
+  exception when raise_exception then null; end;
+  begin update purchase_order set vendor_id = (select id from vendor where tenant_id = 'b146bf5d-6213-556e-8e71-8d4c156ad36d' and id <> current_setting('t.v')::uuid limit 1)
+    where id = current_setting('t.po3')::uuid; assert false, 'approved vendor swapped';
+  exception when raise_exception then null; end;
+  -- 0060: the database names the creator, whatever the client sends
+  insert into purchase_order (farm_id, vendor_id, po_no, po_date, status, total, created_by)
+    values ((select farm_id from purchase_order where id = current_setting('t.po3')::uuid), current_setting('t.v')::uuid, 'PO-FORGE-1', current_date, 'draft', 10,
+            '436f615f-c815-5957-8623-ca639dcdb5e4');
+  assert (select created_by from purchase_order where po_no = 'PO-FORGE-1') = auth.uid(), 'forged creator kept';
 end $$;
 rollback;
 \echo phase3_test OK
