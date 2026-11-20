@@ -17,6 +17,8 @@ export type Field = {
   placeholder?: string;
   hint?: string;
   max?: string;
+  /** file fields: allowed types (default: photos, straight from the camera) */
+  accept?: string;
   /** picking an option of this select fills another field: `{ target: field id, values: option value → what to put there }` */
   follow?: { target: string; values: Record<string, string | number> };
 };
@@ -80,7 +82,7 @@ export function FormSheet({ spec, open, onOpenChange, onSubmit }: {
                   {f.options?.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               ) : f.type === 'file' ? (
-                <input {...common} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" />
+                <input {...common} type="file" accept={f.accept ?? "image/jpeg,image/png,image/webp"} capture={f.accept ? undefined : "environment"} />
               ) : f.type === 'textarea' ? (
                 <textarea {...common} rows={2} placeholder={f.placeholder} defaultValue={f.value ?? ''} />
               ) : (

@@ -13,7 +13,7 @@ export async function BreederPanel({ batchId }: { batchId: string }) {
   const [shedId, farmId] = [fl.shed_id, fl.farm_id];
   const dmy = dateFmt(locale);
   const lim = (q: Row, n: number) => q.limit(n);
-  const [daily, flockDay, bw, coll, eggDay, store, cal, meds, bio, env] = await Promise.all([
+  const [daily, flockDay, bw, coll, eggDay, store, cal, meds, bio, env, feed, feedRule] = await Promise.all([
     lim(sb.from('breeder_daily').select('id,log_date,female_mort,male_mort,status,reject_reason').eq('batch_id', batchId).order('log_date', { ascending: false }), 14),
     lim(sb.from('breeder_flock_day').select('log_date,females_left,males_left,female_mort_pct,male_mort_pct,feed_g_per_female,feed_g_per_male,water_ml_per_bird').eq('batch_id', batchId).order('log_date', { ascending: false }), 14),
     lim(sb.from('body_weight_vs_standard').select('id,weighed_on,sex,sample_size,avg_g,std_g,diff_g,uniformity_pct,cv_pct,fleshing_score,age_week,sample_ok').eq('batch_id', batchId).order('weighed_on', { ascending: false }), 12),
@@ -24,6 +24,8 @@ export async function BreederPanel({ batchId }: { batchId: string }) {
     lim(sb.from('medication_record').select('id,given_on,medicine,dosage,duration_days,reason,withdrawal_days').eq('batch_id', batchId).order('given_on', { ascending: false }), 5),
     lim(sb.from('biosecurity_incident').select('id,occurred_on,nature,birds_affected,follow_up_on,closed_on').eq('farm_id', farmId).order('occurred_on', { ascending: false }), 5),
     lim(sb.from('env_reading').select('id,read_at,temp_c,rh_pct,nh3_ppm,litter,ventilation').eq('shed_id', shedId).order('read_at', { ascending: false }), 5),
+    sb.from('feed_days_left').select('feed_on_hand_kg,feed_per_day_kg,days_left').eq('farm_id', farmId).maybeSingle(), // 0061
+    sb.from('tenant_rule').select('value').eq('key', 'feed_days_alert').maybeSingle(),
   ]);
   const pctOf = new Map<string, Row>((flockDay.data ?? []).map((r: Row) => [r.log_date, r]));
   const ctx = { batch: batchId, shed: shedId };
@@ -31,8 +33,16 @@ export async function BreederPanel({ batchId }: { batchId: string }) {
   const c = cal.data, s = store.data;
   const time = (iso: string) => new Date(iso).toLocaleTimeString(locale + '-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
 
+  const fd = feed.data;
+  const low = fd?.days_left != null && Number(fd.days_left) < Number(feedRule.data?.value ?? 3);
   return (
     <>
+      {fd && (
+        <div className="card row" data-testid="feed-days" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span>{fd.days_left == null ? t('gap.feed.unknown') : t('gap.feed.line', { days: nz(fd.days_left, 1), kg: nz(fd.feed_on_hand_kg, 0), perDay: nz(fd.feed_per_day_kg, 1) })}</span>
+          {low && <span className="pill warn" data-testid="feed-low">{t('gap.feed.low')}</span>}
+        </div>
+      )}
       <Card title={t('erp.b.daily')} testid="breeder-daily" action={eb('breederDaily', t('erp.b.addDaily'))}>
         <Tbl empty={t('erp.b.noDaily')}
           head={['-' + t('batch.colDate'), t('erp.b.fDead'), t('erp.b.mDead'), t('erp.b.fLeft'), t('erp.b.mLeft'), t('erp.b.feedF'), t('erp.b.feedM'), '-' + t('erp.b.status')]}

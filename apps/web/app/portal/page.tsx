@@ -48,7 +48,7 @@ export default async function Portal() {
                   <span className="pill neutral" data-testid="portal-pay">{ts(`sales.pay.${o.payment_status}`)}</span>
                 </div>
               </div>
-              {owing(o) && <PortalPay orderNo={o.order_no} />}
+              {owing(o) && <PortalPay orderNo={o.order_no} orderId={o.id} tenantId={o.tenant_id} />}
             </div>
           ))}
           {!orders?.length && <div className="s">{t('noOrders')}</div>}

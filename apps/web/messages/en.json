@@ -940,6 +940,11 @@
       "delivered": "Delivery recorded",
       "tripCompleted": "Trip completed",
       "claimed": "DOA claim submitted"
+    },
+    "gap": {
+      "alertSaved": "Saved.",
+      "paySaved": "Payment recorded. Finance will verify it.",
+      "poRaised": "Purchase order {no} raised."
     }
   },
   "billCat": {
@@ -1441,7 +1446,8 @@
       "change": "Change",
       "formTitle": "Change rule",
       "value": "Value",
-      "daysVal": "Days (1–30)"
+      "daysVal": "Days (1–30)",
+      "minutes": "{n} minutes"
     }
   },
   "erp": {
@@ -1786,7 +1792,9 @@
       "v": {
         "warn": "Warn only",
         "block": "Block (needs an override)"
-      }
+      },
+      "alert_escalation_minutes": "Alert escalation after (minutes)",
+      "feed_days_alert": "Feed alert below (days left)"
     }
   },
   "sales": {
@@ -2048,7 +2056,10 @@
     "payRefHint": "UPI / bank reference (UTR)",
     "paySend": "Send payment reference",
     "paySent": "Sent. The hatchery will verify your payment.",
-    "refBad": "Enter the payment reference (4 to 60 characters)."
+    "refBad": "Enter the payment reference (4 to 60 characters).",
+    "proofBad": "The proof must be a JPG, PNG, WebP or PDF file under 10 MB.",
+    "proofFailed": "Proof upload failed: {err}",
+    "proofLabel": "Payment proof for {no} (image or PDF, optional)"
   },
   "fin": {
     "title": "Finance",
@@ -2360,5 +2371,101 @@
     "mean7": "7-day average",
     "dropPts": "Drop (points)",
     "noAnomalies": "Nothing unusual."
+  },
+  "gap": {
+    "proofBad": "The proof must be a JPG, PNG, WebP or PDF file under 10 MB.",
+    "proofFailed": "Proof upload failed: {err}",
+    "alert": {
+      "state": {
+        "open": "Open",
+        "ack": "Acknowledged",
+        "actioned": "Actioned",
+        "resolved": "Resolved"
+      },
+      "escalated": "Escalated",
+      "ack": "Acknowledge",
+      "action": "Record action",
+      "resolve": "Resolve",
+      "actionTitle": "Record action taken",
+      "resolveTitle": "Resolve alert",
+      "note": "Action taken",
+      "noteOptional": "(optional, an action is already recorded)",
+      "ackedLine": "Acknowledged {when}",
+      "noteLine": "Action: {note}",
+      "resolvedLine": "Resolved {when}"
+    },
+    "pay": {
+      "record": "Record payment",
+      "title": "Record payment for {no}",
+      "ref": "UTR / reference",
+      "proof": "Payment proof (image or PDF)",
+      "proofHint": "(JPG, PNG, WebP or PDF, max 10 MB)",
+      "proofLabel": "Payment proof",
+      "proofSaved": "Proof saved",
+      "viewProof": "View proof"
+    },
+    "req": {
+      "poTitle": "Raise purchase order",
+      "needVendor": "Add a vendor first (More, Vendors).",
+      "raise": "Raise PO",
+      "vendor": "Vendor",
+      "rate": "Rate per unit",
+      "expected": "Expected on",
+      "poLine": "PO {no}"
+    },
+    "feed": {
+      "line": "Feed: {days} days left ({kg} kg on hand, {perDay} kg/day)",
+      "low": "Low feed",
+      "unknown": "Feed: days left unknown (no feed logged in the last 7 days)"
+    },
+    "doc": {
+      "noRows": "Nothing to list.",
+      "noteTitle": "Delivery note",
+      "listTitle": "Dispatch list",
+      "allocTitle": "Customer allocation list",
+      "farm": "Farm",
+      "trip": "Trip",
+      "vehicle": "Vehicle",
+      "driver": "Driver",
+      "dispatchedAt": "Dispatched at",
+      "customer": "Customer",
+      "address": "Delivery address",
+      "order": "Order",
+      "product": "Product",
+      "batch": "Hatch batch",
+      "qty": "Quantity",
+      "total": "Total",
+      "totalLive": "Total allocated",
+      "receiverName": "Receiver name",
+      "signature": "Receiver signature",
+      "time": "Time",
+      "status": "Status",
+      "tier": {
+        "platinum": "Platinum",
+        "gold": "Gold",
+        "standard": "Standard"
+      },
+      "alloc": {
+        "draft": "Draft",
+        "submitted": "Submitted",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "released": "Released"
+      },
+      "tripSt": {
+        "draft": "Draft",
+        "submitted": "Loaded",
+        "approved": "Dispatched",
+        "rejected": "Rejected",
+        "delivered": "Delivered",
+        "completed": "Completed"
+      },
+      "print": "Print",
+      "generated": "Generated {date}",
+      "noteFor": "Delivery note: {name}",
+      "listFor": "Dispatch list: {code}",
+      "allocFor": "Allocation list: {code}",
+      "tierCol": "Tier"
+    }
   }
 }

@@ -17,6 +17,7 @@ import { FinanceArea } from '@/components/erp/Finance';
 import { ProcurementArea } from '@/components/erp/Procurement';
 import { SettingsArea } from '@/components/erp/Settings';
 import { DashboardsArea } from '@/components/erp/Dashboards';
+import { AlertSteps, loadAlerts } from '@/components/erp/Alerts';
 import { claimsFromUser } from '@/lib/auth/claims';
 import { canSee } from '@/lib/auth/permissions';
 import { hasModule } from '@/lib/modules';
@@ -136,14 +137,16 @@ async function Notifications({ c: { v, t }, B }: { c: Ctx; B: React.ReactNode })
     const sb = await createClient();
     await sb.from('notification').update({ read_at: new Date().toISOString() }).is('read_at', null);
   }
+  const { life, names } = await loadAlerts(v.t.notifications.filter((n) => n.kind === 'alert').map((n) => n.id));
   return (
     <>{B}<Header title={t('sections.notifications')} action={<Live />} />
       <PushToggle />
       <div className="card"><div className="list">
         {v.t.notifications.map((n) => (
-          <div key={n.id} className={`item stripe ${sevStripe(n.severity)}`}><div>
+          <div key={n.id} className={`item stripe ${sevStripe(n.severity)}`} data-testid="notif-row"><div style={{ minWidth: 0 }}>
             <div className="t">{n.title}</div><div className="s">{n.body}</div>
             <div className="s" style={{ color: 'var(--muted)' }}>{n.ago_h ? t('sections.hAgo', { n: n.ago_h }) : t('sections.justNow')}</div>
+            {n.kind === 'alert' && <AlertSteps id={n.id} title={n.title} a={life.get(Number(n.id))} names={names} t={t} />}
           </div></div>
         ))}
         {!v.t.notifications.length && <div className="s">{t('sections.noNotifs')}</div>}

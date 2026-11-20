@@ -95,6 +95,9 @@ export const ACT_ROLES: Record<string, string[]> = {
   addBranch: ['tenant_owner'], toggleBranch: ['tenant_owner'], setFarmBranch: ['tenant_owner'], grantSupport: ['tenant_owner'], revokeSupport: ['tenant_owner'],
   toggleWebhook: ['tenant_owner'], revokeApiKey: ['tenant_owner'], createApiKey: ['tenant_owner'], createWebhook: ['tenant_owner'],
   linkPortal: ['tenant_owner'], unlinkPortal: ['tenant_owner'],
+  // requirement gaps (0061): any active member works an alert (alert_step); payment proof mirrors the evidence storage policy; PR -> PO needs a PO-capable role
+  ackAlert: Object.keys(BY_ROLE), actAlert: Object.keys(BY_ROLE), resolveAlert: Object.keys(BY_ROLE),
+  recordPayment: [...MONEY, 'sales_officer'], raiseReqPO: ['tenant_owner', 'farm_manager', 'store_keeper', 'procurement_officer'],
   addPm: PM, pmDone: PM,
   addDelegation: DELEGATORS, revokeDelegation: DELEGATORS, // the owner cannot delegate (ownership is not delegable, and roles must be held)
   decidePay: ['tenant_owner'], // payments > ₹50,000 by others wait for the owner (0012)

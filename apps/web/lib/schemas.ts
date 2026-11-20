@@ -30,6 +30,14 @@ export const CHICK_CATS = ['broiler', 'layer', 'breeder', 'other'] as const;
 export const PAY_RESULTS = ['verified', 'partial', 'rejected'] as const;
 export const OWNERSHIPS = ['own', 'hired'] as const;
 export const DOA_RESOLUTIONS = ['replace', 'credit_note', 'none'] as const;
+/** Payment proof in the private evidence bucket (0061): <tenant>/payment/<order id>/<uuid>.<ext>, jpeg / png / webp / pdf, max 10 MB. */
+export const PROOF_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' } as const;
+export const PROOF_MAX_BYTES = 10 * 1024 * 1024;
+export const proofPathOk = (path: string, orderId?: string) => {
+  const m = /^[0-9a-f-]{36}\/payment\/([0-9a-f-]{36})\/[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/.exec(path);
+  return !!m && (!orderId || m[1] === orderId);
+};
+const alertId = z.coerce.number().int().positive(); // notification.id is a bigint
 const why = z.string().trim().min(1).max(300);
 const note = (n: number) => opt(z.string().trim().max(n));
 
@@ -253,6 +261,13 @@ export const SCHEMAS = {
   revokeApiKey: z.object({ id }),
   linkPortal: z.object({ customer_id: id, email: z.string().trim().email().max(120) }),
   unlinkPortal: z.object({ customer_id: id }),
+  // ---- requirement gaps (0061): alert lifecycle, payment proof, requisition -> PO
+  ackAlert: z.object({ id: alertId }),
+  actAlert: z.object({ id: alertId, note: z.string().trim().min(1).max(500) }),
+  resolveAlert: z.object({ id: alertId, note: note(500) }), // the DB asks for a note when no action was recorded first
+  recordPayment: z.object({ order_id: id, payment_ref: z.string().trim().min(4).max(60), proof_path: opt(z.string().max(200)) })
+    .refine((x) => !x.proof_path || proofPathOk(x.proof_path, x.order_id), { path: ['proof_path'] }),
+  raiseReqPO: z.object({ req_id: id, vendor_id: id, rate: money, expected: opt(date) }),
   inviteUser: z.object({ name: text, phone: mobile, role: z.enum(STAFF_ROLES), language: z.enum(LANGS), farm_id: opt(id) }),
 } as const;
 

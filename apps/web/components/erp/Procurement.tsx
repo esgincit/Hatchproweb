@@ -36,7 +36,7 @@ const Resubmit = ({ act, id, status, t }: { act: string; id: string; status: str
 async function Reqs({ t }: { t: T }) {
   const [sb, locale] = [await createClient(), await getLocale()];
   const dmy = dateFmt(locale);
-  const { data } = await sb.from('purchase_requisition').select('id,qty,needed_by,est_rate,purpose,status,reject_reason,item(name,unit),farm(name)').order('created_at', { ascending: false }).limit(200);
+  const { data } = await sb.from('purchase_requisition').select('id,qty,needed_by,est_rate,purpose,status,reject_reason,po_id,item(name,unit),farm(name),po:purchase_order!po_id(po_no)').order('created_at', { ascending: false }).limit(200);
   return (
     <Card title={t('proc.tab.requisitions')} testid="reqs">
       <div className="list">
@@ -48,7 +48,9 @@ async function Reqs({ t }: { t: T }) {
               {reason(t, r)}
             </div>
             <div className="r row" style={{ gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <AStatus status={r.status} t={t} /><Resubmit act="submitReq" id={r.id} status={r.status} t={t} />
+              <AStatus status={r.status} t={t} />
+              {one(r.po)?.po_no && <span className="pill neutral" data-testid="req-po">{t('gap.req.poLine', { no: one(r.po).po_no })}</span>}
+              {r.status === 'approved' && <ActBtn act="raiseReqPO" className="btn small" ctx={{ req: r.id, label: `${one(r.item)?.name} · ${fmtN(Number(r.qty))} ${one(r.item)?.unit}`, rate: r.est_rate == null ? '' : String(r.est_rate), expected: r.needed_by ?? '' }}>{t('gap.req.raise')}</ActBtn>}<Resubmit act="submitReq" id={r.id} status={r.status} t={t} />
               <Decide act="decideReq" id={r.id} status={r.status === 'submitted' ? 'submitted' : ''} t={t} />
             </div>
           </div>

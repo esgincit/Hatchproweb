@@ -9,7 +9,7 @@ import { runAct } from '@/app/actions/forms';
 import {
   SCHEMAS, isAct, FARM_TYPES, SHED_TYPES, VENDOR_CATS, BILL_CATS, PRODUCTS, CUSTOMER_KINDS, WORKER_ROLES, PAY_MODES,
   STAGES, PRIORITIES, ASSET_CATS, ITEM_CATS, RATE_PRODUCTS, STAFF_ROLES, DIET_STAGES, WATER_TREAT, WATER_QUAL, VENT, LITTER, POWER, MACHINE_KINDS,
-  TIERS, CHICK_CATS, PAY_RESULTS, OWNERSHIPS, DOA_RESOLUTIONS,
+  TIERS, CHICK_CATS, PAY_RESULTS, OWNERSHIPS, DOA_RESOLUTIONS, PROOF_EXT, PROOF_MAX_BYTES,
 } from '@/lib/schemas';
 import { LOCALES, LOCALE_NAMES } from '@/lib/i18n/locales';
 import { addDays, fmtINR } from '@/lib/format';
@@ -163,6 +163,7 @@ const DIRECT: Record<string, (c: ActCtx) => { act: string; input: Record<string,
   releaseAlloc: (c) => ({ act: 'releaseAlloc', input: { id: c.id } }),
   submitTrip: (c) => ({ act: 'submitTrip', input: { id: c.trip } }),
   completeTrip: (c) => ({ act: 'completeTrip', input: { id: c.trip } }),
+  ackAlert: (c) => ({ act: 'ackAlert', input: { id: c.id } }),
   submitReq: (c) => ({ act: 'submitReq', input: { id: c.id } }),
   approvePO: (c) => ({ act: 'approvePO', input: { id: c.id } }),
   cancelPO: (c) => ({ act: 'cancelPO', input: { id: c.id } }),
@@ -205,6 +206,7 @@ export function ActionHost({ today }: { today: string }) {
     const key = keyOf(act);
     if (!isAct(key)) return { error: t('forms.unknown') };
     if (key === 'deliverTrip') await attachPod(values, t);
+    if (key === 'recordPayment') { const bad = await attachProof(values, t); if (bad) return { fields: ['proof'], error: bad }; }
     const local = SCHEMAS[key].safeParse(values);
     if (!local.success) return { fields: local.error.issues.map((i) => String(i.path[0])), error: t('forms.invalid') };
     const r = await runAct(key, values);
@@ -260,6 +262,22 @@ async function attachPod(values: Record<string, unknown>, t: TFn) {
   const up = batch && tenant ? await sb.storage.from('evidence').upload(path, file, { contentType: file.type || 'image/jpeg' }) : { error: new Error('no batch') };
   if (up.error) toast(t('sales.podFailed', { err: up.error.message }));
   else values.pod_path = path;
+}
+
+/** Payment proof -> private evidence bucket (0061: <tenant>/payment/<order id>/<uuid>.<ext>). Unlike the POD photo a refused upload stops the save: the reference alone would not carry the proof the finance officer expects. Returns an error text, or nothing. */
+async function attachProof(values: Record<string, unknown>, t: TFn): Promise<string | void> {
+  const file = values.proof;
+  delete values.proof;
+  if (!(file instanceof File)) return;
+  const ext = PROOF_EXT[file.type as keyof typeof PROOF_EXT];
+  if (!ext || file.size > PROOF_MAX_BYTES) return t('gap.proofBad');
+  const sb = createClient();
+  const { data: { session } } = await sb.auth.getSession();
+  const tenant = (session?.user.app_metadata as { tenant_id?: string } | undefined)?.tenant_id;
+  const path = `${tenant}/payment/${values.order_id}/${crypto.randomUUID()}.${ext}`;
+  const up = tenant ? await sb.storage.from('evidence').upload(path, file, { contentType: file.type }) : { error: new Error('no tenant') };
+  if (up.error) return t('gap.proofFailed', { err: up.error.message });
+  values.proof_path = path;
 }
 
 function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): FormSpec | null {
@@ -1021,6 +1039,32 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
           { id: 'credit_note_id', label: fi('f.note'), type: 'select', options: [none, ...L.notes.map((n): Opt => [n.id, n.no])] },
           num('amount', f('amount'), { required: true, step: 'any' }), { id: 'mode', label: f('pay.mode'), type: 'select', options: enumOpts(PAY_MODES, 'forms.pay'), value: 'upi', half: true },
           { id: 'utr', label: f('pay.utr'), half: true }, { ...date('paid_on', fi('f.paidOn')), required: false, value: '' },
+        ],
+      };
+    }
+    case 'actAlert': case 'resolveAlert': {
+      const need = act === 'actAlert' || ctx.needNote === '1';
+      return {
+        title: t(act === 'actAlert' ? 'gap.alert.actionTitle' : 'gap.alert.resolveTitle'), intro: ctx.title, submit: t(act === 'actAlert' ? 'gap.alert.action' : 'gap.alert.resolve'), hidden: { id: ctx.id },
+        fields: [{ id: 'note', label: t('gap.alert.note'), type: 'textarea', required: need, hint: need ? undefined : t('gap.alert.noteOptional') }],
+      };
+    }
+    case 'recordPayment':
+      return {
+        title: t('gap.pay.title', { no: ctx.no ?? '' }), submit: f('save'), hidden: { order_id: ctx.order },
+        fields: [
+          { id: 'payment_ref', label: t('gap.pay.ref'), required: true, hint: '(4–60)', value: ctx.ref },
+          { id: 'proof', label: t('gap.pay.proof'), type: 'file', accept: 'image/jpeg,image/png,image/webp,application/pdf', hint: t('gap.pay.proofHint') },
+        ],
+      };
+    case 'raiseReqPO': {
+      if (!L.vendors.length) return { title: t('gap.req.poTitle'), intro: t('gap.req.needVendor'), fields: [], submit: f('save') };
+      return {
+        title: t('gap.req.poTitle'), intro: ctx.label, submit: t('gap.req.raise'), hidden: { req_id: ctx.req },
+        fields: [
+          { id: 'vendor_id', label: t('gap.req.vendor'), type: 'select', options: vendorOpts() },
+          num('rate', t('gap.req.rate'), { required: true, step: 'any', value: ctx.rate }),
+          { id: 'expected', label: t('gap.req.expected'), type: 'date', half: true, value: ctx.expected },
         ],
       };
     }

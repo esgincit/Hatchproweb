@@ -77,7 +77,7 @@ async function Trips({ q, t }: { q: DispatchQuery; t: T }) {
 async function TripDetail({ d, trace, t, dmy }: { d: Row; trace: boolean; t: T; dmy: (s: string) => string }) {
   const sb = await createClient();
   const { data: lines } = await sb.from('dispatch_line')
-    .select('id,qty_loaded,boxes,qty_delivered,qty_short,qty_doa,age_override_reason,order_allocation(batch_id,batch(code),sales_order(order_no,customer(name)))')
+    .select('id,qty_loaded,boxes,qty_delivered,qty_short,qty_doa,age_override_reason,order_allocation(batch_id,batch(code),sales_order(order_no,customer_id,customer(name)))')
     .eq('dispatch_id', d.id).order('created_at');
   const ids = (lines ?? []).map((l: Row) => l.id);
   const [{ data: claims }, { data: invs }, { data: tr }, pod] = await Promise.all([
@@ -90,6 +90,8 @@ async function TripDetail({ d, trace, t, dmy }: { d: Row; trace: boolean; t: T; 
   const open = d.status === 'draft' || d.status === 'rejected';
   const done = d.status === 'delivered' || d.status === 'completed';
   const first = (lines ?? [])[0];
+  const custs = [...new Map((lines ?? []).map((l: Row) => { const o = one(one(l.order_allocation)?.sales_order); return [o?.customer_id, one(o?.customer)?.name]; })).entries()] as [string, string][];
+  const sets = [...new Map((lines ?? []).map((l: Row) => [one(l.order_allocation)?.batch_id, one(one(l.order_allocation)?.batch)?.code])).entries()] as [string, string][];
   const lineLabel = (l: Row) => { const o = one(l.order_allocation); return `${one(o?.sales_order)?.order_no} · ${one(one(o?.sales_order)?.customer)?.name}`; };
   const claimed = (id: string) => (claims ?? []).filter((c: Row) => c.dispatch_line_id === id && c.status !== 'rejected').reduce((n: number, c: Row) => n + c.qty, 0);
   const podUrl = (pod as { data: { signedUrl: string } | null }).data?.signedUrl;
@@ -139,6 +141,19 @@ async function TripDetail({ d, trace, t, dmy }: { d: Row; trace: boolean; t: T; 
           <Link className="btn small secondary" data-testid="trace-btn" href={`/more/dispatch?trip=${d.dispatch_no}&trace=1`} scroll={false}>{t('sales.trace')}</Link>
         )}
       </div>
+      {!!lines?.length && (
+        <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginTop: 10 }} data-testid="print-links">
+          {['approved', 'delivered', 'completed'].includes(d.status) && custs.map(([cid, name]) => (
+            <Link key={cid} className="btn small secondary" data-testid="note-link" href={`/print/delivery-note?trip=${d.dispatch_no}&customer=${cid}`}>{t('gap.doc.noteFor', { name })}</Link>
+          ))}
+          {sets.map(([bid, code]) => (
+            <span key={bid} className="row" style={{ gap: 6 }}>
+              <Link className="btn small secondary" data-testid="list-link" href={`/print/dispatch-list?batch=${bid}`}>{t('gap.doc.listFor', { code })}</Link>
+              <Link className="btn small secondary" data-testid="alloc-link" href={`/print/allocation-list?batch=${bid}`}>{t('gap.doc.allocFor', { code })}</Link>
+            </span>
+          ))}
+        </div>
+      )}
       {trace && <Trace rows={tr ?? []} t={t} dmy={dmy} />}
     </Card>
   );

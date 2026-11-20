@@ -151,7 +151,7 @@ export async function RulesCard() {
     if (r.key === 'allow_self_approval') return v ? t('trace.rules.allowed') : t('trace.rules.blocked');
     if (r.kind === 'bool') return v ? t('erp.yes') : t('erp.no');
     if (r.kind === 'enum') return t(`erp.rule.v.${v}`);
-    return r.unit === 'days' ? t('trace.rules.days', { n: v as number }) : `${v}${r.unit === 'pct' ? ' %' : ' °C'}`;
+    return r.unit === 'days' ? t('trace.rules.days', { n: v as number }) : r.unit === 'min' ? t('trace.rules.minutes', { n: v as number }) : `${v}${r.unit === 'pct' ? ' %' : ' °C'}`;
   };
   const label = (k: string) => (k === 'allow_self_approval' ? t('trace.rules.selfApproval') : k === 'egg_max_storage_days' ? t('trace.rules.maxDays') : t(`erp.rule.${k}`));
   return (

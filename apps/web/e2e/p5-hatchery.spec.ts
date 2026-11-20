@@ -379,7 +379,7 @@ test('HAT-03: tenant rules from the owner card change what the DB allows', async
   await login(page, PHONES.ksOwner);
   await page.goto('/more');
   const rules = step(page, 'rules-card');
-  await expect(rules.locator('[data-rule]')).toHaveCount(15);
+  await expect(rules.locator('[data-rule]')).toHaveCount(17);
   const rule = rules.locator('[data-rule="expired_vaccine_policy"]');
   await expect(rule).toContainText('Warn only');
   await rule.getByRole('button', { name: 'Change' }).click();

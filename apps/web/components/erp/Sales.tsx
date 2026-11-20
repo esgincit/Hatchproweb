@@ -48,7 +48,7 @@ async function Orders({ q, t }: { q: SalesQuery; t: T }) {
   const dmy = dateFmt(locale);
   const f = (FILTERS as readonly string[]).includes(q.f ?? '') ? q.f! : '';
   const pay = (PAYS as readonly string[]).includes(q.pay ?? '') ? q.pay! : '';
-  let qb = sb.from('sales_order').select('id,order_no,product_id,qty,hatch_date,suggested_hatch_date,price,price_locked_at,deposit_due,deposit_paid,payment_status,payment_ref,status,reserve_expires_at,cancel_reason,refund_status,credit_override_reason,customer(name,tier),chick_product(name)')
+  let qb = sb.from('sales_order').select('id,order_no,product_id,qty,hatch_date,suggested_hatch_date,price,price_locked_at,deposit_due,deposit_paid,payment_status,payment_ref,payment_proof_path,status,reserve_expires_at,cancel_reason,refund_status,credit_override_reason,customer(name,tier),chick_product(name)')
     .order('created_at', { ascending: false }).limit(200);
   if (f) qb = f === 'cancelled' ? qb.in('status', ['cancelled', 'expired']) : qb.eq('status', f);
   if (pay) qb = qb.eq('payment_status', pay);
@@ -85,8 +85,9 @@ async function Orders({ q, t }: { q: SalesQuery; t: T }) {
   );
 }
 
-function OrderDetail({ o, t, dmy, close }: { o: Row; t: T; dmy: (s: string) => string; close: string }) {
+async function OrderDetail({ o, t, dmy, close }: { o: Row; t: T; dmy: (s: string) => string; close: string }) {
   const ctx = { order: o.id, no: o.order_no };
+  const proof = o.payment_proof_path ? (await (await createClient()).storage.from('evidence').createSignedUrl(o.payment_proof_path, 300)).data?.signedUrl : null;
   const open = ['reserved', 'waitlisted', 'confirmed', 'allocated'].includes(o.status);
   const owing = ['pending', 'submitted', 'rejected', 'partial'].includes(o.payment_status) && Number(o.deposit_due) > 0;
   const btn = (act: string, label: string, extra: Record<string, string> = {}, secondary = true) =>
@@ -101,11 +102,13 @@ function OrderDetail({ o, t, dmy, close }: { o: Row; t: T; dmy: (s: string) => s
         <div>{t('sales.f.price')}</div><div>{fmtINR(Number(o.price))}{o.price_locked_at ? ` · ${t('sales.locked')}` : ''}</div>
         <div>{t('sales.deposit')}</div><div data-testid="deposit">{t('sales.depositLine', { paid: fmtINR(Number(o.deposit_paid)), due: fmtINR(Number(o.deposit_due)) })}</div>
         <div>{t('sales.f.ref')}</div><div>{o.payment_ref ?? '—'}</div>
+        {o.payment_proof_path && <><div>{t('gap.pay.proofLabel')}</div><div data-testid="pay-proof">{proof ? <ProofLink url={proof} path={o.payment_proof_path} t={t} /> : t('gap.pay.proofSaved')}</div></>}
         {o.credit_override_reason && <><div>{t('sales.f.override')}</div><div>{o.credit_override_reason}</div></>}
         {o.status === 'reserved' && o.reserve_expires_at && <><div>{t('sales.holdUntil')}</div><div>{new Date(o.reserve_expires_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</div></>}
         {o.status === 'cancelled' && <><div>{t('sales.cancelReason')}</div><div>{o.cancel_reason}{o.refund_status !== 'none' ? ` · ${t('sales.refund', { s: o.refund_status })}` : ''}</div></>}
       </div>
       <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+        {['pending', 'rejected', 'partial'].includes(o.payment_status) && open && btn('recordPayment', t('gap.pay.record'), { ref: o.payment_ref ?? '' }, false)}
         {owing && ['reserved', 'waitlisted'].includes(o.status) && btn('verifyPayment', t('sales.verifyPay'), { due: String(o.deposit_due), ref: o.payment_ref ?? '' }, false)}
         {owing && o.status === 'reserved' && btn('waiveDeposit', t('sales.waive'))}
         {o.status === 'reserved' && btn('confirmOrder', t('sales.confirm'), {}, false)}
@@ -116,6 +119,17 @@ function OrderDetail({ o, t, dmy, close }: { o: Row; t: T; dmy: (s: string) => s
         {open && btn('cancelOrder', t('sales.cancel'))}
       </div>
     </Card>
+  );
+}
+
+/** Images show as a thumbnail that opens full size; a PDF is a link. */
+function ProofLink({ url, path, t }: { url: string; path: string; t: T }) {
+  if (path.endsWith('.pdf')) return <a href={url} target="_blank" rel="noreferrer">{t('gap.pay.viewProof')}</a>;
+  return (
+    <a href={url} target="_blank" rel="noreferrer" aria-label={t('gap.pay.viewProof')}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL, no optimisation wanted */}
+      <img src={url} alt={t('gap.pay.viewProof')} style={{ maxWidth: 160, maxHeight: 160, borderRadius: 6 }} />
+    </a>
   );
 }
 

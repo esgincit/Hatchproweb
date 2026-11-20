@@ -714,6 +714,23 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
       const x = v as In<'unlinkPortal'>;
       return touched(await sb.from('customer_portal_user').delete().eq('customer_id', x.customer_id).select('user_id'), { ok: true, msg: t('erp.saved') }, t);
     }
+    // ---- requirement gaps (0061). The DB messages (already resolved, describe the action taken…) are shown as is.
+    case 'ackAlert': case 'actAlert': case 'resolveAlert': {
+      const x = v as In<'ackAlert'> & In<'actAlert'> & In<'resolveAlert'>;
+      const step = act === 'ackAlert' ? 'ack' : act === 'actAlert' ? 'action' : 'resolve';
+      const { error } = await sb.rpc('alert_step', { p_id: x.id, p_step: step, p_note: x.note ?? null });
+      return fail(error) ?? { ok: true, msg: t('gap.alertSaved') };
+    }
+    case 'recordPayment': { // the proof file is already in <tenant>/payment/<order>/ (ActionHost uploads it first); the DB refuses any other path
+      const x = v as In<'recordPayment'>;
+      const patch = { payment_ref: x.payment_ref, payment_status: 'submitted', ...(x.proof_path ? { payment_proof_path: x.proof_path } : {}) };
+      return touched(await sb.from('sales_order').update(patch).eq('id', x.order_id).in('payment_status', ['pending', 'rejected', 'partial']).select('id'), { ok: true, msg: t('gap.paySaved') }, t);
+    }
+    case 'raiseReqPO': {
+      const x = v as In<'raiseReqPO'>;
+      const { data, error } = await sb.rpc('requisition_to_po', { p_req: x.req_id, p_vendor: x.vendor_id, p_rate: x.rate, p_expected: x.expected ?? null });
+      return fail(error) ?? { ok: true, msg: t('gap.poRaised', { no: String(data) }) };
+    }
     case 'remind': {
       const x = v as In<'remind'>;
       const { error } = await sb.from('reminder_log').insert({ customer_id: x.customer_id, invoice_ids: x.invoice_ids, amount: x.amount, channel: 'wa_link', lang: x.lang });
