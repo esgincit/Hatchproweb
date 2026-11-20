@@ -2,6 +2,7 @@
 -- 0051: PO approval threshold + delegation, stock count adjustments, store transfer in transit, API keys, module privacy.
 begin;
 delete from tenant_rule where tenant_id = 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; -- test runs on rule defaults (rolled back)
+delete from subscription where tenant_id in ('b146bf5d-6213-556e-8e71-8d4c156ad36d', '4c593c59-b79c-5b92-8601-fd7c0d7a3b4c'); -- plan defaults (rolled back)
 do $$
 declare ks uuid := 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; hat uuid := '72c46a7d-d72c-5676-bc8a-70c996df7088'; v uuid; i uuid; s1 uuid; s2 uuid;
 begin

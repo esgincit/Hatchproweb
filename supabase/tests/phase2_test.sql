@@ -2,6 +2,7 @@
 -- 0050: plan modules, PM due alerts, credit note owner threshold, period lock, support grants, customer portal.
 begin;
 delete from tenant_rule where tenant_id = 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; -- test runs on rule defaults (rolled back)
+delete from subscription where tenant_id in ('b146bf5d-6213-556e-8e71-8d4c156ad36d', '4c593c59-b79c-5b92-8601-fd7c0d7a3b4c'); -- plan defaults (rolled back)
 do $$
 declare ks uuid := 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; hat uuid := '72c46a7d-d72c-5676-bc8a-70c996df7088'; a uuid; p uuid; c uuid; pu uuid := gen_random_uuid();
 begin

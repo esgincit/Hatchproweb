@@ -4,7 +4,7 @@
 //  3. pm_due_alerts()          preventive maintenance due (0050, once a day per schedule)
 //  4. webhook delivery         webhook_outbox -> tenant URLs, HMAC-SHA256 signed, retried with backoff (0052)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { safeWebhookUrl } from "./url.ts";
+import { resolvesPublic, safeWebhookUrl } from "./url.ts";
 
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -25,7 +25,7 @@ async function deliverWebhooks() {
     const body = JSON.stringify({ id: m.id, event: m.event, data: m.payload });
     let err: string | null = null;
     for (const s of targets) {
-      if (!safeWebhookUrl(s.url)) { err = "url not allowed"; continue; }
+      if (!safeWebhookUrl(s.url) || !await resolvesPublic(new URL(s.url).hostname)) { err = "url not allowed"; continue; }
       try {
         const r = await fetch(s.url, {
           method: "POST", redirect: "manual", signal: AbortSignal.timeout(5000),
