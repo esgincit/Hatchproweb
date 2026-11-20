@@ -11,8 +11,8 @@ begin
   insert into batch (tenant_id, farm_id, shed_id, code, farm_type, placed_on, doc_count)
     values (ks, bf, bs, 'KS-BR-T1', 'breeder', '2026-03-01', 5000) returning id into fl;
   insert into hatching_egg_collection (tenant_id, batch_id, collected_on, collection_no, nest) values (ks, fl, '2026-10-10', 1, 1300); -- 0039 egg store
-  insert into batch (tenant_id, farm_id, shed_id, code, farm_type, placed_on, doc_count)
-    values (ks, '72c46a7d-d72c-5676-bc8a-70c996df7088', '3cc7357e-09d6-5972-a12d-5f5aa2949a3c', 'KS-H-T1', 'hatchery', '2026-10-20', 1000)
+  insert into batch (tenant_id, farm_id, shed_id, code, farm_type, placed_on, doc_count, full_hatch_flow)   -- legacy one-form hatch (0044)
+    values (ks, '72c46a7d-d72c-5676-bc8a-70c996df7088', '3cc7357e-09d6-5972-a12d-5f5aa2949a3c', 'KS-H-T1', 'hatchery', '2026-10-20', 1000, false)
     returning id into st;
   perform set_config('t.fl', fl::text, true), set_config('t.st', st::text, true);
 end $$;

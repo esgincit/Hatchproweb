@@ -3,7 +3,9 @@
 // The service role bypasses RLS, so every rule the database would apply is checked here explicitly.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const STAFF_ROLES = ["farm_manager", "finance", "shed_supervisor", "labour", "veterinarian", "store_keeper", "auditor"];
+const STAFF_ROLES = ["farm_manager", "finance", "shed_supervisor", "labour", "veterinarian", "store_keeper", "auditor",
+  // ERP roles (migration 0035; keep in sync with apps/web/lib/schemas.ts STAFF_ROLES)
+  "hatchery_manager", "hatchery_ops_manager", "hatchery_technician", "sales_officer", "dispatch_officer", "procurement_officer"];
 const LANGS = ["en", "te", "hi", "ta", "kn"];
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 
