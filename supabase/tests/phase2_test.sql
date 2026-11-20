@@ -85,7 +85,10 @@ insert into subscription (tenant_id, plan, status, features) values ('b146bf5d-6
   '{"modules":["core","breeder","hatchery","sales","dispatch","dashboards","portal"]}');
 set local role authenticated;
 do $$ begin
-  perform portal_submit_payment('SO-P1', 'UTR777', 'proof/p.jpg');
+  -- 0061: a proof file must sit in that order's own folder
+  begin perform portal_submit_payment('SO-P1', 'UTR777', 'proof/p.jpg'); assert false, 'foreign proof path';
+  exception when raise_exception then null; end;
+  perform portal_submit_payment('SO-P1', 'UTR777', null);
   assert (select payment_status from portal_orders() where order_no = 'SO-P1') = 'submitted', 'proof submitted';
   begin perform portal_submit_payment('SO-OTHER', 'UTR777', 'x'); assert false, 'paid someone else''s order';
   exception when raise_exception then null; end;

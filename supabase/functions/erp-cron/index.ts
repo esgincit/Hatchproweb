@@ -2,6 +2,7 @@
 //  1. expire_reservations()   temporary chick reservations past their window (0043)
 //  2. machine_silence_check() machines in use with no reading for 2x the interval (0041)
 //  3. pm_due_alerts()          preventive maintenance due (0050, once a day per schedule)
+//  4. alert_escalate()         warning/critical alerts nobody acknowledged in time (0061)
 //  4. webhook delivery         webhook_outbox -> tenant URLs, HMAC-SHA256 signed, retried with backoff (0052)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { resolvesPublic, safeWebhookUrl } from "./url.ts";
@@ -47,10 +48,10 @@ async function deliverWebhooks() {
 Deno.serve(async (req) => {
   const secret = Deno.env.get("CRON_SECRET");
   if (!secret || req.headers.get("x-cron-secret") !== secret) return json({ error: "forbidden" }, 403);
-  const [exp, silent, pm] = await Promise.all([
-    admin.rpc("expire_reservations"), admin.rpc("machine_silence_check"), admin.rpc("pm_due_alerts"),
+  const [exp, silent, pm, esc] = await Promise.all([
+    admin.rpc("expire_reservations"), admin.rpc("machine_silence_check"), admin.rpc("pm_due_alerts"), admin.rpc("alert_escalate"),
   ]);
-  const errors = [exp.error, silent.error, pm.error].filter(Boolean).map((e) => e!.message);
+  const errors = [exp.error, silent.error, pm.error, esc.error].filter(Boolean).map((e) => e!.message);
   const webhooks = await deliverWebhooks();
-  return json({ expired: exp.data, silent_machines: silent.data, pm_alerts: pm.data, webhooks, errors }, errors.length ? 500 : 200);
+  return json({ expired: exp.data, silent_machines: silent.data, pm_alerts: pm.data, escalated: esc.data, webhooks, errors }, errors.length ? 500 : 200);
 });
