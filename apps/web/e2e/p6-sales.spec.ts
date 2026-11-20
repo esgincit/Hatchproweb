@@ -268,19 +268,21 @@ test('SAL-03: hatchery manager approves, dispatch loads the trip, ops manager co
 
 test('SAL-04: delivery with a POD photo, DOA claim and approval, completion and the one-click trace', async ({ page }) => {
   test.setTimeout(300_000);
-  // the evidence bucket (0027) lets the owner write, not the dispatch roles: the owner records the delivery with the photo
-  await login(page, PHONES.ksOwner);
-  await page.goto(`/more/dispatch?trip=${vals.trip}`);
-  const trip = page.getByTestId('trip-detail');
-  const dlg = await open(page, trip.getByRole('button', { name: 'Record delivery' }), /^Record delivery/);
-  await fill(dlg, 'Received by', 'Ramesh');
-  await fill(dlg, /^Delivered/, 595); await fill(dlg, 'Short', 5); await fill(dlg, 'Dead on arrival', 5);
-  await dlg.getByLabel(/^Proof of delivery photo/).setInputFiles({ name: 'pod.png', mimeType: 'image/png', buffer: POD });
-  await send(dlg, 'Record delivery');
-  await expect(trip.getByTestId('receiver')).toHaveText('Ramesh', { timeout: 20_000 });
-  await expect(trip.getByTestId('pod')).toContainText('View photo');
+  // 0056: the dispatch officer records the delivery WITH the photo (the evidence bucket now accepts the dispatch roles)
+  await as(page, 'dispatch_officer', async () => {
+    await page.goto(`/more/dispatch?trip=${vals.trip}`);
+    const trip = page.getByTestId('trip-detail');
+    const dlg = await open(page, trip.getByRole('button', { name: 'Record delivery' }), /^Record delivery/);
+    await fill(dlg, 'Received by', 'Ramesh');
+    await fill(dlg, /^Delivered/, 595); await fill(dlg, 'Short', 5); await fill(dlg, 'Dead on arrival', 5);
+    await dlg.getByLabel(/^Proof of delivery photo/).setInputFiles({ name: 'pod.png', mimeType: 'image/png', buffer: POD });
+    await send(dlg, 'Record delivery');
+    await expect(trip.getByTestId('receiver')).toHaveText('Ramesh', { timeout: 20_000 });
+    await expect(trip.getByTestId('pod')).toBeVisible();
+  });
   const pod = (await admin.from('dispatch').select('pod_path').eq('dispatch_no', vals.trip!).single()).data!.pod_path as string;
-  expect(pod).toMatch(new RegExp(`^${tenant}/`));
+  expect(pod).toMatch(new RegExp(`^${tenant}/`)); // the path is only stored when the upload succeeded
+  expect((await admin.storage.from('evidence').download(pod)).error).toBeNull();
   await admin.storage.from('evidence').remove([pod]);
 
   // ---- sales raises the DOA claim; the hatchery manager approves it with a resolution
@@ -371,7 +373,7 @@ test('SAL-07: a linked customer sees only their orders, invoices and availabilit
   // a customer order with a deposit due (the waiting-list order was cancelled above, so book a fresh small-deposit one for this customer)
   const { error } = await admin.from('sales_order').insert({ tenant_id: tenant, order_no: `SO-E2E-${uniq()}`, customer_id: custB, product_id: productId, qty: 501, hatch_date: TODAY, price: 40 }); // 501 > the 400 left this week: waiting list, with a 50 % deposit pending
   expect(error).toBeNull();
-  const u = await admin.auth.admin.createUser({ phone: '+91' + PORTAL_PHONE, phone_confirm: true });
+  const u = await admin.auth.admin.createUser({ phone: '+91' + PORTAL_PHONE, phone_confirm: true, email: 'e2e-s-portal@example.test', email_confirm: true }); // link_portal_user (0056) finds the login by its confirmed email
   expect(u.error).toBeNull();
 
   // ---- a login that is not linked to a customer
@@ -382,7 +384,18 @@ test('SAL-07: a linked customer sees only their orders, invoices and availabilit
   await expect(page.getByTestId('not-customer')).toBeVisible();
 
   // ---- linked: sees its own customer's rows only
-  expect((await admin.from('customer_portal_user').insert({ user_id: u.data.user!.id, tenant_id: tenant, customer_id: custB })).error).toBeNull();
+  // the owner links it through the Customers tab (0056 link_portal_user), then the customer signs in again
+  await login(page, PHONES.ksOwner);
+  await page.goto('/more/sales?tab=customers');
+  const lk = page.getByTestId('customer-row').filter({ hasText: 'E2E-S Credit' });
+  const ld = await open(page, lk.getByRole('button', { name: 'Give portal access' }), /^Portal access ·/);
+  await fill(ld, 'Customer email', 'e2e-s-portal@example.test');
+  await send(ld, 'Give access');
+  await expect(lk.getByTestId('portal-linked')).toBeVisible({ timeout: 20_000 });
+  await page.context().clearCookies();
+  await page.context().addCookies([{ name: 'NEXT_LOCALE', value: 'en', url: 'http://localhost:3100' }]);
+  await otp(page, '/login', PORTAL_PHONE);
+  await expect(page).toHaveURL(/\/portal/, { timeout: 30_000 });
   await page.goto('/portal');
   await expect(page.getByTestId('portal-orders')).toBeVisible();
   const mine = page.getByTestId('portal-order');

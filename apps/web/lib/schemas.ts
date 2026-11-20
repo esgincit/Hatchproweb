@@ -49,7 +49,10 @@ export const ASSET_CATS = ['feeder', 'drinker', 'fan', 'generator', 'incubator',
 export const ITEM_CATS = ['feed', 'feed_ingredient', 'medicine', 'vaccine', 'disinfectant', 'equipment', 'spare', 'packaging', 'fuel', 'other'] as const;
 export const RATE_PRODUCTS = ['egg', 'broiler_farmgate', 'maize', 'soya'] as const;
 export const STAFF_ROLES = ['farm_manager', 'finance', 'shed_supervisor', 'labour', 'veterinarian', 'store_keeper', 'auditor', 'hatchery_manager', 'hatchery_ops_manager', 'hatchery_technician', 'sales_officer', 'dispatch_officer', 'procurement_officer'] as const;
-export const LANGS = ['en', 'te', 'hi', 'ta', 'kn'] as const;
+export const LIMIT_KEYS = ['po_approval_above', 'finance_owner_above', 'stock_adjust_owner_above'] as const;
+export const API_SCOPES = ['readings:write', 'orders:read', 'stock:read', 'trace:read'] as const;
+export const WEBHOOK_EVENTS = ['order.status', 'dispatch.status'] as const;
+export const LANGS =['en', 'te', 'hi', 'ta', 'kn'] as const;
 /** Indian mobile: any formatting, last 10 digits starting 6-9 */
 const mobile = z.string().transform((s) => s.replace(/\D/g, '').slice(-10)).pipe(z.string().regex(/^[6-9]\d{9}$/));
 
@@ -222,6 +225,34 @@ export const SCHEMAS = {
   decideDoa: z.object({ id, decision: z.enum(['approve', 'reject']), resolution: opt(z.enum(DOA_RESOLUTIONS)), reason: note(300) })
     .refine((x) => x.decision === 'reject' || !!x.resolution, { path: ['resolution'] })
     .refine((x) => x.decision === 'approve' || !!x.reason, { path: ['reason'] }),
+  // ---- finance / procurement / settings (0050-0053, 0056): the approval flows reuse DECIDE (a reason is required to reject)
+  addCreditNote: z.object({ customer_id: id, invoice_id: opt(id), amount: money, reason: z.string().trim().min(3).max(300), issued_on: date }),
+  decideCreditNote: DECIDE, decideRefund: DECIDE, decideReq: DECIDE, decideCount: DECIDE, decideStockXfer: DECIDE,
+  addRefund: z.object({ customer_id: id, sales_order_id: opt(id), credit_note_id: opt(id), amount: money, mode: z.enum(PAY_MODES), utr: note(40), paid_on: opt(date) }),
+  setLock: z.object({ date: opt(date) }), // blank = reopen the books
+  setLimit: z.object({ key: z.enum(LIMIT_KEYS), value: opt(z.coerce.number().positive().max(1e10)) }), // blank = back to the default / off
+  addReq: z.object({ farm_id: id, item_id: id, qty: money, needed_by: opt(date), est_rate: opt(z.coerce.number().min(0).max(1e8)), purpose: note(300), status: z.enum(['draft', 'submitted']) }),
+  submitReq: z.object({ id }),
+  approvePO: z.object({ id }), cancelPO: z.object({ id }),
+  addCount: z.object({ store_id: id, counted_on: date, note: note(300), lines: z.array(z.object({ item_id: id, counted_qty: z.coerce.number().min(0).max(1e9) })).min(1).max(300) }),
+  submitCount: z.object({ id }),
+  addStockXfer: z.object({ from_store: id, to_store: id, item_id: id, qty: money }).refine((x) => x.from_store !== x.to_store, { path: ['to_store'] }),
+  sendStockXfer: z.object({ id, sent_on: date }),
+  receiveStockXfer: z.object({ id, received_qty: z.coerce.number().min(0).max(1e9), received_on: date }),
+  addBranch: z.object({ name: z.string().trim().min(1).max(80), code: note(20), state: note(60), district: note(60), gstin: opt(z.string().trim().toUpperCase().regex(/^[0-9A-Z]{15}$/)) }),
+  toggleBranch: z.object({ id, active: z.enum(['yes', 'no']) }),
+  setFarmBranch: z.object({ farm_id: id, branch_id: opt(id) }),
+  addPm: z.object({ asset_id: id, task: z.string().trim().min(3).max(200), every_days: opt(int(1)), every_batches: opt(int(1)), last_done_on: opt(date) })
+    .refine((x) => x.every_days != null || x.every_batches != null, { path: ['every_days'] }),
+  pmDone: z.object({ id, date }),
+  addDelegation: z.object({ to_user: id, roles: z.array(z.string().max(40)).min(1).max(6), days: int(1).max(60), reason: z.string().trim().min(3).max(200) }),
+  revokeDelegation: z.object({ id }),
+  grantSupport: z.object({ hours: int(1).max(144), reason: z.string().trim().min(3).max(300) }), // the DB caps a grant at 7 days from its creation
+  revokeSupport: z.object({ id }),
+  toggleWebhook: z.object({ id, active: z.enum(['yes', 'no']) }),
+  revokeApiKey: z.object({ id }),
+  linkPortal: z.object({ customer_id: id, email: z.string().trim().email().max(120) }),
+  unlinkPortal: z.object({ customer_id: id }),
   inviteUser: z.object({ name: text, phone: mobile, role: z.enum(STAFF_ROLES), language: z.enum(LANGS), farm_id: opt(id) }),
 } as const;
 

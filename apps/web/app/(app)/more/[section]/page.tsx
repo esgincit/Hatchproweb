@@ -13,6 +13,10 @@ import { TransferList } from '@/components/trace/Transfers';
 import { MachineList } from '@/components/erp/Hatchery';
 import { SalesArea } from '@/components/erp/Sales';
 import { DispatchArea } from '@/components/erp/Dispatch';
+import { FinanceArea } from '@/components/erp/Finance';
+import { ProcurementArea } from '@/components/erp/Procurement';
+import { SettingsArea } from '@/components/erp/Settings';
+import { DashboardsArea } from '@/components/erp/Dashboards';
 import { claimsFromUser } from '@/lib/auth/claims';
 import { canSee } from '@/lib/auth/permissions';
 import { hasModule } from '@/lib/modules';
@@ -40,6 +44,12 @@ export default async function Section({ params, searchParams }: { params: Promis
       const c = claimsFromUser((await sb.auth.getUser()).data.user);
       if (!canSee(c.roles, section) || !(await hasModule(sb, section))) notFound();
       return <>{B}{section === 'sales' ? <SalesArea q={q} /> : <DispatchArea q={q} />}</>;
+    }
+    case 'finance': case 'procurement': case 'settings': case 'dashboards': { // role (+ plan module for dashboards): otherwise the screen does not exist for this user
+      const sb = await createClient();
+      const c = claimsFromUser((await sb.auth.getUser()).data.user);
+      if (!canSee(c.roles, section) || (section === 'dashboards' && !(await hasModule(sb, 'dashboards')))) notFound();
+      return <>{B}{section === 'finance' ? <FinanceArea tab={tab} /> : section === 'procurement' ? <ProcurementArea tab={tab} /> : section === 'settings' ? <SettingsArea roles={c.roles} /> : <DashboardsArea tab={tab} />}</>;
     }
     case 'machines': return <>{B}<Header title={t('erp.machine.title')} /><MachineList /></>;
     case 'vendors': return <Vendors c={c} B={B} />;

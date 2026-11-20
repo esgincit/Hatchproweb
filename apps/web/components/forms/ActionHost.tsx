@@ -48,12 +48,19 @@ type Lookups = {
   vehicles: { id: string; reg: string }[];
   /** approved allocations and how many chicks of each are not on a trip yet */
   allocs: { id: string; order_no: string; customer: string; code: string; left: number }[];
+  /** finance / procurement / settings (0050-0053) */
+  stores: { id: string; name: string }[];
+  invoices: { id: string; no: string; customer_id: string; customer: string }[];
+  orders: { id: string; no: string; customer_id: string; customer: string; deposit: number }[];
+  notes: { id: string; no: string; customer_id: string }[];
+  users: { id: string; name: string }[];
+  branches: { id: string; name: string }[];
 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- PostgREST embeds */
 async function loadLookups(): Promise<Lookups> {
   const sb = createClient();
-  const [farms, sheds, breeds, vendors, customers, batches, diseases, bills, invoices, assets, items, pos, vaccines, workers, contracts, lots, machines, products, stock, stockBatches, vehicles, allocs] = await Promise.all([
+  const [farms, sheds, breeds, vendors, customers, batches, diseases, bills, invoices, assets, items, pos, vaccines, workers, contracts, lots, machines, products, stock, stockBatches, vehicles, allocs, stores, invoicesAll, orders, notes, users, branches] = await Promise.all([
     sb.from('farm').select('id,name,farm_type').order('created_at'),
     sb.from('shed').select('id,name,farm_id,batch(state)').order('name'),
     sb.from('breed').select('id,name,farm_type').order('name'),
@@ -76,6 +83,12 @@ async function loadLookups(): Promise<Lookups> {
     sb.from('batch').select('id,chick_product_id').not('chick_product_id', 'is', null),
     sb.from('vehicle').select('id,reg_no').eq('active', true).order('reg_no'),
     sb.from('order_allocation').select('id,qty,batch(code),sales_order(order_no,customer(name)),dispatch_line(qty_loaded)').eq('status', 'approved'),
+    sb.from('store').select('id,name').order('name'),
+    sb.from('invoice').select('id,invoice_no,customer_id,customer(name)').order('invoice_date', { ascending: false }).limit(200),
+    sb.from('sales_order').select('id,order_no,customer_id,deposit_paid,customer(name)').gt('deposit_paid', 0).order('created_at', { ascending: false }).limit(200),
+    sb.from('credit_note').select('id,note_no,customer_id').eq('status', 'approved'),
+    sb.from('app_user').select('id,full_name').order('full_name'),
+    sb.from('branch').select('id,name').eq('active', true).order('name'),
   ]);
   const d = (r: { data: unknown }) => (r.data ?? []) as any[];
   const one = (x: any) => (Array.isArray(x) ? x[0] : x);
@@ -108,6 +121,12 @@ async function loadLookups(): Promise<Lookups> {
       id: a.id, order_no: one(a.sales_order)?.order_no ?? '', customer: one(one(a.sales_order)?.customer)?.name ?? '', code: one(a.batch)?.code ?? '',
       left: a.qty - (a.dispatch_line ?? []).reduce((n: number, l: any) => n + l.qty_loaded, 0),
     })),
+    stores: d(stores),
+    invoices: d(invoicesAll).map((i) => ({ id: i.id, no: i.invoice_no, customer_id: i.customer_id, customer: one(i.customer)?.name ?? '' })),
+    orders: d(orders).map((o) => ({ id: o.id, no: o.order_no, customer_id: o.customer_id, customer: one(o.customer)?.name ?? '', deposit: Number(o.deposit_paid) })),
+    notes: d(notes).map((n) => ({ id: n.id, no: n.note_no, customer_id: n.customer_id })),
+    users: d(users).map((u) => ({ id: u.id, name: u.full_name })),
+    branches: d(branches),
     machines: d(machines).map((m) => ({ id: m.id, name: m.name, no: m.machine_no, kind: m.machine_kind, cap: m.capacity_eggs })),
     workers: d(workers),
     contracts: d(contracts),
@@ -144,6 +163,16 @@ const DIRECT: Record<string, (c: ActCtx) => { act: string; input: Record<string,
   releaseAlloc: (c) => ({ act: 'releaseAlloc', input: { id: c.id } }),
   submitTrip: (c) => ({ act: 'submitTrip', input: { id: c.trip } }),
   completeTrip: (c) => ({ act: 'completeTrip', input: { id: c.trip } }),
+  submitReq: (c) => ({ act: 'submitReq', input: { id: c.id } }),
+  approvePO: (c) => ({ act: 'approvePO', input: { id: c.id } }),
+  cancelPO: (c) => ({ act: 'cancelPO', input: { id: c.id } }),
+  submitCount: (c) => ({ act: 'submitCount', input: { id: c.id } }),
+  toggleBranch: (c) => ({ act: 'toggleBranch', input: { id: c.id, active: c.active } }),
+  toggleWebhook: (c) => ({ act: 'toggleWebhook', input: { id: c.id, active: c.active } }),
+  revokeDelegation: (c) => ({ act: 'revokeDelegation', input: { id: c.id } }),
+  revokeSupport: (c) => ({ act: 'revokeSupport', input: { id: c.id } }),
+  revokeApiKey: (c) => ({ act: 'revokeApiKey', input: { id: c.id } }),
+  unlinkPortal: (c) => ({ act: 'unlinkPortal', input: { customer_id: c.customer } }),
   attSet: (c) => ({ act: 'attSet', input: c }),
   attCycle: (c) => ({ act: 'attSet', input: { worker_id: c.worker_id, date: c.date, status: NEXT_ATT[c.code] ?? 'present' } }),
   confirmCase: (c) => ({ act: 'confirmCase', input: { case_id: c.case } }),
@@ -217,7 +246,7 @@ export function ActionHost({ today }: { today: string }) {
 
 type TFn = ReturnType<typeof useTranslations>;
 
-/** Proof-of-delivery photo -> private evidence bucket (0027: <tenant>/<batch>/<date>/<uuid>). Not a blocker: dispatch roles may lack upload rights, so say so and go on. */
+/** Proof-of-delivery photo -> private evidence bucket (0027: <tenant>/<batch>/<date>/<uuid>). Best effort (0056 lets dispatch_officer, hatchery_ops_manager and hatchery_manager write to the bucket): a failed upload is reported and the delivery is still recorded. */
 async function attachPod(values: Record<string, unknown>, t: TFn) {
   const file = values.pod;
   const batch = String(values.pod_batch ?? '');
@@ -244,6 +273,9 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
   const enumOpts = (vals: readonly string[], ns: string): Opt[] => vals.map((v) => [v, t(`${ns}.${v}`)]);
   const e = (k: string, p?: Record<string, string | number>) => t(`erp.${k}`, p);
   const s = (k: string, p?: Record<string, string | number>) => t(`sales.${k}`, p);
+  const fi = (k: string, p?: Record<string, string | number>) => t(`fin.${k}`, p);
+  const pr = (k: string, p?: Record<string, string | number>) => t(`proc.${k}`, p);
+  const sg = (k: string, p?: Record<string, string | number>) => t(`setg.${k}`, p);
   const realToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // dates the DB checks against the real clock (APP_TODAY only pins demo screens)
   const num = (id: string, label: string, o: Partial<Field> = {}): Field => ({ id, label, type: 'number', half: true, ...o });
   const pick = (id: string, label: string, vals: readonly string[], ns: string): Field => ({ id, label, type: 'select', half: true, options: [none, ...enumOpts(vals, `erp.${ns}`)] });
@@ -963,8 +995,127 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
       return ctx._d === 'approve'
         ? { title: s('ttl.decideClaim'), submit: tr('approve'), hidden: { id: ctx.id, decision: 'approve' }, fields: [{ id: 'resolution', label: s('f.resolution'), type: 'select', options: enumOpts(DOA_RESOLUTIONS, 'sales.res') }] }
         : { title: e('rejectTitle'), submit: tr('reject'), danger: true, hidden: { id: ctx.id, decision: 'reject' }, fields: [{ id: 'reason', label: tr('form.reason'), type: 'textarea', required: true }] };
-    case 'decideDaily': case 'decideEggs': case 'decideCandling': case 'decideXfer': case 'decideHatch': case 'decideQuality': case 'decideAlloc': case 'decideTrip': // opened by reject:<act>
+    case 'decideDaily': case 'decideEggs': case 'decideCandling': case 'decideXfer': case 'decideHatch': case 'decideQuality': case 'decideAlloc': case 'decideTrip':
+    case 'decideCreditNote': case 'decideRefund': case 'decideReq': case 'decideCount': case 'decideStockXfer': // opened by reject:<act>
       return { title: e('rejectTitle'), submit: tr('reject'), danger: true, hidden: { id: ctx.id, decision: 'reject' }, fields: [{ id: 'reason', label: tr('form.reason'), type: 'textarea', required: true }] };
+    // ---- finance / procurement / settings (0050-0056). Labels live in `fin.*`, `proc.*`, `setg.*`.
+    case 'addCreditNote': {
+      if (!L.customers.length) return { title: fi('ttl.note'), intro: f('needCustomer'), fields: [], submit: f('save') };
+      return {
+        title: fi('ttl.note'), intro: fi('noteIntro'), submit: f('save'),
+        fields: [
+          { id: 'customer_id', label: s('f.customer'), type: 'select', options: L.customers.map((c): Opt => [c.id, c.name]) },
+          { id: 'invoice_id', label: fi('f.invoice'), type: 'select', options: [none, ...L.invoices.map((i): Opt => [i.id, `${i.no} · ${i.customer}`])] },
+          num('amount', f('amount'), { required: true, step: 'any' }), date('issued_on', fi('f.issued')),
+          { id: 'reason', label: tr('form.reason'), type: 'textarea', required: true },
+        ],
+      };
+    }
+    case 'addRefund': {
+      if (!L.customers.length) return { title: fi('ttl.refund'), intro: f('needCustomer'), fields: [], submit: f('save') };
+      return {
+        title: fi('ttl.refund'), intro: fi('refundIntro'), submit: f('save'),
+        fields: [
+          { id: 'customer_id', label: s('f.customer'), type: 'select', options: L.customers.map((c): Opt => [c.id, c.name]) },
+          { id: 'sales_order_id', label: fi('f.order'), type: 'select', options: [none, ...L.orders.map((o): Opt => [o.id, `${o.no} · ${o.customer} · ${fmtINR(o.deposit)}`])] },
+          { id: 'credit_note_id', label: fi('f.note'), type: 'select', options: [none, ...L.notes.map((n): Opt => [n.id, n.no])] },
+          num('amount', f('amount'), { required: true, step: 'any' }), { id: 'mode', label: f('pay.mode'), type: 'select', options: enumOpts(PAY_MODES, 'forms.pay'), value: 'upi', half: true },
+          { id: 'utr', label: f('pay.utr'), half: true }, { ...date('paid_on', fi('f.paidOn')), required: false, value: '' },
+        ],
+      };
+    }
+    case 'setLock':
+      return { title: fi('ttl.lock'), intro: fi('lockIntro'), submit: f('save'), fields: [{ id: 'date', label: fi('f.lockDate'), type: 'date', value: ctx.date ?? '' }] };
+    case 'setLimit':
+      return { title: fi(`limit.${ctx.key}`), intro: fi('limitIntro'), submit: f('save'), hidden: { key: ctx.key ?? '' }, fields: [num('value', fi('f.limit'), { step: 'any', value: ctx.value ?? '' })] };
+    case 'addReq': {
+      if (!L.farms.length || !L.items.length) return { title: pr('ttl.req'), intro: f('po.needBoth'), fields: [], submit: f('save') };
+      return {
+        title: pr('ttl.req'), submit: f('save'),
+        fields: [
+          { id: 'farm_id', label: f('shed.farm'), type: 'select', options: L.farms.map((x): Opt => [x.id, x.name]), half: true },
+          { id: 'item_id', label: f('po.item'), type: 'select', options: L.items.map((i): Opt => [i.id, `${i.name} · ${i.unit}`]), value: ctx.item, half: true },
+          num('qty', f('po.qty'), { required: true, step: 'any' }), num('est_rate', pr('f.estRate'), { step: 'any' }),
+          { id: 'needed_by', label: pr('f.neededBy'), type: 'date', half: true }, { id: 'status', label: pr('f.send'), type: 'select', half: true, options: [['submitted', pr('sendOpt.submit')], ['draft', pr('sendOpt.draft')]] },
+          { id: 'purpose', label: pr('f.purpose'), type: 'textarea' },
+        ],
+      };
+    }
+    case 'addCount': {
+      if (!L.stores.length || !L.items.length) return { title: pr('ttl.count'), intro: pr('needStore'), fields: [], submit: f('save') };
+      return {
+        title: pr('ttl.count'), intro: pr('countIntro'), submit: f('save'),
+        fields: [
+          { id: 'store_id', label: pr('f.store'), type: 'select', options: L.stores.map((x): Opt => [x.id, x.name]), half: true }, date('counted_on', pr('f.countedOn')),
+          { id: 'note', label: f('notes') },
+          ...L.items.map((i, k): Field => num(`q${k}`, `${i.name} · ${i.unit}`, { step: 'any', value: '' })),
+        ],
+        transform: (v) => ({
+          store_id: v.store_id, counted_on: v.counted_on, note: v.note,
+          lines: L.items.flatMap((i, k) => (v[`q${k}`] === '' || v[`q${k}`] == null ? [] : [{ item_id: i.id, counted_qty: v[`q${k}`] }])),
+        }),
+      };
+    }
+    case 'addStockXfer': {
+      if (L.stores.length < 2 || !L.items.length) return { title: pr('ttl.xfer'), intro: pr('needTwoStores'), fields: [], submit: f('save') };
+      return {
+        title: pr('ttl.xfer'), submit: f('save'),
+        fields: [
+          { id: 'from_store', label: pr('f.from'), type: 'select', options: L.stores.map((x): Opt => [x.id, x.name]), half: true },
+          { id: 'to_store', label: pr('f.to'), type: 'select', options: L.stores.map((x): Opt => [x.id, x.name]), value: L.stores[1].id, half: true },
+          { id: 'item_id', label: f('po.item'), type: 'select', options: L.items.map((i): Opt => [i.id, `${i.name} · ${i.unit}`]) },
+          num('qty', f('po.qty'), { required: true, step: 'any' }),
+        ],
+      };
+    }
+    case 'sendStockXfer':
+      return { title: pr('ttl.send'), submit: f('save'), hidden: { id: ctx.id }, fields: [date('sent_on', pr('f.sentOn'))] };
+    case 'receiveStockXfer':
+      return { title: pr('ttl.receive'), submit: f('save'), hidden: { id: ctx.id }, fields: [num('received_qty', pr('f.receivedQty'), { required: true, value: ctx.qty, step: 'any' }), date('received_on', pr('f.receivedOn'))] };
+    case 'addBranch':
+      return {
+        title: sg('ttl.branch'), submit: f('save'),
+        fields: [
+          { id: 'name', label: f('name'), required: true }, { id: 'code', label: sg('f.code'), half: true }, { id: 'gstin', label: f('vendor.gstin'), half: true, placeholder: '36ABCDE1234F1Z5' },
+          { id: 'state', label: sg('f.state'), half: true }, { id: 'district', label: f('farm.district'), half: true },
+        ],
+      };
+    case 'setFarmBranch':
+      return { title: sg('ttl.farmBranch', { name: ctx.name ?? '' }), submit: f('save'), hidden: { farm_id: ctx.farm }, fields: [{ id: 'branch_id', label: sg('f.branch'), type: 'select', options: [none, ...L.branches.map((b): Opt => [b.id, b.name])], value: ctx.branch ?? '' }] };
+    case 'addPm': {
+      if (!L.assets.length) return { title: sg('ttl.pm'), intro: sg('needAsset'), fields: [], submit: f('save') };
+      return {
+        title: sg('ttl.pm'), intro: sg('pmIntro'), submit: f('save'),
+        fields: [
+          { id: 'asset_id', label: sg('f.asset'), type: 'select', options: L.assets.map((a): Opt => [a.id, a.name]) }, { id: 'task', label: sg('f.task'), required: true },
+          num('every_days', sg('f.everyDays')), num('every_batches', sg('f.everyBatches')), { ...date('last_done_on', sg('f.lastDone')), required: false },
+        ],
+      };
+    }
+    case 'pmDone':
+      return { title: sg('ttl.pmDone'), submit: f('save'), hidden: { id: ctx.id }, fields: [date()] };
+    case 'addDelegation': {
+      const mine: string[] = JSON.parse(ctx.roles || '[]');
+      return {
+        title: sg('ttl.delegate'), intro: sg('delegateIntro'), submit: f('save'),
+        fields: [
+          { id: 'to_user', label: sg('f.to'), type: 'select', options: L.users.map((u): Opt => [u.id, u.name]) },
+          { id: 'role', label: f('worker.role'), type: 'select', half: true, options: mine.map((r): Opt => [r, t(`roles.${r}`)]) },
+          num('days', sg('f.days'), { value: '7', required: true }), { id: 'reason', label: tr('form.reason'), required: true },
+        ],
+        transform: (v) => ({ to_user: v.to_user, roles: v.role ? [v.role] : [], days: v.days, reason: v.reason }),
+      };
+    }
+    case 'grantSupport':
+      return {
+        title: sg('ttl.support'), intro: sg('supportIntro'), submit: f('save'),
+        fields: [
+          { id: 'hours', label: sg('f.duration'), type: 'select', value: '24', half: true, options: [['1', sg('dur.1')], ['4', sg('dur.4')], ['24', sg('dur.24')], ['72', sg('dur.72')], ['144', sg('dur.144')]] },
+          { id: 'reason', label: tr('form.reason'), type: 'textarea', required: true },
+        ],
+      };
+    case 'linkPortal':
+      return { title: sg('ttl.portal', { name: ctx.name ?? '' }), intro: sg('portalIntro'), submit: sg('portalSubmit'), hidden: { customer_id: ctx.customer }, fields: [{ id: 'email', label: sg('f.email'), required: true, placeholder: 'customer@example.com' }] };
     case 'inviteUser':
       return {
         title: f('invite.title'), intro: f('invite.intro'), submit: f('invite.submit'),

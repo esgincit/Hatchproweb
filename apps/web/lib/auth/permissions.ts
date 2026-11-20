@@ -33,6 +33,9 @@ const BREED = [...OWN, 'shed_supervisor'];
 const HATCH = ['hatchery_technician', 'hatchery_ops_manager'];
 const SALES = ['tenant_owner', 'sales_officer', 'hatchery_manager'];
 const DISPATCH = ['tenant_owner', 'dispatch_officer', 'hatchery_ops_manager'];
+const STORE = ['tenant_owner', 'farm_manager', 'store_keeper'];
+const PM = ['tenant_owner', 'farm_manager', 'store_keeper', 'hatchery_ops_manager'];
+export const DELEGATORS = ['farm_manager', 'hatchery_manager', 'hatchery_ops_manager', 'finance', 'procurement_officer', 'store_keeper'];
 const SHED = [...OWN, 'shed_supervisor', 'labour', 'veterinarian'];
 /** which platform team sees/does what on the console (DB mirrors `billing` in 0016) */
 export const TEAM = {
@@ -82,6 +85,18 @@ export const ACT_ROLES: Record<string, string[]> = {
   addVehicle: [...OWN, 'dispatch_officer', 'hatchery_ops_manager'], addTrip: DISPATCH, addLoad: DISPATCH, submitTrip: DISPATCH,
   decideTrip: ['tenant_owner', 'hatchery_ops_manager'], deliverTrip: DISPATCH, completeTrip: DISPATCH,
   doaClaim: [...SALES, 'dispatch_officer'], decideDoa: ['tenant_owner', 'hatchery_manager'],
+  // finance / procurement / settings (0050-0053): lists mirror each table's RLS roles and its guard_locked() approvers
+  addCreditNote: ['tenant_owner', 'finance', 'sales_officer', 'hatchery_manager'], decideCreditNote: ['tenant_owner', 'finance'],
+  addRefund: ['tenant_owner', 'finance'], decideRefund: ['tenant_owner', 'finance'], setLock: ['tenant_owner'], setLimit: ['tenant_owner'],
+  addReq: ['tenant_owner', 'farm_manager', 'store_keeper', 'shed_supervisor', 'hatchery_technician', 'hatchery_ops_manager', 'procurement_officer'],
+  submitReq: ['tenant_owner', 'farm_manager', 'store_keeper', 'hatchery_ops_manager', 'procurement_officer'], decideReq: ['tenant_owner', 'farm_manager', 'store_keeper', 'hatchery_ops_manager'],
+  approvePO: ['tenant_owner'], cancelPO: ['tenant_owner', 'farm_manager', 'finance', 'store_keeper'], // 0053 lets procurement_officer approve, but 0006 gives them no PO update right
+  addCount: STORE, submitCount: STORE, decideCount: STORE, addStockXfer: STORE, decideStockXfer: STORE, sendStockXfer: STORE, receiveStockXfer: STORE,
+  addBranch: ['tenant_owner'], toggleBranch: ['tenant_owner'], setFarmBranch: ['tenant_owner'], grantSupport: ['tenant_owner'], revokeSupport: ['tenant_owner'],
+  toggleWebhook: ['tenant_owner'], revokeApiKey: ['tenant_owner'], createApiKey: ['tenant_owner'], createWebhook: ['tenant_owner'],
+  linkPortal: ['tenant_owner'], unlinkPortal: ['tenant_owner'],
+  addPm: PM, pmDone: PM,
+  addDelegation: DELEGATORS, revokeDelegation: DELEGATORS, // the owner cannot delegate (ownership is not delegable, and roles must be held)
   decidePay: ['tenant_owner'], // payments > ₹50,000 by others wait for the owner (0012)
   inviteUser: ['tenant_owner'], // matches invite-user edge function + user_role_assignment policy
   // downloads (app/api/export) — the route enforces the same lists
@@ -92,6 +107,10 @@ export const ACT_ROLES: Record<string, string[]> = {
 export const AREA_ROLES = {
   sales: [...OWN, 'sales_officer', 'hatchery_manager', 'finance', 'auditor'],
   dispatch: [...OWN, 'dispatch_officer', 'hatchery_ops_manager', 'hatchery_manager', 'sales_officer'],
+  finance: [...OWN, 'finance', 'auditor', 'sales_officer', 'hatchery_manager'],
+  procurement: [...OWN, 'store_keeper', 'procurement_officer', 'hatchery_ops_manager', 'finance', 'auditor', 'shed_supervisor', 'hatchery_technician'],
+  dashboards: [...OWN, 'hatchery_manager', 'hatchery_ops_manager', 'finance', 'auditor', 'sales_officer'],
+  settings: ['tenant_owner', ...DELEGATORS],
 } as const;
 export const canSee = (roles: string[], area: keyof typeof AREA_ROLES) => AREA_ROLES[area].some((r) => roles.includes(r));
 export const canAct = (roles: string[], act: string) => (ACT_ROLES[act] ?? []).some((r) => roles.includes(r));

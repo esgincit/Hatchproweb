@@ -55,6 +55,10 @@ Breeder → egg transfer → hatchery → sales → dispatch chain, approvals, r
   `max_dispatch_age_hours`, `expired_vaccine_policy` (warn|block), `allow_self_approval`, `credit_limit_policy`
   (warn|block), `doc_gst_pct` (0 until the GST treatment is confirmed), `books_locked_until`, `po_approval_above`,
   `finance_owner_above`, alert thresholds (`breeder_mortality_alert_pct`, `machine_temp_min_c`, …).
+- **More menu screens (ERP):** Finance (credit notes, refunds, receivables ageing, customer balances, books lock), Procurement (requisitions,
+  PO approval, stock counts, store transfers, supplier KPIs), Dashboards (module `dashboards`), Settings (owner: modules, branches, maintenance
+  schedules, approval limits, delegation, API keys, webhooks, support access). API keys and webhook secrets are shown once at creation.
+  Sales > Customers: the owner links a customer to a portal login by the email the customer signed up with (confirmed email required).
 - **SQL tests:** `for f in supabase/tests/*_test.sql; do psql … -f $f; done` — each runs in a rolled-back transaction.
 
 ### Demo data (QA only, optional)

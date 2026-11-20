@@ -48,3 +48,9 @@ export function Tbl({ head, rows, empty }: { head: string[]; rows: { key: string
     </div>
   );
 }
+
+const APILL: Record<string, string> = { ...PILL, ordered: 'good', in_transit: 'warn', received: 'good', cancelled: 'crit', partial: 'warn', closed: 'good' };
+/** Status pill for the finance / procurement documents (labels in fin.status.*). */
+export function AStatus({ status, t }: { status: string; t: T }) {
+  return <span className={`pill ${APILL[status] ?? 'neutral'}`} data-testid="doc-status">{t(`fin.status.${status}`)}</span>;
+}

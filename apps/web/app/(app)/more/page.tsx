@@ -17,7 +17,7 @@ export default async function More() {
   const claims = claimsFromUser(user);
   const owner = !!user && claims.roles.includes('tenant_owner');
   const sb = await createClient();
-  const [sales, dispatch] = await Promise.all((['sales', 'dispatch'] as const).map(async (m) => canSee(claims.roles, m) && (await hasModule(sb, m))));
+  const [sales, dispatch, dashboards] = await Promise.all((['sales', 'dispatch', 'dashboards'] as const).map(async (m) => canSee(claims.roles, m) && (await hasModule(sb, m))));
   const openT = tn.tickets.filter((k) => k.status === 'open').length;
   const low = tn.stock.filter((s) => s.reorder > 0 && s.qty <= s.reorder).length;
   const overdueV = tn.batches.flatMap((b) => b.vacc).filter((x) => !x.done && daysBetween(x.due, today) > 0).length;
@@ -28,6 +28,10 @@ export default async function More() {
     ['transfers', t('transfers'), t('transfersSub')],
     ...(sales ? [['sales', t('sales'), t('salesSub')] as [string, string, string]] : []),
     ...(dispatch ? [['dispatch', t('dispatch'), t('dispatchSub')] as [string, string, string]] : []),
+    ...(dashboards ? [['dashboards', t('dashboards'), t('dashboardsSub')] as [string, string, string]] : []),
+    ...(canSee(claims.roles, 'finance') ? [['finance', t('finance'), t('financeSub')] as [string, string, string]] : []),
+    ...(canSee(claims.roles, 'procurement') ? [['procurement', t('procurement'), t('procurementSub')] as [string, string, string]] : []),
+    ...(canSee(claims.roles, 'settings') ? [['settings', t('settings'), t('settingsSub')] as [string, string, string]] : []),
     ['vendors', t('vendors'), t('nVendors', { n: tn.vendors.length })],
     ['customers', t('customers'), t('nTraders', { n: tn.customers.length })],
     ['health', t('health'), overdueV ? t('vaccOverdue', { n: overdueV }) : t('onTrack')],

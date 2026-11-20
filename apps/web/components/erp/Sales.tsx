@@ -229,7 +229,11 @@ async function Products({ t }: { t: T }) {
 
 async function Customers({ t }: { t: T }) {
   const sb = await createClient();
-  const { data: cs } = await sb.from('customer').select('id,name,phone,tier,delivery_address,credit_limit').order('name');
+  const [{ data: cs }, { data: links }] = await Promise.all([
+    sb.from('customer').select('id,name,phone,tier,delivery_address,credit_limit').order('name'),
+    sb.from('customer_portal_user').select('customer_id'), // RLS: the owner sees the tenant's links, everyone else none
+  ]);
+  const linked = new Set((links ?? []).map((l: Row) => l.customer_id));
   return (
     <Card title={t('sales.tab.customers')} testid="customers">
       <div className="list">
@@ -237,7 +241,12 @@ async function Customers({ t }: { t: T }) {
           <div className="item" key={c.id} data-testid="customer-row" data-name={c.name}>
             <div style={{ minWidth: 0 }}><div className="t">{c.name} <span className="pill neutral" data-testid="tier">{t(`sales.tier.${c.tier}`)}</span></div>
               <div className="s">{[c.phone, c.delivery_address].filter(Boolean).join(' · ')}</div></div>
-            <div className="r"><ActBtn act="setTier" ctx={{ customer: c.id, name: c.name, tier: c.tier, addr: c.delivery_address ?? '' }} className="btn small secondary">{t('sales.setTier')}</ActBtn></div>
+            <div className="r row" style={{ gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              {linked.has(c.id) && <span className="pill good" data-testid="portal-linked">{t('setg.portalLinked')}</span>}
+              <ActBtn act="setTier" ctx={{ customer: c.id, name: c.name, tier: c.tier, addr: c.delivery_address ?? '' }} className="btn small secondary">{t('sales.setTier')}</ActBtn>
+              <ActBtn act="linkPortal" ctx={{ customer: c.id, name: c.name }} className="btn small secondary">{t('setg.givePortal')}</ActBtn>
+              {linked.has(c.id) && <ActBtn act="unlinkPortal" ctx={{ customer: c.id }} className="btn small secondary">{t('setg.removePortal')}</ActBtn>}
+            </div>
           </div>
         ))}
         {!cs?.length && <div className="s">{t('sections.noCustomers')}</div>}

@@ -6,3 +6,6 @@ export async function hasModule(sb: Awaited<ReturnType<typeof createClient>>, mo
   const { data } = await sb.rpc('auth_has_module', { p_module: module });
   return data === true;
 }
+
+/** every plan module, in the order the Settings screen lists them */
+export const ALL_MODULES = ['core', 'breeder', 'hatchery', 'sales', 'dispatch', 'dashboards', 'portal', 'branches', 'api'] as const;

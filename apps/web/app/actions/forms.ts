@@ -40,6 +40,7 @@ type In<K extends ActKey> = import('zod').infer<(typeof SCHEMAS)[K]>;
 const DECIDE_TABLE = {
   decideDaily: 'breeder_daily', decideEggs: 'hatching_egg_collection', decideCandling: 'candling', decideXfer: 'hatcher_transfer',
   decideHatch: 'hatch_record', decideQuality: 'chick_quality_inspection', decideAlloc: 'order_allocation',
+  decideCreditNote: 'credit_note', decideRefund: 'refund', decideReq: 'purchase_requisition', decideCount: 'stock_count', decideStockXfer: 'stock_transfer',
 } as const;
 const ORDER = 'order_no,status,suggested_hatch_date,reserve_expires_at';
 const ist = (iso: string) => new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
@@ -453,7 +454,8 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
       const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
       return { ok: true, msg: x.expiry < today ? t('erp.vaccExpired', { lot: x.vaccine_lot }) : t('erp.saved') }; // the DB flags it and alerts the owner either way
     }
-    case 'decideDaily': case 'decideEggs': case 'decideCandling': case 'decideXfer': case 'decideHatch': case 'decideQuality': case 'decideAlloc': {
+    case 'decideDaily': case 'decideEggs': case 'decideCandling': case 'decideXfer': case 'decideHatch': case 'decideQuality': case 'decideAlloc':
+    case 'decideCreditNote': case 'decideRefund': case 'decideReq': case 'decideCount': case 'decideStockXfer': {
       const x = v as In<'decideDaily'>;
       const ok = x.decision === 'approve';
       const patch = ok ? { status: 'approved' } : { status: 'rejected', reject_reason: x.reason };
@@ -584,6 +586,133 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
       const ok = x.decision === 'approve';
       return touched(await sb.from('doa_claim').update(ok ? { status: 'approved', resolution: x.resolution } : { status: 'rejected', reject_reason: x.reason }).eq('id', x.id).eq('status', 'submitted').select('id'),
         { ok: true, msg: ok ? t('erp.approved') : t('erp.rejected') }, t);
+    }
+    // ---- finance (0050): credit notes, refunds, period lock, approval limits. The DB checks totals, the owner threshold and the lock.
+    case 'addCreditNote': {
+      const x = v as In<'addCreditNote'>;
+      const { error } = await sb.from('credit_note').insert({ customer_id: x.customer_id, invoice_id: x.invoice_id ?? null, amount: x.amount, reason: x.reason, issued_on: x.issued_on, note_no: '' });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'addRefund': {
+      const x = v as In<'addRefund'>;
+      const { error } = await sb.from('refund').insert({
+        customer_id: x.customer_id, sales_order_id: x.sales_order_id ?? null, credit_note_id: x.credit_note_id ?? null, amount: x.amount, mode: x.mode, utr: x.utr ?? null, paid_on: x.paid_on ?? null,
+      });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'setLock': case 'setLimit': {
+      const x = v as In<'setLock'> & In<'setLimit'>;
+      const key = act === 'setLock' ? 'books_locked_until' : x.key;
+      const value = act === 'setLock' ? x.date : x.value;
+      const r = value == null
+        ? await sb.from('tenant_rule').delete().eq('key', key)
+        : await sb.from('tenant_rule').upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id,key' });
+      return fail(r.error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    // ---- procurement (0051/0053): requisitions, PO approval, stock counts, store transfers
+    case 'addReq': {
+      const x = v as In<'addReq'>;
+      const { error } = await sb.from('purchase_requisition').insert({
+        farm_id: x.farm_id, item_id: x.item_id, qty: x.qty, needed_by: x.needed_by ?? null, est_rate: x.est_rate ?? null, purpose: x.purpose ?? null, status: x.status,
+      });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'submitReq': {
+      const x = v as In<'submitReq'>;
+      return touched(await sb.from('purchase_requisition').update({ status: 'submitted' }).eq('id', x.id).in('status', ['draft', 'rejected']).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'approvePO': {
+      const x = v as In<'approvePO'>;
+      return touched(await sb.from('purchase_order').update({ status: 'approved' }).eq('id', x.id).in('status', ['draft', 'submitted']).select('id'), { ok: true, msg: t('erp.approved') }, t);
+    }
+    case 'cancelPO': {
+      const x = v as In<'cancelPO'>;
+      return touched(await sb.from('purchase_order').update({ status: 'cancelled' }).eq('id', x.id).in('status', ['draft', 'submitted', 'approved']).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'addCount': {
+      const x = v as In<'addCount'>;
+      const { data: c, error } = await sb.from('stock_count').insert({ store_id: x.store_id, counted_on: x.counted_on, note: x.note ?? null, status: 'draft' }).select('id').single();
+      if (error) return fail(error)!;
+      const l = await sb.from('stock_count_line').insert(x.lines.map((r) => ({ count_id: c.id, item_id: r.item_id, counted_qty: r.counted_qty })));
+      if (l.error) { await sb.from('stock_count').delete().eq('id', c.id); return fail(l.error)!; } // no half-saved sheet
+      return { ok: true, msg: t('erp.saved') };
+    }
+    case 'submitCount': {
+      const x = v as In<'submitCount'>;
+      return touched(await sb.from('stock_count').update({ status: 'submitted' }).eq('id', x.id).in('status', ['draft', 'rejected']).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'addStockXfer': {
+      const x = v as In<'addStockXfer'>;
+      const { error } = await sb.from('stock_transfer').insert({ from_store: x.from_store, to_store: x.to_store, item_id: x.item_id, qty: x.qty });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'sendStockXfer': {
+      const x = v as In<'sendStockXfer'>;
+      return touched(await sb.from('stock_transfer').update({ status: 'in_transit', sent_on: x.sent_on }).eq('id', x.id).eq('status', 'approved').select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'receiveStockXfer': {
+      const x = v as In<'receiveStockXfer'>;
+      return touched(await sb.from('stock_transfer').update({ status: 'received', received_qty: x.received_qty, received_on: x.received_on }).eq('id', x.id).eq('status', 'in_transit').select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    // ---- settings (0050-0052, 0056)
+    case 'addBranch': {
+      const x = v as In<'addBranch'>;
+      const { error } = await sb.from('branch').insert({ name: x.name, code: x.code ?? null, state: x.state ?? null, district: x.district ?? null, gstin: x.gstin ?? null });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'toggleBranch': {
+      const x = v as In<'toggleBranch'>;
+      return touched(await sb.from('branch').update({ active: x.active === 'yes' }).eq('id', x.id).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'setFarmBranch': {
+      const x = v as In<'setFarmBranch'>;
+      return touched(await sb.from('farm').update({ branch_id: x.branch_id ?? null }).eq('id', x.farm_id).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'addPm': {
+      const x = v as In<'addPm'>;
+      const { error } = await sb.from('pm_schedule').insert({
+        asset_id: x.asset_id, task: x.task, every_days: x.every_days ?? null, every_batches: x.every_batches ?? null, ...(x.last_done_on ? { last_done_on: x.last_done_on } : {}),
+      });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'pmDone': {
+      const x = v as In<'pmDone'>;
+      return touched(await sb.from('pm_schedule').update({ last_done_on: x.date }).eq('id', x.id).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'addDelegation': {
+      const x = v as In<'addDelegation'>;
+      const { error } = await sb.from('approval_delegation').insert({ to_user: x.to_user, roles: x.roles, ends_at: new Date(Date.now() + x.days * 864e5).toISOString(), reason: x.reason });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'revokeDelegation': {
+      const x = v as In<'revokeDelegation'>;
+      return touched(await sb.from('approval_delegation').update({ revoked_at: new Date().toISOString() }).eq('id', x.id).is('revoked_at', null).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'grantSupport': {
+      const x = v as In<'grantSupport'>;
+      const { error } = await sb.from('support_access_grant').insert({ reason: x.reason, expires_at: new Date(Date.now() + x.hours * 36e5).toISOString() });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'revokeSupport': {
+      const x = v as In<'revokeSupport'>;
+      return touched(await sb.from('support_access_grant').update({ revoked_at: new Date().toISOString() }).eq('id', x.id).is('revoked_at', null).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'toggleWebhook': {
+      const x = v as In<'toggleWebhook'>;
+      return touched(await sb.from('webhook_subscription').update({ active: x.active === 'yes' }).eq('id', x.id).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'revokeApiKey': {
+      const x = v as In<'revokeApiKey'>;
+      return touched(await sb.from('api_key').update({ revoked_at: new Date().toISOString() }).eq('id', x.id).is('revoked_at', null).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'linkPortal': { // the RPC refuses every failure with one generic message: shown as is
+      const x = v as In<'linkPortal'>;
+      const { error } = await sb.rpc('link_portal_user', { p_customer: x.customer_id, p_email: x.email });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'unlinkPortal': {
+      const x = v as In<'unlinkPortal'>;
+      return touched(await sb.from('customer_portal_user').delete().eq('customer_id', x.customer_id).select('user_id'), { ok: true, msg: t('erp.saved') }, t);
     }
     case 'remind': {
       const x = v as In<'remind'>;
