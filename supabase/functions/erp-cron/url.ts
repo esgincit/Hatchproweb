@@ -14,7 +14,8 @@ export function privateIp(ip: string): boolean {
   if (ip.includes(":")) {
     const v = ip.toLowerCase();
     if (v.startsWith("::ffff:")) return privateIp(v.slice(7));
-    return v === "::" || v === "::1" || /^f[cd]/.test(v) || /^fe[89ab]/.test(v) || v.startsWith("ff");
+    // allow-list: only global unicast 2000::/3, minus ranges that embed IPv4 (6to4 2002::/16, NAT64 64:ff9b::/96 is outside 2000::/3 anyway)
+    return !/^[23][0-9a-f]{0,3}:/.test(v) || v.startsWith("2002:") || v.startsWith("2001:db8:") || /^2001:0{0,3}:/.test(v);
   }
   const [a, b] = ip.split(".").map(Number);
   return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
@@ -40,7 +41,8 @@ if (import.meta.main) {
     "https://metadata.google.internal/", "https://intranet/", "https://x.example.com:8443/", "https://u:p@example.com/", "ftp://example.com"];
   for (const u of ok) if (!safeWebhookUrl(u)) throw new Error("should allow " + u);
   for (const u of bad) if (safeWebhookUrl(u)) throw new Error("should block " + u);
-  for (const ip of ["10.1.2.3", "172.20.0.1", "192.168.1.1", "127.0.0.1", "169.254.169.254", "100.64.0.1", "0.0.0.0", "::1", "fd00::1", "fe80::1", "::ffff:10.0.0.1"])
+  for (const ip of ["10.1.2.3", "172.20.0.1", "192.168.1.1", "127.0.0.1", "169.254.169.254", "100.64.0.1", "0.0.0.0", "::1", "fd00::1", "fe80::1",
+                    "::ffff:10.0.0.1", "::a00:1", "64:ff9b::a00:1", "2002:a00:1::1", "2001:db8::1", "2001::1"])
     if (!privateIp(ip)) throw new Error("should be private " + ip);
   for (const ip of ["8.8.8.8", "1.1.1.1", "2606:4700::1111", "172.32.0.1"]) if (privateIp(ip)) throw new Error("should be public " + ip);
   console.log("url guard ok");
