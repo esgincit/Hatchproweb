@@ -4,7 +4,9 @@
 // as a conflict for the manager to resolve in-app.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-const APPEND_ONLY = new Set(["mortality_event", "stock_movement", "payment", "media", "attendance"]);
+const APPEND_ONLY = new Set(["mortality_event", "stock_movement", "payment", "media", "attendance", "hatching_egg_collection", "candling"]);
+// approval tables (0039/0041) stamp submitted_by in the DB guard and have no created_by column
+const NO_CREATED_BY = new Set(["hatching_egg_collection", "candling"]);
 const LWW = new Set(["daily_shed_log", "egg_production", "vaccination_schedule", "vet_visit", "maintenance_ticket"]);
 
 type Op = { op_id: string; table: string; action: "insert" | "update"; payload: Record<string, unknown>; base_version?: number };
@@ -25,7 +27,7 @@ Deno.serve(async (req) => {
     const { error: rErr } = await supabase.from("sync_outbox_receipt").insert({ client_op_id: op.op_id, tenant_id: tenantId, device_id });
     if (rErr?.code === "23505") { results.push({ op_id: op.op_id, status: "duplicate" }); continue; }
     if (!APPEND_ONLY.has(op.table) && !LWW.has(op.table)) { results.push({ op_id: op.op_id, status: "error", detail: "table not syncable" }); continue; }
-    const row: Record<string, unknown> = { ...op.payload, tenant_id: tenantId, created_by: user.id };
+    const row: Record<string, unknown> = { ...op.payload, tenant_id: tenantId, ...(NO_CREATED_BY.has(op.table) ? {} : { created_by: user.id }) };
     // the phone knows the farm and the feed name, not store/item ids: resolve them here
     if (op.table === "stock_movement" && row.farm_id && row.item_name_hint) {
       const { data: store } = await supabase.from("store").select("id").eq("farm_id", row.farm_id as string).limit(1).maybeSingle();
