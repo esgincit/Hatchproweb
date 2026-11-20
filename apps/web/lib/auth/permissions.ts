@@ -31,6 +31,8 @@ const OWN = ['tenant_owner', 'farm_manager'];
 const MONEY = [...OWN, 'finance'];
 const BREED = [...OWN, 'shed_supervisor'];
 const HATCH = ['hatchery_technician', 'hatchery_ops_manager'];
+const SALES = ['tenant_owner', 'sales_officer', 'hatchery_manager'];
+const DISPATCH = ['tenant_owner', 'dispatch_officer', 'hatchery_ops_manager'];
 const SHED = [...OWN, 'shed_supervisor', 'labour', 'veterinarian'];
 /** which platform team sees/does what on the console (DB mirrors `billing` in 0016) */
 export const TEAM = {
@@ -45,7 +47,7 @@ export const TEAM = {
 
 export const ACT_ROLES: Record<string, string[]> = {
   addFarm: OWN, addShed: OWN, addBatch: OWN, addWorker: OWN,
-  saleOpen: MONEY, addBill: MONEY, payOpen: MONEY, addCustomer: MONEY, addVendor: MONEY,
+  saleOpen: MONEY, addBill: MONEY, payOpen: MONEY, addCustomer: MONEY, setTier: MONEY, addVendor: MONEY, // customer policies (0006): owner, manager, finance
   mort: SHED, logSave: SHED, shiftLog: SHED,
   vaccDone: [...OWN, 'shed_supervisor', 'veterinarian'], addVisit: [...OWN, 'shed_supervisor', 'veterinarian'],
   attSet: [...OWN, 'shed_supervisor'],
@@ -73,10 +75,23 @@ export const ACT_ROLES: Record<string, string[]> = {
   chickVaccine: ['tenant_owner', 'veterinarian', 'hatchery_manager', 'hatchery_technician'],
   decideDaily: OWN, decideEggs: OWN, decideCandling: ['tenant_owner', 'hatchery_ops_manager'], decideXfer: ['tenant_owner', 'hatchery_ops_manager'],
   decideHatch: ['tenant_owner', 'hatchery_manager'], decideQuality: ['tenant_owner', 'veterinarian', 'hatchery_manager'],
+  // chick sales + dispatch (0043–0049): each list mirrors the table's RLS roles and the trigger that guards the step
+  addProduct: [...OWN, 'hatchery_manager'], setBatchProduct: OWN, addOrder: SALES, verifyPayment: ['tenant_owner', 'finance'], confirmOrder: SALES,
+  cancelOrder: SALES, moveOrder: SALES, reserveOrder: SALES, priceOrder: ['tenant_owner'], waiveDeposit: ['tenant_owner'],
+  allocate: SALES, decideAlloc: ['tenant_owner', 'hatchery_manager'], releaseAlloc: ['tenant_owner', 'hatchery_manager'],
+  addVehicle: [...OWN, 'dispatch_officer', 'hatchery_ops_manager'], addTrip: DISPATCH, addLoad: DISPATCH, submitTrip: DISPATCH,
+  decideTrip: ['tenant_owner', 'hatchery_ops_manager'], deliverTrip: DISPATCH, completeTrip: DISPATCH,
+  doaClaim: [...SALES, 'dispatch_officer'], decideDoa: ['tenant_owner', 'hatchery_manager'],
   decidePay: ['tenant_owner'], // payments > ₹50,000 by others wait for the owner (0012)
   inviteUser: ['tenant_owner'], // matches invite-user edge function + user_role_assignment policy
   // downloads (app/api/export) — the route enforces the same lists
   tally: [...MONEY, 'auditor'], gstr: [...MONEY, 'auditor'], stmt: [...MONEY, 'auditor'], payroll: MONEY, // bank file: account numbers (0022)
   report: [...MONEY, 'auditor', 'shed_supervisor'],
 };
+/** who sees the Sales / Dispatch screens (RLS lets the whole tenant read; this keeps the menu honest) */
+export const AREA_ROLES = {
+  sales: [...OWN, 'sales_officer', 'hatchery_manager', 'finance', 'auditor'],
+  dispatch: [...OWN, 'dispatch_officer', 'hatchery_ops_manager', 'hatchery_manager', 'sales_officer'],
+} as const;
+export const canSee = (roles: string[], area: keyof typeof AREA_ROLES) => AREA_ROLES[area].some((r) => roles.includes(r));
 export const canAct = (roles: string[], act: string) => (ACT_ROLES[act] ?? []).some((r) => roles.includes(r));

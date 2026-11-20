@@ -6,13 +6,18 @@ import { daysBetween } from '@/lib/format';
 import { Header } from '@/components/ui/bits';
 import { createClient } from '@/lib/supabase/server';
 import { claimsFromUser } from '@/lib/auth/claims';
+import { canSee } from '@/lib/auth/permissions';
+import { hasModule } from '@/lib/modules';
 import { RulesCard } from '@/components/trace/Transfers';
 import { LanguagePicker } from '@/components/i18n/LanguagePicker';
 
 export default async function More() {
   const [{ t: tn, today }, t] = await Promise.all([loadView(), getTranslations('more')]);
   const { data: { user } } = await (await createClient()).auth.getUser();
-  const owner = !!user && claimsFromUser(user).roles.includes('tenant_owner');
+  const claims = claimsFromUser(user);
+  const owner = !!user && claims.roles.includes('tenant_owner');
+  const sb = await createClient();
+  const [sales, dispatch] = await Promise.all((['sales', 'dispatch'] as const).map(async (m) => canSee(claims.roles, m) && (await hasModule(sb, m))));
   const openT = tn.tickets.filter((k) => k.status === 'open').length;
   const low = tn.stock.filter((s) => s.reorder > 0 && s.qty <= s.reorder).length;
   const overdueV = tn.batches.flatMap((b) => b.vacc).filter((x) => !x.done && daysBetween(x.due, today) > 0).length;
@@ -21,6 +26,8 @@ export default async function More() {
     ['equipment', t('equipment'), openT ? t('openTickets', { n: openT }) : t('assetsOk', { n: tn.assets.length })],
     ['stock', t('stock'), low ? t('belowReorder', { n: low }) : t('stockOk')],
     ['transfers', t('transfers'), t('transfersSub')],
+    ...(sales ? [['sales', t('sales'), t('salesSub')] as [string, string, string]] : []),
+    ...(dispatch ? [['dispatch', t('dispatch'), t('dispatchSub')] as [string, string, string]] : []),
     ['vendors', t('vendors'), t('nVendors', { n: tn.vendors.length })],
     ['customers', t('customers'), t('nTraders', { n: tn.customers.length })],
     ['health', t('health'), overdueV ? t('vaccOverdue', { n: overdueV }) : t('onTrack')],

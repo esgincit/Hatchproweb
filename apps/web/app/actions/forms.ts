@@ -39,8 +39,10 @@ type In<K extends ActKey> = import('zod').infer<(typeof SCHEMAS)[K]>;
 
 const DECIDE_TABLE = {
   decideDaily: 'breeder_daily', decideEggs: 'hatching_egg_collection', decideCandling: 'candling', decideXfer: 'hatcher_transfer',
-  decideHatch: 'hatch_record', decideQuality: 'chick_quality_inspection',
+  decideHatch: 'hatch_record', decideQuality: 'chick_quality_inspection', decideAlloc: 'order_allocation',
 } as const;
+const ORDER = 'order_no,status,suggested_hatch_date,reserve_expires_at';
+const ist = (iso: string) => new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 const fail = (e: { message: string } | null): ActResult | null => (e ? { ok: false, error: e.message } : null);
 /** An UPDATE that RLS filters to zero rows (someone else's id) is not an error to PostgREST: say so instead of a false success. */
 const touched = (r: { data: unknown[] | null; error: { message: string } | null }, ok: ActResult, t: T): ActResult => fail(r.error) ?? (r.data?.length ? ok : { ok: false, error: t('notFound') });
@@ -112,7 +114,7 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
     }
     case 'addCustomer': {
       const x = v as In<'addCustomer'>;
-      const { error } = await sb.from('customer').insert({ name: x.name, kind: x.kind, phone: x.phone, credit_limit: x.credit_limit, credit_days: x.credit_days });
+      const { error } = await sb.from('customer').insert({ name: x.name, kind: x.kind, phone: x.phone, credit_limit: x.credit_limit, credit_days: x.credit_days, tier: x.tier ?? 'standard', delivery_address: x.delivery_address ?? null });
       return fail(error) ?? { ok: true, msg: t('customer.ok', { name: x.name }) };
     }
     case 'addVendor': {
@@ -451,11 +453,137 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
       const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
       return { ok: true, msg: x.expiry < today ? t('erp.vaccExpired', { lot: x.vaccine_lot }) : t('erp.saved') }; // the DB flags it and alerts the owner either way
     }
-    case 'decideDaily': case 'decideEggs': case 'decideCandling': case 'decideXfer': case 'decideHatch': case 'decideQuality': {
+    case 'decideDaily': case 'decideEggs': case 'decideCandling': case 'decideXfer': case 'decideHatch': case 'decideQuality': case 'decideAlloc': {
       const x = v as In<'decideDaily'>;
       const ok = x.decision === 'approve';
       const patch = ok ? { status: 'approved' } : { status: 'rejected', reject_reason: x.reason };
       return touched(await sb.from(DECIDE_TABLE[act as keyof typeof DECIDE_TABLE]).update(patch).eq('id', x.id).in('status', ['draft', 'submitted']).select('id'), { ok: true, msg: ok ? t('erp.approved') : t('erp.rejected') }, t);
+    }
+    // ---- chick sales (0043/0047/0049): the DB decides reserved vs waitlisted, the deposit, who may verify / confirm / override
+    case 'addProduct': {
+      const x = v as In<'addProduct'>;
+      const { error } = await sb.from('chick_product').insert({
+        name: x.name, category: x.category, price: x.price ?? null, max_dispatch_age_hours: x.max_age_hours ?? null, required_vaccines: x.required_vaccine ? [x.required_vaccine] : [],
+      });
+      return fail(error) ?? { ok: true, msg: t('sales.productAdded', { name: x.name }) };
+    }
+    case 'setTier': {
+      const x = v as In<'setTier'>;
+      return touched(await sb.from('customer').update({ tier: x.tier, delivery_address: x.delivery_address ?? null }).eq('id', x.customer_id).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'setBatchProduct': {
+      const x = v as In<'setBatchProduct'>;
+      return touched(await sb.from('batch').update({ chick_product_id: x.product_id ?? null }).eq('id', x.batch_id).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'addOrder': {
+      const x = v as In<'addOrder'>;
+      for (let i = 0; i < 3; i++) { // order numbers are max+1: a concurrent booking can take ours first
+        const { data: no, error: e1 } = await sb.rpc('next_doc_no', { kind: 'order' });
+        if (e1) return fail(e1)!;
+        const { data, error } = await sb.from('sales_order').insert({
+          order_no: no, customer_id: x.customer_id, product_id: x.product_id, qty: x.qty, hatch_date: x.hatch_date, price: x.price ?? 0, notes: x.notes ?? null,
+        }).select(ORDER).single();
+        if (error && /duplicate key/.test(error.message) && i < 2) continue;
+        if (error) return fail(error)!;
+        if (data.status === 'reserved') return { ok: true, msg: t('sales.orderReserved', { no: data.order_no, until: ist(data.reserve_expires_at) }) };
+        return { ok: true, msg: data.suggested_hatch_date ? t('sales.orderWaitlisted', { no: data.order_no, date: data.suggested_hatch_date }) : t('sales.orderWaitlistedNone', { no: data.order_no }) };
+      }
+      return { ok: false, error: t('duplicate') };
+    }
+    case 'verifyPayment': {
+      const x = v as In<'verifyPayment'>;
+      const patch = { payment_status: x.result, ...(x.result === 'rejected' ? {} : { deposit_paid: x.deposit_paid }), ...(x.payment_ref ? { payment_ref: x.payment_ref } : {}) };
+      return touched(await sb.from('sales_order').update(patch).eq('id', x.order_id).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'confirmOrder': {
+      const x = v as In<'confirmOrder'>;
+      const patch = { status: 'confirmed', ...(x.credit_override_reason ? { credit_override_reason: x.credit_override_reason } : {}) };
+      return touched(await sb.from('sales_order').update(patch).eq('id', x.order_id).eq('status', 'reserved').select('id'), { ok: true, msg: t('sales.confirmed') }, t);
+    }
+    case 'cancelOrder': {
+      const x = v as In<'cancelOrder'>;
+      return touched(await sb.from('sales_order').update({ status: 'cancelled', cancel_reason: x.reason }).eq('id', x.order_id).select('id'), { ok: true, msg: t('sales.cancelled') }, t);
+    }
+    case 'moveOrder': {
+      const x = v as In<'moveOrder'>;
+      return touched(await sb.from('sales_order').update({ hatch_date: x.hatch_date }).eq('id', x.order_id).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'reserveOrder': {
+      const x = v as In<'reserveOrder'>;
+      return touched(await sb.from('sales_order').update({ status: 'reserved' }).eq('id', x.order_id).eq('status', 'waitlisted').select('id'), { ok: true, msg: t('sales.reserved') }, t);
+    }
+    case 'priceOrder': {
+      const x = v as In<'priceOrder'>;
+      return touched(await sb.from('sales_order').update({ price: x.price, price_change_reason: x.reason }).eq('id', x.order_id).select('id'), { ok: true, msg: t('erp.saved') }, t);
+    }
+    case 'waiveDeposit': {
+      const x = v as In<'waiveDeposit'>;
+      return touched(await sb.from('sales_order').update({ payment_status: 'waived' }).eq('id', x.order_id).select('id'), { ok: true, msg: t('sales.waived') }, t);
+    }
+    case 'allocate': {
+      const x = v as In<'allocate'>;
+      const { error } = await sb.from('order_allocation').insert({ order_id: x.order_id, batch_id: x.batch_id, qty: x.qty, note: x.note ?? null });
+      return fail(error) ?? { ok: true, msg: t('sales.allocated') };
+    }
+    case 'releaseAlloc': {
+      const x = v as In<'releaseAlloc'>;
+      return touched(await sb.from('order_allocation').update({ status: 'released' }).eq('id', x.id).eq('status', 'approved').select('id'), { ok: true, msg: t('sales.released') }, t);
+    }
+    // ---- dispatch (0045)
+    case 'addVehicle': {
+      const x = v as In<'addVehicle'>;
+      const { error } = await sb.from('vehicle').insert({
+        reg_no: x.reg_no, ownership: x.ownership, capacity_boxes: x.capacity_boxes ?? null, temp_controlled: x.temp_controlled === 'yes',
+        fitness_expiry: x.fitness_expiry ?? null, insurance_expiry: x.insurance_expiry ?? null, permit_expiry: x.permit_expiry ?? null,
+      });
+      return fail(error) ?? { ok: true, msg: t('sales.vehicleAdded', { reg: x.reg_no }) };
+    }
+    case 'addTrip': {
+      const x = v as In<'addTrip'>;
+      const { data, error } = await sb.from('dispatch').insert({ vehicle_id: x.vehicle_id, driver_name: x.driver_name, route: x.route ?? null, planned_on: x.planned_on }).select('dispatch_no').single();
+      return fail(error) ?? { ok: true, msg: t('sales.tripAdded', { no: data!.dispatch_no }) };
+    }
+    case 'addLoad': {
+      const x = v as In<'addLoad'>;
+      const { error } = await sb.from('dispatch_line').insert({
+        dispatch_id: x.dispatch_id, allocation_id: x.allocation_id, qty_loaded: x.qty_loaded, boxes: x.boxes ?? null, age_override_reason: x.age_override_reason ?? null,
+      });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'submitTrip': {
+      const x = v as In<'submitTrip'>;
+      return touched(await sb.from('dispatch').update({ status: 'submitted' }).eq('id', x.id).in('status', ['draft', 'rejected']).select('id'), { ok: true, msg: t('sales.tripSubmitted') }, t);
+    }
+    case 'decideTrip': {
+      const x = v as In<'decideTrip'>;
+      const ok = x.decision === 'approve';
+      return touched(await sb.from('dispatch').update(ok ? { status: 'approved' } : { status: 'rejected', reject_reason: x.reason }).eq('id', x.id).eq('status', 'submitted').select('id'),
+        { ok: true, msg: ok ? t('sales.tripConfirmed') : t('erp.rejected') }, t);
+    }
+    case 'deliverTrip': {
+      const x = v as In<'deliverTrip'>;
+      for (const l of x.lines) {
+        const r = await sb.from('dispatch_line').update({ qty_delivered: l.delivered, qty_short: l.short, qty_doa: l.doa }).eq('id', l.id).eq('dispatch_id', x.dispatch_id).select('id');
+        if (r.error) return fail(r.error)!;
+        if (!r.data?.length) return { ok: false, error: t('notFound') };
+      }
+      const patch = { status: 'delivered', receiver_name: x.receiver_name, delivery_note: x.delivery_note ?? null, ...(x.pod_path ? { pod_path: x.pod_path } : {}) };
+      return touched(await sb.from('dispatch').update(patch).eq('id', x.dispatch_id).eq('status', 'approved').select('id'), { ok: true, msg: t('sales.delivered') }, t);
+    }
+    case 'completeTrip': {
+      const x = v as In<'completeTrip'>;
+      return touched(await sb.from('dispatch').update({ status: 'completed' }).eq('id', x.id).eq('status', 'delivered').select('id'), { ok: true, msg: t('sales.tripCompleted') }, t);
+    }
+    case 'doaClaim': {
+      const x = v as In<'doaClaim'>;
+      const { error } = await sb.from('doa_claim').insert({ dispatch_line_id: x.dispatch_line_id, reported_on: x.reported_on, qty: x.qty, customer_note: x.customer_note ?? null });
+      return fail(error) ?? { ok: true, msg: t('sales.claimed') };
+    }
+    case 'decideDoa': {
+      const x = v as In<'decideDoa'>;
+      const ok = x.decision === 'approve';
+      return touched(await sb.from('doa_claim').update(ok ? { status: 'approved', resolution: x.resolution } : { status: 'rejected', reject_reason: x.reason }).eq('id', x.id).eq('status', 'submitted').select('id'),
+        { ok: true, msg: ok ? t('erp.approved') : t('erp.rejected') }, t);
     }
     case 'remind': {
       const x = v as In<'remind'>;

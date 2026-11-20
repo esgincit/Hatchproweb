@@ -5,12 +5,16 @@ const PUBLIC = ['/login', '/platform/login', '/apply'];
 const under = (path: string, base: string) => path === base || path.startsWith(base + '/');
 const NO_ACCESS = '/login?error=no-access';
 
+// customer-portal users (0050) are not tenant members: a login with no tenant, no role, not staff. The page itself asks portal_me().
+const isPortal = (c: Claims) => !c.platform && !c.tenantId && !c.roles.length;
+
 // marketplace advertisers (0032): a vendor login without a farm
 const isVendor = (c: Claims) => !c.platform && !c.tenantId && c.roles.includes('vendor');
 
 export function landingFor(c: Claims): string {
   if (c.platform) return '/admin';
   if (isVendor(c)) return '/vendor';
+  if (isPortal(c)) return '/portal';
   const first = tabsFor(c.roles)[0];
   return c.tenantId && first ? '/' + first : NO_ACCESS;
 }
@@ -23,7 +27,8 @@ export function redirectFor(pathname: string, c: Claims | null): string | null {
   if (!c) to = isPublic ? null : isAdmin ? '/platform/login' : '/login';
   else if (c.platform) to = isAdmin || under(pathname, '/apply') ? null : '/admin'; // staff fill /apply for farms that call in
   else if (isVendor(c)) to = under(pathname, '/vendor') ? null : '/vendor'; // vendors only see their portal
-  else if (isAdmin || isPublic || under(pathname, '/vendor')) to = landingFor(c);
+  else if (isPortal(c)) to = under(pathname, '/portal') ? null : '/portal'; // so do customers
+  else if (isAdmin || isPublic || under(pathname, '/vendor') || under(pathname, '/portal')) to = landingFor(c);
   else {
     const seg = pathname.split('/')[1] as Tab;
     const land = landingFor(c);

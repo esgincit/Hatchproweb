@@ -25,6 +25,14 @@ export const MACHINE_KINDS = ['setter', 'hatcher', 'combined'] as const;
 const DECIDE = z.object({ id, decision: z.enum(['approve', 'reject']), reason: opt(z.string().trim().max(300)) })
   .refine((x) => x.decision === 'approve' || !!x.reason, { path: ['reason'] });
 
+export const TIERS = ['platinum', 'gold', 'standard'] as const;
+export const CHICK_CATS = ['broiler', 'layer', 'breeder', 'other'] as const;
+export const PAY_RESULTS = ['verified', 'partial', 'rejected'] as const;
+export const OWNERSHIPS = ['own', 'hired'] as const;
+export const DOA_RESOLUTIONS = ['replace', 'credit_note', 'none'] as const;
+const why = z.string().trim().min(1).max(300);
+const note = (n: number) => opt(z.string().trim().max(n));
+
 export const FARM_TYPES = ['broiler', 'layer', 'hatchery', 'breeder'] as const;
 export const SHED_TYPES = ['cage', 'deep_litter', 'environment_controlled'] as const;
 export const VENDOR_CATS = ['doc_hatchery', 'feed', 'feed_ingredient', 'medicine', 'vaccine', 'equipment', 'transport', 'labour_contractor', 'packaging', 'fuel', 'other'] as const;
@@ -58,7 +66,7 @@ export const SCHEMAS = {
   saleOpen: z.object({ customer_id: id, product: z.enum(PRODUCTS), qty: money, unit: text, rate: money, date, batch_id: opt(id) }),
   addBill: z.object({ vendor_id: id, category: z.enum(BILL_CATS), total: money, date, batch_id: opt(id), bill_no: opt(z.string().max(40)) }),
   payOpen: z.object({ kind: z.enum(['bill', 'invoice']), id, amount: money, mode: z.enum(PAY_MODES), date, utr: opt(z.string().max(40)) }),
-  addCustomer: z.object({ name: text, kind: z.enum(CUSTOMER_KINDS), phone, credit_limit: z.coerce.number().min(0), credit_days: int(0) }),
+  addCustomer: z.object({ name: text, kind: z.enum(CUSTOMER_KINDS), phone, credit_limit: z.coerce.number().min(0), credit_days: int(0), tier: opt(z.enum(TIERS)), delivery_address: note(300) }),
   addVendor: z.object({
     name: text, category: z.enum(VENDOR_CATS), contact: opt(text), phone,
     gstin: opt(z.string().trim().toUpperCase().regex(/^[0-9A-Z]{15}$/)), terms: int(0),
@@ -180,6 +188,40 @@ export const SCHEMAS = {
   }),
   // approve / reject one record: the six approval flows share one shape, each act key carries its own role list
   decideDaily: DECIDE, decideEggs: DECIDE, decideCandling: DECIDE, decideXfer: DECIDE, decideHatch: DECIDE, decideQuality: DECIDE,
+  // ---- chick sales (0043/0047/0049): product master, tiers, orders, payment verification, allocation
+  addProduct: z.object({ name: z.string().trim().min(1).max(80), category: z.enum(CHICK_CATS), price: opt(dec(0, 1e6)), max_age_hours: opt(int(1)), required_vaccine: opt(id) }),
+  setTier: z.object({ customer_id: id, tier: z.enum(TIERS), delivery_address: note(300) }),
+  setBatchProduct: z.object({ batch_id: id, product_id: opt(id) }),
+  addOrder: z.object({ customer_id: id, product_id: id, qty: int(1), hatch_date: date, price: opt(dec(0, 1e6)), notes: note(500) }),
+  verifyPayment: z.object({ order_id: id, result: z.enum(PAY_RESULTS), deposit_paid: dec(0, 1e10), payment_ref: note(60) })
+    .refine((x) => x.result === 'rejected' || x.deposit_paid > 0, { path: ['deposit_paid'] }),
+  confirmOrder: z.object({ order_id: id, credit_override_reason: note(300) }),
+  cancelOrder: z.object({ order_id: id, reason: why }),
+  moveOrder: z.object({ order_id: id, hatch_date: date }),
+  reserveOrder: z.object({ order_id: id }),
+  priceOrder: z.object({ order_id: id, price: dec(0, 1e6), reason: why }),
+  waiveDeposit: z.object({ order_id: id }),
+  allocate: z.object({ order_id: id, batch_id: id, qty: int(1), note: note(300) }),
+  decideAlloc: DECIDE,
+  releaseAlloc: z.object({ id }),
+  // ---- dispatch (0045): vehicles, trips, loading, delivery + POD, DOA claims
+  addVehicle: z.object({
+    reg_no: z.string().trim().toUpperCase().min(4).max(20), ownership: z.enum(OWNERSHIPS), capacity_boxes: opt(int(1)), temp_controlled: opt(z.enum(['yes', 'no'])),
+    fitness_expiry: opt(date), insurance_expiry: opt(date), permit_expiry: opt(date),
+  }),
+  addTrip: z.object({ vehicle_id: id, driver_name: z.string().trim().min(1).max(80), route: note(200), planned_on: date }),
+  addLoad: z.object({ dispatch_id: id, allocation_id: id, qty_loaded: int(1), boxes: opt(int(1)), age_override_reason: note(300) }),
+  submitTrip: z.object({ id }),
+  decideTrip: DECIDE,
+  deliverTrip: z.object({
+    dispatch_id: id, receiver_name: z.string().trim().min(1).max(80), delivery_note: note(500), pod_path: note(200),
+    lines: z.array(z.object({ id, delivered: int(0), short: int(0), doa: int(0) })).min(1).max(50),
+  }).refine((x) => x.lines.every((l) => l.doa <= l.delivered), { path: ['lines'] }),
+  completeTrip: z.object({ id }),
+  doaClaim: z.object({ dispatch_line_id: id, reported_on: notFuture, qty: int(1), customer_note: note(500) }),
+  decideDoa: z.object({ id, decision: z.enum(['approve', 'reject']), resolution: opt(z.enum(DOA_RESOLUTIONS)), reason: note(300) })
+    .refine((x) => x.decision === 'reject' || !!x.resolution, { path: ['resolution'] })
+    .refine((x) => x.decision === 'approve' || !!x.reason, { path: ['reason'] }),
   inviteUser: z.object({ name: text, phone: mobile, role: z.enum(STAFF_ROLES), language: z.enum(LANGS), farm_id: opt(id) }),
 } as const;
 

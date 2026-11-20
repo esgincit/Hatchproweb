@@ -8,7 +8,7 @@ import { Sheet } from '@/components/ui/Sheet';
 export type Field = {
   id: string;
   label: string;
-  type?: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'tel';
+  type?: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'tel' | 'file';
   options?: [value: string, label: string][];
   value?: string | number;
   half?: boolean;
@@ -48,7 +48,8 @@ export function FormSheet({ spec, open, onOpenChange, onSubmit }: {
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const raw = Object.fromEntries([...new FormData(e.currentTarget).entries()].map(([k, v]) => [k, String(v)]));
+    // a chosen file rides along as a File (ActionHost uploads it); an empty picker is just blank
+    const raw = Object.fromEntries([...new FormData(e.currentTarget).entries()].map(([k, v]) => [k, v instanceof File ? (v.size ? v : '') : String(v)])) as Record<string, string>;
     const values = { ...(spec!.transform ? spec!.transform(raw) : raw), ...spec!.hidden };
     setBusy(true);
     setErr(null);
@@ -78,6 +79,8 @@ export function FormSheet({ spec, open, onOpenChange, onSubmit }: {
                   onChange={f.follow ? (e) => { const t = e.currentTarget.form?.elements.namedItem(f.follow!.target) as HTMLInputElement | null; if (t) t.value = String(f.follow!.values[e.currentTarget.value] ?? ''); } : undefined}>
                   {f.options?.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
+              ) : f.type === 'file' ? (
+                <input {...common} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" />
               ) : f.type === 'textarea' ? (
                 <textarea {...common} rows={2} placeholder={f.placeholder} defaultValue={f.value ?? ''} />
               ) : (

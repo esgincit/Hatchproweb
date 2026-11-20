@@ -11,15 +11,21 @@ import { PushToggle } from '@/components/shell/PushToggle';
 import { ContactButton } from '@/components/marketplace/Market';
 import { TransferList } from '@/components/trace/Transfers';
 import { MachineList } from '@/components/erp/Hatchery';
+import { SalesArea } from '@/components/erp/Sales';
+import { DispatchArea } from '@/components/erp/Dispatch';
+import { claimsFromUser } from '@/lib/auth/claims';
+import { canSee } from '@/lib/auth/permissions';
+import { hasModule } from '@/lib/modules';
 import type { View } from '@/lib/view/types';
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
 const ATT_STATUS = { P: 'present', H: 'half', A: 'absent', L: 'leave' } as const;
 type Ctx = { v: View; t: T; dmy: (s: string) => string; locale: string };
 
-export default async function Section({ params, searchParams }: { params: Promise<{ section: string }>; searchParams: Promise<{ tab?: string }> }) {
+export default async function Section({ params, searchParams }: { params: Promise<{ section: string }>; searchParams: Promise<{ tab?: string; order?: string; f?: string; pay?: string; trip?: string; trace?: string }> }) {
   const { section } = await params;
-  const { tab } = await searchParams;
+  const q = await searchParams;
+  const { tab } = q;
   const [v, t, locale] = await Promise.all([loadView(), getTranslations(), getLocale()]);
   const c: Ctx = { v, t, dmy: dateFmt(locale), locale };
   const B = <Back href="/more" />;
@@ -29,6 +35,12 @@ export default async function Section({ params, searchParams }: { params: Promis
     case 'transfers': return (
       <>{B}<Header title={t('trace.title')} action={<ActBtn act="addTransfer" className="btn small">{t('trace.add')}</ActBtn>} /><TransferList /></>
     );
+    case 'sales': case 'dispatch': { // plan module + role: otherwise the screen does not exist for this user
+      const sb = await createClient();
+      const c = claimsFromUser((await sb.auth.getUser()).data.user);
+      if (!canSee(c.roles, section) || !(await hasModule(sb, section))) notFound();
+      return <>{B}{section === 'sales' ? <SalesArea q={q} /> : <DispatchArea q={q} />}</>;
+    }
     case 'machines': return <>{B}<Header title={t('erp.machine.title')} /><MachineList /></>;
     case 'vendors': return <Vendors c={c} B={B} />;
     case 'customers': return <Customers c={c} B={B} />;

@@ -9,6 +9,7 @@ import { runAct } from '@/app/actions/forms';
 import {
   SCHEMAS, isAct, FARM_TYPES, SHED_TYPES, VENDOR_CATS, BILL_CATS, PRODUCTS, CUSTOMER_KINDS, WORKER_ROLES, PAY_MODES,
   STAGES, PRIORITIES, ASSET_CATS, ITEM_CATS, RATE_PRODUCTS, STAFF_ROLES, DIET_STAGES, WATER_TREAT, WATER_QUAL, VENT, LITTER, POWER, MACHINE_KINDS,
+  TIERS, CHICK_CATS, PAY_RESULTS, OWNERSHIPS, DOA_RESOLUTIONS,
 } from '@/lib/schemas';
 import { LOCALES, LOCALE_NAMES } from '@/lib/i18n/locales';
 import { addDays, fmtINR } from '@/lib/format';
@@ -40,12 +41,19 @@ type Lookups = {
   contracts: { id: string; name: string }[];
   /** received egg transfers with eggs still free to set */
   lots: { id: string; ref: string; src: string; left: number }[];
+  /** chick sales + dispatch (0043–0045) */
+  products: { id: string; name: string; price: number | null; active: boolean }[];
+  /** hatched settings with a product and chicks still free to allocate */
+  stock: { id: string; code: string; product: string; available: number }[];
+  vehicles: { id: string; reg: string }[];
+  /** approved allocations and how many chicks of each are not on a trip yet */
+  allocs: { id: string; order_no: string; customer: string; code: string; left: number }[];
 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- PostgREST embeds */
 async function loadLookups(): Promise<Lookups> {
   const sb = createClient();
-  const [farms, sheds, breeds, vendors, customers, batches, diseases, bills, invoices, assets, items, pos, vaccines, workers, contracts, lots, machines] = await Promise.all([
+  const [farms, sheds, breeds, vendors, customers, batches, diseases, bills, invoices, assets, items, pos, vaccines, workers, contracts, lots, machines, products, stock, stockBatches, vehicles, allocs] = await Promise.all([
     sb.from('farm').select('id,name,farm_type').order('created_at'),
     sb.from('shed').select('id,name,farm_id,batch(state)').order('name'),
     sb.from('breed').select('id,name,farm_type').order('name'),
@@ -63,6 +71,11 @@ async function loadLookups(): Promise<Lookups> {
     sb.from('contract').select('id,name').eq('active', true).order('created_at'),
     sb.from('egg_transfer').select('id,ref,received_qty,receipt_rejects,batch(code),vendor(name),setting_lot(qty)').eq('status', 'received').order('received_on'),
     sb.from('asset').select('id,name,machine_no,machine_kind,capacity_eggs').not('machine_kind', 'is', null).order('name'),
+    sb.from('chick_product').select('id,name,price,active').order('name'),
+    sb.from('chick_stock').select('batch_id,code,available'),
+    sb.from('batch').select('id,chick_product_id').not('chick_product_id', 'is', null),
+    sb.from('vehicle').select('id,reg_no').eq('active', true).order('reg_no'),
+    sb.from('order_allocation').select('id,qty,batch(code),sales_order(order_no,customer(name)),dispatch_line(qty_loaded)').eq('status', 'approved'),
   ]);
   const d = (r: { data: unknown }) => (r.data ?? []) as any[];
   const one = (x: any) => (Array.isArray(x) ? x[0] : x);
@@ -85,6 +98,16 @@ async function loadLookups(): Promise<Lookups> {
       return { id: p.id, no: p.po_no, vendor: one(p.vendor)?.name ?? '', item: one(l?.item)?.name ?? '', qty: Number(l?.qty ?? 0), rate: Number(l?.rate ?? 0) };
     }),
     vaccines: d(vaccines),
+    products: d(products).map((p) => ({ id: p.id, name: p.name, price: p.price == null ? null : Number(p.price), active: p.active })),
+    stock: d(stock).flatMap((x) => {
+      const b = d(stockBatches).find((y) => y.id === x.batch_id);
+      return b ? [{ id: x.batch_id, code: x.code, product: b.chick_product_id, available: Number(x.available) }] : [];
+    }),
+    vehicles: d(vehicles).map((x) => ({ id: x.id, reg: x.reg_no })),
+    allocs: d(allocs).map((a) => ({
+      id: a.id, order_no: one(a.sales_order)?.order_no ?? '', customer: one(one(a.sales_order)?.customer)?.name ?? '', code: one(a.batch)?.code ?? '',
+      left: a.qty - (a.dispatch_line ?? []).reduce((n: number, l: any) => n + l.qty_loaded, 0),
+    })),
     machines: d(machines).map((m) => ({ id: m.id, name: m.name, no: m.machine_no, kind: m.machine_kind, cap: m.capacity_eggs })),
     workers: d(workers),
     contracts: d(contracts),
@@ -116,6 +139,11 @@ const DOWNLOAD: Record<string, (c: ActCtx) => string | null> = {
 // Register grid: each tap moves the day one step P → H → A → L → P (blank days start at P).
 const NEXT_ATT: Record<string, string> = { P: 'half', H: 'absent', A: 'leave', L: 'present' };
 const DIRECT: Record<string, (c: ActCtx) => { act: string; input: Record<string, unknown> }> = {
+  reserveOrder: (c) => ({ act: 'reserveOrder', input: { order_id: c.order } }),
+  waiveDeposit: (c) => ({ act: 'waiveDeposit', input: { order_id: c.order } }),
+  releaseAlloc: (c) => ({ act: 'releaseAlloc', input: { id: c.id } }),
+  submitTrip: (c) => ({ act: 'submitTrip', input: { id: c.trip } }),
+  completeTrip: (c) => ({ act: 'completeTrip', input: { id: c.trip } }),
   attSet: (c) => ({ act: 'attSet', input: c }),
   attCycle: (c) => ({ act: 'attSet', input: { worker_id: c.worker_id, date: c.date, status: NEXT_ATT[c.code] ?? 'present' } }),
   confirmCase: (c) => ({ act: 'confirmCase', input: { case_id: c.case } }),
@@ -147,6 +175,7 @@ export function ActionHost({ today }: { today: string }) {
   const submit = useCallback(async (values: Record<string, unknown>) => {
     const key = keyOf(act);
     if (!isAct(key)) return { error: t('forms.unknown') };
+    if (key === 'deliverTrip') await attachPod(values, t);
     const local = SCHEMAS[key].safeParse(values);
     if (!local.success) return { fields: local.error.issues.map((i) => String(i.path[0])), error: t('forms.invalid') };
     const r = await runAct(key, values);
@@ -167,12 +196,13 @@ export function ActionHost({ today }: { today: string }) {
         lookups.current = null;
         return r.ok ? (toast(r.msg), router.refresh()) : toast(r.error);
       }
-      if (a.startsWith('approve:')) { // one tap on a record row
+      if (a.startsWith('approve:') && a !== 'approve:decideDoa') { // one tap on a record row
         const r = await runAct(keyOf(a), { id: ctx.id, decision: 'approve' });
+        lookups.current = null;
         return r.ok ? (toast(r.msg), router.refresh()) : toast(r.error);
       }
       lookups.current ??= await loadLookups();
-      const s = build(keyOf(a), ctx, lookups.current, t, today);
+      const s = build(keyOf(a), { ...ctx, _d: a.startsWith('approve:') ? 'approve' : 'reject' }, lookups.current, t, today);
       if (!s) return toast(t('common.comingNext'));
       setAct(a);
       setSpec(s);
@@ -187,6 +217,22 @@ export function ActionHost({ today }: { today: string }) {
 
 type TFn = ReturnType<typeof useTranslations>;
 
+/** Proof-of-delivery photo -> private evidence bucket (0027: <tenant>/<batch>/<date>/<uuid>). Not a blocker: dispatch roles may lack upload rights, so say so and go on. */
+async function attachPod(values: Record<string, unknown>, t: TFn) {
+  const file = values.pod;
+  const batch = String(values.pod_batch ?? '');
+  delete values.pod; delete values.pod_batch;
+  if (!(file instanceof File)) return;
+  const sb = createClient();
+  const { data: { session } } = await sb.auth.getSession();
+  const tenant = (session?.user.app_metadata as { tenant_id?: string } | undefined)?.tenant_id;
+  const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+  const path = `${tenant}/${batch}/${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })}/${crypto.randomUUID()}.${ext}`;
+  const up = batch && tenant ? await sb.storage.from('evidence').upload(path, file, { contentType: file.type || 'image/jpeg' }) : { error: new Error('no batch') };
+  if (up.error) toast(t('sales.podFailed', { err: up.error.message }));
+  else values.pod_path = path;
+}
+
 function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): FormSpec | null {
   const f = (k: string, p?: Record<string, string | number>) => t(`forms.${k}`, p);
   const none: Opt = ['', f('none')];
@@ -197,6 +243,8 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
   const tr = (k: string, p?: Record<string, string | number>) => t(`trace.${k}`, p);
   const enumOpts = (vals: readonly string[], ns: string): Opt[] => vals.map((v) => [v, t(`${ns}.${v}`)]);
   const e = (k: string, p?: Record<string, string | number>) => t(`erp.${k}`, p);
+  const s = (k: string, p?: Record<string, string | number>) => t(`sales.${k}`, p);
+  const realToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // dates the DB checks against the real clock (APP_TODAY only pins demo screens)
   const num = (id: string, label: string, o: Partial<Field> = {}): Field => ({ id, label, type: 'number', half: true, ...o });
   const pick = (id: string, label: string, vals: readonly string[], ns: string): Field => ({ id, label, type: 'select', half: true, options: [none, ...enumOpts(vals, `erp.${ns}`)] });
   const yn: Opt[] = [['no', e('no')], ['yes', e('yes')]];
@@ -332,6 +380,8 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
           { id: 'phone', label: f('phone'), type: 'tel', half: true },
           { id: 'credit_limit', label: f('customer.limit'), type: 'number', half: true, value: 0 },
           { id: 'credit_days', label: f('customer.days'), type: 'number', half: true, value: 7 },
+          { id: 'tier', label: s('f.tier'), type: 'select', options: enumOpts(TIERS, 'sales.tier'), value: 'standard', half: true },
+          { id: 'delivery_address', label: s('f.address'), half: true },
         ],
       };
     case 'addVendor':
@@ -767,7 +817,153 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
           num('qty', e('vacc.qty'), { required: true, value: ctx.qty }), { id: 'override_reason', label: e('vacc.override') },
         ],
       };
-    case 'decideDaily': case 'decideEggs': case 'decideCandling': case 'decideXfer': case 'decideHatch': case 'decideQuality': // opened by reject:<act>
+    // ---- chick sales + dispatch (0043–0049). Labels live in `sales.*`.
+    case 'addProduct':
+      return {
+        title: s('ttl.product'), submit: f('save'),
+        fields: [
+          { id: 'name', label: s('f.name'), required: true },
+          { id: 'category', label: s('f.category'), type: 'select', options: enumOpts(CHICK_CATS, 'sales.cat'), half: true },
+          num('price', s('f.listPrice'), { step: 'any' }), num('max_age_hours', s('f.maxAge')),
+          { id: 'required_vaccine', label: s('f.vaccine'), type: 'select', options: [none, ...L.vaccines.map((v): Opt => [v.id, v.name])] },
+        ],
+      };
+    case 'setTier':
+      return {
+        title: s('ttl.tier', { name: ctx.name ?? '' }), submit: f('save'), hidden: { customer_id: ctx.customer },
+        fields: [
+          { id: 'tier', label: s('f.tier'), type: 'select', options: enumOpts(TIERS, 'sales.tier'), value: ctx.tier || 'standard' },
+          { id: 'delivery_address', label: s('f.address'), type: 'textarea', value: ctx.addr },
+        ],
+      };
+    case 'setBatchProduct':
+      return {
+        title: s('ttl.setProduct', { code: ctx.code ?? '' }), intro: s('setProductHint'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [{ id: 'product_id', label: s('f.product'), type: 'select', options: [none, ...L.products.map((p): Opt => [p.id, p.name])], value: ctx.product ?? '' }],
+      };
+    case 'addOrder': {
+      const live = L.products.filter((p) => p.active);
+      if (!live.length || !L.customers.length) return { title: s('ttl.order'), intro: s(live.length ? 'needCustomer' : 'needProduct'), fields: [], submit: f('save') };
+      return {
+        title: s('ttl.order'), intro: s('orderIntro'), submit: s('bookSubmit'),
+        fields: [
+          { id: 'customer_id', label: s('f.customer'), type: 'select', options: L.customers.map((c): Opt => [c.id, c.name]), value: ctx.customer },
+          { id: 'product_id', label: s('f.product'), type: 'select', options: live.map((p): Opt => [p.id, `${p.name}${p.price != null ? ` · ${fmtINR(p.price)}` : ''}`]) },
+          num('qty', s('f.qty'), { required: true }),
+          { id: 'hatch_date', label: s('f.hatchDate'), type: 'date', half: true, required: true, value: addDays(realToday, 14) },
+          num('price', s('f.price'), { step: 'any', hint: s('f.priceHint') }),
+          { id: 'notes', label: f('notes'), type: 'textarea' },
+        ],
+      };
+    }
+    case 'verifyPayment':
+      return {
+        title: s('ttl.verify', { no: ctx.no ?? '' }), intro: s('verifyIntro', { due: ctx.due ?? '0' }), submit: f('save'), hidden: { order_id: ctx.order },
+        fields: [
+          { id: 'result', label: s('f.result'), type: 'select', options: enumOpts(PAY_RESULTS, 'sales.verify'), half: true },
+          num('deposit_paid', s('f.paid'), { required: true, value: ctx.due }),
+          { id: 'payment_ref', label: s('f.ref'), value: ctx.ref },
+        ],
+      };
+    case 'confirmOrder':
+      return {
+        title: s('ttl.confirm', { no: ctx.no ?? '' }), intro: s('confirmIntro'), submit: s('confirm'), hidden: { order_id: ctx.order },
+        fields: [{ id: 'credit_override_reason', label: s('f.override'), hint: s('f.overrideHint') }],
+      };
+    case 'cancelOrder':
+      return {
+        title: s('ttl.cancel', { no: ctx.no ?? '' }), submit: s('cancelSubmit'), danger: true, hidden: { order_id: ctx.order },
+        fields: [{ id: 'reason', label: tr('form.reason'), type: 'textarea', required: true }],
+      };
+    case 'moveOrder':
+      return { title: s('ttl.move', { no: ctx.no ?? '' }), submit: f('save'), hidden: { order_id: ctx.order }, fields: [{ id: 'hatch_date', label: s('f.newDate'), type: 'date', value: ctx.date, required: true }] };
+    case 'priceOrder':
+      return {
+        title: s('ttl.price', { no: ctx.no ?? '' }), intro: s('priceIntro'), submit: f('save'), hidden: { order_id: ctx.order },
+        fields: [num('price', s('f.newPrice'), { required: true, value: ctx.price, step: 'any' }), { id: 'reason', label: tr('form.reason'), type: 'textarea', required: true }],
+      };
+    case 'allocate': {
+      const opts = L.stock.filter((x) => x.product === ctx.product && x.available > 0).map((x): Opt => [x.id, `${x.code} · ${s('availLine', { n: x.available })}`]);
+      if (!opts.length) return { title: s('ttl.allocate', { no: ctx.no ?? '' }), intro: s('noStock'), fields: [], submit: f('save') };
+      return {
+        title: s('ttl.allocate', { no: ctx.no ?? '' }), intro: s('allocIntro', { n: ctx.open ?? '' }), submit: s('allocSubmit'), hidden: { order_id: ctx.order },
+        fields: [
+          { id: 'batch_id', label: s('f.setting'), type: 'select', options: opts, follow: { target: 'qty', values: Object.fromEntries(L.stock.map((x) => [x.id, Math.min(x.available, +(ctx.open ?? 0) || x.available)])) } },
+          num('qty', s('f.qty'), { required: true, value: Math.min(L.stock.find((x) => x.id === opts[0][0])?.available ?? 0, +(ctx.open ?? 0) || Infinity) }),
+          { id: 'note', label: f('notes'), type: 'textarea' },
+        ],
+      };
+    }
+    case 'addVehicle':
+      return {
+        title: s('ttl.vehicle'), submit: f('save'),
+        fields: [
+          { id: 'reg_no', label: s('f.reg'), required: true, half: true, placeholder: 'AP21 TB 0001' },
+          { id: 'ownership', label: s('f.ownership'), type: 'select', options: enumOpts(OWNERSHIPS, 'sales.own'), half: true },
+          num('capacity_boxes', s('f.capacity')),
+          { id: 'temp_controlled', label: s('f.cold'), type: 'select', half: true, options: yn },
+          { id: 'fitness_expiry', label: s('f.fitness'), type: 'date', half: true }, { id: 'insurance_expiry', label: s('f.insurance'), type: 'date', half: true },
+          { id: 'permit_expiry', label: s('f.permit'), type: 'date', half: true },
+        ],
+      };
+    case 'addTrip': {
+      const live = L.vehicles;
+      if (!live.length) return { title: s('ttl.trip'), intro: s('needVehicle'), fields: [], submit: f('save') };
+      return {
+        title: s('ttl.trip'), submit: f('save'),
+        fields: [
+          { id: 'vehicle_id', label: s('f.vehicle'), type: 'select', options: live.map((x): Opt => [x.id, x.reg]) },
+          { id: 'driver_name', label: s('f.driver'), required: true, half: true }, { id: 'route', label: s('f.route'), half: true },
+          { id: 'planned_on', label: s('f.planned'), type: 'date', value: realToday, required: true },
+        ],
+      };
+    }
+    case 'addLoad': {
+      const left = L.allocs.filter((a) => a.left > 0);
+      if (!left.length) return { title: s('ttl.load'), intro: s('needAlloc'), fields: [], submit: f('save') };
+      return {
+        title: s('ttl.load'), intro: s('loadIntro'), submit: f('save'), hidden: { dispatch_id: ctx.trip },
+        fields: [
+          { id: 'allocation_id', label: s('f.allocation'), type: 'select', options: left.map((a): Opt => [a.id, `${a.order_no} · ${a.customer} · ${a.code} · ${s('leftLine', { n: a.left })}`]), follow: { target: 'qty_loaded', values: Object.fromEntries(left.map((a) => [a.id, a.left])) } },
+          num('qty_loaded', s('f.loaded'), { required: true, value: left[0].left }), num('boxes', s('f.boxes')),
+          { id: 'age_override_reason', label: s('f.ageReason') },
+        ],
+      };
+    }
+    case 'deliverTrip': {
+      const lines = JSON.parse(ctx.lines || '[]') as { id: string; label: string; loaded: number }[];
+      return {
+        title: s('ttl.deliver', { no: ctx.no ?? '' }), intro: s('deliverIntro'), submit: s('deliverSubmit'), hidden: { dispatch_id: ctx.trip, pod_batch: ctx.batch ?? '' },
+        fields: [
+          { id: 'receiver_name', label: s('f.receiver'), required: true, half: true }, { id: 'delivery_note', label: s('f.deliveryNote'), half: true },
+          { id: 'pod', label: s('f.pod'), type: 'file', hint: s('f.podHint') },
+          ...lines.flatMap((l, i): Field[] => {
+            const pre = lines.length > 1 ? `${l.label} · ` : '';
+            return [
+              num(`d${i}`, pre + s('f.delivered'), { required: true, value: l.loaded, hint: s('loadedLine', { n: l.loaded }) }),
+              num(`s${i}`, pre + s('f.short'), { required: true, value: '0' }), num(`o${i}`, pre + s('f.doa'), { required: true, value: '0' }),
+            ];
+          }),
+        ],
+        transform: (v) => ({
+          receiver_name: v.receiver_name, delivery_note: v.delivery_note, pod: v.pod,
+          lines: lines.map((l, i) => ({ id: l.id, delivered: v[`d${i}`], short: v[`s${i}`], doa: v[`o${i}`] })),
+        }),
+      };
+    }
+    case 'doaClaim':
+      return {
+        title: s('ttl.claim', { label: ctx.label ?? '' }), intro: s('claimIntro', { n: ctx.max ?? '' }), submit: s('claimSubmit'), hidden: { dispatch_line_id: ctx.line },
+        fields: [
+          { id: 'reported_on', label: s('f.claimDate'), type: 'date', value: realToday, max: realToday, half: true, required: true },
+          num('qty', s('f.claimQty'), { required: true, value: ctx.max }), { id: 'customer_note', label: f('notes'), type: 'textarea' },
+        ],
+      };
+    case 'decideDoa':
+      return ctx._d === 'approve'
+        ? { title: s('ttl.decideClaim'), submit: tr('approve'), hidden: { id: ctx.id, decision: 'approve' }, fields: [{ id: 'resolution', label: s('f.resolution'), type: 'select', options: enumOpts(DOA_RESOLUTIONS, 'sales.res') }] }
+        : { title: e('rejectTitle'), submit: tr('reject'), danger: true, hidden: { id: ctx.id, decision: 'reject' }, fields: [{ id: 'reason', label: tr('form.reason'), type: 'textarea', required: true }] };
+    case 'decideDaily': case 'decideEggs': case 'decideCandling': case 'decideXfer': case 'decideHatch': case 'decideQuality': case 'decideAlloc': case 'decideTrip': // opened by reject:<act>
       return { title: e('rejectTitle'), submit: tr('reject'), danger: true, hidden: { id: ctx.id, decision: 'reject' }, fields: [{ id: 'reason', label: tr('form.reason'), type: 'textarea', required: true }] };
     case 'inviteUser':
       return {
