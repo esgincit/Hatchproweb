@@ -1,6 +1,6 @@
 # HatchPro — QA environment setup
 
-`main` holds the web app (`apps/web`, Next.js 15), the Supabase schema (`supabase/migrations` 0001–0020), edge
+`main` holds the web app (`apps/web`, Next.js 15), the Supabase schema (`supabase/migrations` 0001–0053), edge
 functions (`supabase/functions`) and demo seed data. Nothing deploys automatically: the database workflow is manual.
 
 ## 1. Supabase QA project (owner of the Supabase account)
@@ -35,6 +35,27 @@ functions (`supabase/functions`) and demo seed data. Nothing deploys automatical
      (full list in `supabase/config.toml` under `[auth.sms.test_otp]`).
    - Turn **off** "Allow new users to sign up" — accounts are created by approval / invite only.
    - URL Configuration → Site URL + Redirect URLs = the QA web address.
+
+### ERP layer (migrations 0035–0053, branch `erp-phase1`)
+Breeder → egg transfer → hatchery → sales → dispatch chain, approvals, rules, Phase 2–5 (plan:
+`docs/superpowers/plans/2026-11-18-volume1-erp-plan.md`). The manual migrate workflow applies these with the rest.
+- **Functions:** `erp-api` (machines/partners, header `x-api-key` from an owner's API key) and `erp-cron` (scheduler,
+  `x-cron-secret` = the same `CRON_SECRET`). Both have `verify_jwt = false` in `supabase/config.toml`.
+- **Schedule** (pg_cron + pg_net as above) every 15 minutes — expires temporary chick reservations, alerts on silent
+  machines and due maintenance, delivers webhooks:
+  ```sql
+  select cron.schedule('erp-cron', '*/15 * * * *', $$
+    select net.http_post(url := 'https://<ref>.supabase.co/functions/v1/erp-cron',
+                         headers := jsonb_build_object('x-cron-secret', '<CRON_SECRET>')) $$);
+  ```
+- **Modules by plan** (`tenant.plan`): starter = core; growth = + breeder, hatchery; pro = + sales, dispatch,
+  dashboards; enterprise = + portal, branches, api. Override per tenant with a `subscription` row whose
+  `features.modules` lists the modules.
+- **Rules** (owner only; defaults = spec values until management decides): `deposit_slabs`, `temp_reservation_hours`,
+  `max_dispatch_age_hours`, `expired_vaccine_policy` (warn|block), `allow_self_approval`, `credit_limit_policy`
+  (warn|block), `doc_gst_pct` (0 until the GST treatment is confirmed), `books_locked_until`, `po_approval_above`,
+  `finance_owner_above`, alert thresholds (`breeder_mortality_alert_pct`, `machine_temp_min_c`, …).
+- **SQL tests:** `for f in supabase/tests/*_test.sql; do psql … -f $f; done` — each runs in a rolled-back transaction.
 
 ### Demo data (QA only, optional)
 - SQL editor → run `supabase/seed.sql` (two demo tenants: VKR Poultry Farms, KS Farms).
