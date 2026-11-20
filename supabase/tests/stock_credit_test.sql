@@ -1,6 +1,7 @@
 -- Run: docker exec -i supabase_db_poultryos psql -U postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/stock_credit_test.sql
 -- 0046: multi-line GRN with running totals + over-receipt cap, no negative stock, credit limit warn/block.
 begin;
+delete from tenant_rule where tenant_id = 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; -- test runs on rule defaults (rolled back)
 do $$
 declare ks uuid := 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; f uuid := '72c46a7d-d72c-5676-bc8a-70c996df7088'; v uuid; i1 uuid; i2 uuid; po uuid; c uuid;
 begin

@@ -29,7 +29,7 @@ end $$;
 -- KS finance: reads, can't change counts
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f1","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["finance"]}}';
 do $$ begin
-  assert (select count(*) from hatch_record) = 1, 'finance reads hatch records';
+  assert (select count(*) from hatch_record where batch_id = current_setting('t.h')::uuid) = 1, 'finance reads hatch records';
   update hatch_record set culls = 0;
 end $$;
 

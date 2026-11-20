@@ -2,6 +2,7 @@
 -- 0038: breeder daily record (sex split, alerts, approval, edit-then-approve), body weight vs standard, house
 -- environment alerts, medication roles, calendar, tenant isolation.
 begin;
+delete from tenant_rule where tenant_id = 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; -- test runs on rule defaults (rolled back)
 do $$
 declare ks uuid := 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; bf uuid; bs uuid; br uuid; fl uuid;
 begin

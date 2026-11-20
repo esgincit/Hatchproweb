@@ -2,6 +2,7 @@
 -- 0041/0042: setter loading (capacity, single-stage), candling D10/D18 + approvals, hatcher transfer, hatch approval,
 -- hatcher release, machine status, machine env alerts, vaccination (expired policy), quality, KPIs, flock feedback.
 begin;
+delete from tenant_rule where tenant_id = 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; -- test runs on rule defaults (rolled back)
 do $$
 declare ks uuid := 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; hat uuid := '72c46a7d-d72c-5676-bc8a-70c996df7088'; hs uuid := '3cc7357e-09d6-5972-a12d-5f5aa2949a3c';
         bf uuid; bs uuid; fl uuid; st uuid; st2 uuid; tr uuid; s1 uuid; h1 uuid;

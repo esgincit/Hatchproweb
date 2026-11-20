@@ -2,6 +2,7 @@
 -- 0036: approval lock (guard_locked), egg transfer -> setting lot traceability, egg-age override, mixed-source estimate,
 -- self-approval rule, roles, tenant isolation.
 begin;
+delete from tenant_rule where tenant_id = 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; -- test runs on rule defaults (rolled back)
 -- fixtures (as postgres): a KS breeder flock + a 1,000-egg hatchery setting on 2026-10-20
 do $$
 declare ks uuid := 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; bf uuid; bs uuid; fl uuid; st uuid;
@@ -60,7 +61,7 @@ do $$ declare st uuid := current_setting('t.st')::uuid; t1 uuid; t2 uuid;
 begin
   update egg_transfer set status = 'received', received_qty = 700, receipt_rejects = 20, received_on = '2026-10-18' where ref = 'TRF-T1';
   update egg_transfer set status = 'received', received_qty = 400, received_on = '2026-10-14' where ref = 'TRF-T2';
-  assert (select count(*) from egg_transfer where status = 'received') = 2, 'received';
+  assert (select count(*) from egg_transfer where status = 'received' and ref like 'TRF-T_') = 2, 'received';
   begin update egg_transfer set received_qty = 650 where ref = 'TRF-T1'; assert false, 'changed confirmed receipt';
   exception when raise_exception then null; end;
   begin update egg_transfer set status = 'cancelled' where ref = 'TRF-T1'; assert false, 'received -> cancelled';

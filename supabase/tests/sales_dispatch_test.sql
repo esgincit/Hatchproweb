@@ -3,6 +3,7 @@
 -- credit customers, cancellation frees space, expiry, allocation (sales proposes / HM approves, over-allocation
 -- blocked), dispatch gates, invoice at dispatch, delivery + DOA claim, order status sync, delivery trace.
 begin;
+delete from tenant_rule where tenant_id = 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; -- test runs on rule defaults (rolled back)
 do $$
 declare ks uuid := 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; hat uuid := '72c46a7d-d72c-5676-bc8a-70c996df7088'; hs uuid := '3cc7357e-09d6-5972-a12d-5f5aa2949a3c';
         p uuid; s1 uuid; s2 uuid; c1 uuid; c2 uuid; v1 uuid; today date := (now() at time zone 'Asia/Kolkata')::date;

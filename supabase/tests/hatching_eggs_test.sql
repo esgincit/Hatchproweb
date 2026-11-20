@@ -2,6 +2,7 @@
 -- 0039: hatching-egg collection (settable, floor/dirty rules, alerts, approval), egg KPIs, farm egg store limit on
 -- transfers, receipt discrepancy note.
 begin;
+delete from tenant_rule where tenant_id = 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; -- test runs on rule defaults (rolled back)
 do $$
 declare ks uuid := 'b146bf5d-6213-556e-8e71-8d4c156ad36d'; bf uuid; bs uuid; fl uuid;
 begin
@@ -22,7 +23,7 @@ begin
     values (fl, '2026-10-10', 1, 3000, 100, 20, 30, 10);
   -- 2nd: 900 nest + 100 floor = 10 % floor -> alert
   insert into hatching_egg_collection (batch_id, collected_on, collection_no, nest, floor) values (fl, '2026-10-10', 2, 900, 100);
-  assert (select settable from hatching_egg_collection where collection_no = 1) = 2940, 'settable excludes floor + rejects';
+  assert (select settable from hatching_egg_collection where batch_id = current_setting('t.fl')::uuid and collection_no =1) = 2940, 'settable excludes floor + rejects';
   assert (select count(*) from notification where title like 'Floor eggs high%') = 1, 'floor alert once';
   begin insert into hatching_egg_collection (batch_id, collected_on, collection_no, nest, dirty, dirty_treated) values (fl, '2026-10-10', 3, 100, 10, 5);
     assert false, 'treated dirty eggs without rule'; exception when raise_exception then null; end;
@@ -45,19 +46,19 @@ end $$;
 
 -- farm manager approves collection + transfer; hatchery tech receives short with a note
 set local request.jwt.claims = '{"sub":"9a7b4e00-d286-5aa1-9627-b38cdd6051a3","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["farm_manager"]}}';
-update hatching_egg_collection set status = 'approved' where collection_no = 1;
+update hatching_egg_collection set status = 'approved' where batch_id = current_setting('t.fl')::uuid and collection_no =1;
 update egg_transfer set status = 'approved' where ref = 'TRF-A';
 do $$ begin
-  begin update hatching_egg_collection set nest = 3100 where collection_no = 1; assert false, 'edited approved collection';
+  begin update hatching_egg_collection set nest = 3100 where batch_id = current_setting('t.fl')::uuid and collection_no =1; assert false, 'edited approved collection';
   exception when raise_exception then null; end;
   -- 0041: eggs already committed (3,100) — rejecting collection 2 would leave 2,940 collected
-  begin update hatching_egg_collection set status = 'rejected', reject_reason = 'miscount' where collection_no = 2; assert false, 'store went negative';
+  begin update hatching_egg_collection set status = 'rejected', reject_reason = 'miscount' where batch_id = current_setting('t.fl')::uuid and collection_no =2; assert false, 'store went negative';
   exception when raise_exception then null; end;
   update egg_transfer set status = 'rejected', reject_reason = 'too old' where ref = 'TRF-OLD';
   begin update egg_transfer set status = 'submitted', qty = 100 where ref = 'TRF-OLD';
-    update hatching_egg_collection set nest = 800 where collection_no = 2;  -- 3,740 collected vs 3,100 committed: fine
+    update hatching_egg_collection set nest = 800 where batch_id = current_setting('t.fl')::uuid and collection_no =2;  -- 3,740 collected vs 3,100 committed: fine
     update egg_transfer set qty = 700 where ref = 'TRF-OLD';               -- 3,700 committed vs 3,740: fine
-    update hatching_egg_collection set nest = 700 where collection_no = 2; assert false, 'edit made store negative';
+    update hatching_egg_collection set nest = 700 where batch_id = current_setting('t.fl')::uuid and collection_no =2; assert false, 'edit made store negative';
   exception when raise_exception then null; end;
 end $$;
 set local request.jwt.claims = '{"sub":"3d86a04e-a887-52ea-bb3c-67ab5c414ce7","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["hatchery_technician"]}}';
