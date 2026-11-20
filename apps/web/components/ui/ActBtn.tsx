@@ -17,7 +17,7 @@ export function ActBtn({ act, ctx, className, children, style }: {
   act: string; ctx?: ActCtx; className?: string; children: React.ReactNode; style?: React.CSSProperties;
 }) {
   const roles = useContext(RolesContext);
-  const key = SAME_AS[act] ?? act;
+  const key = SAME_AS[act] ?? act.replace(/^(approve|reject):/, ''); // approve:decideDaily → that act's role list
   if (roles && ACT_ROLES[key] && !canAct(roles, key)) return null;
   return (
     <button type="button" className={className} style={style} data-act={act}

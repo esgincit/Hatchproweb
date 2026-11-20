@@ -10,6 +10,7 @@ import { settle, type ContractTerms } from '@/lib/settlement';
 import { claimsFromUser } from '@/lib/auth/claims';
 import { canAct } from '@/lib/auth/permissions';
 import { transferRef } from '@/lib/trace';
+import { RULES, ruleDef, parseRule, pairOk } from '@/lib/rules';
 
 export type ActResult = { ok: true; msg: string; href?: string } | { ok: false; error: string; fields?: string[] };
 
@@ -36,6 +37,10 @@ type Sb = Awaited<ReturnType<typeof createClient>>;
 type T = Awaited<ReturnType<typeof getTranslations>>;
 type In<K extends ActKey> = import('zod').infer<(typeof SCHEMAS)[K]>;
 
+const DECIDE_TABLE = {
+  decideDaily: 'breeder_daily', decideEggs: 'hatching_egg_collection', decideCandling: 'candling', decideXfer: 'hatcher_transfer',
+  decideHatch: 'hatch_record', decideQuality: 'chick_quality_inspection',
+} as const;
 const fail = (e: { message: string } | null): ActResult | null => (e ? { ok: false, error: e.message } : null);
 /** An UPDATE that RLS filters to zero rows (someone else's id) is not an error to PostgREST: say so instead of a false success. */
 const touched = (r: { data: unknown[] | null; error: { message: string } | null }, ok: ActResult, t: T): ActResult => fail(r.error) ?? (r.data?.length ? ok : { ok: false, error: t('notFound') });
@@ -57,7 +62,12 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
       const { error } = await sb.rpc('place_batch', {
         p_shed: x.shed_id, p_code: x.code, p_breed: x.breed_id ?? null, p_placed: x.placed, p_doc: x.doc, p_doc_rate: x.doc_rate, p_vendor: x.vendor_id ?? null,
       });
-      return fail(error) ?? { ok: true, msg: t('batch.ok', { code: x.code }), href: `/farm/batch/${encodeURIComponent(x.code)}` };
+      if (error) return fail(error)!;
+      if (x.females_placed != null) { // breeder flock: record the sex split (0038); the DB re-checks it adds up
+        const r = await sb.from('batch').update({ females_placed: x.females_placed, males_placed: x.males_placed ?? 0 }).eq('shed_id', x.shed_id).eq('code', x.code).select('id');
+        if (r.error || !r.data?.length) return { ok: false, error: r.error?.message ?? t('notFound') };
+      }
+      return { ok: true, msg: t('batch.ok', { code: x.code }), href: `/farm/batch/${encodeURIComponent(x.code)}` };
     }
     case 'mort': {
       const x = v as In<'mort'>;
@@ -313,9 +323,139 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
     }
     case 'setRule': {
       const x = v as In<'setRule'>;
-      const value = x.key === 'allow_self_approval' ? x.value === 'yes' : Number(x.value);
+      const value = parseRule(x.key, x.value)!; // the schema already refused anything else
+      if (typeof value === 'number') {
+        const { data } = await sb.from('tenant_rule').select('key,value').in('key', RULES.filter((r) => r.kind === 'num').map((r) => r.key));
+        const cur = (k: string) => Number(data?.find((r) => r.key === k)?.value ?? ruleDef(k)!.def);
+        if (!pairOk(x.key, value, cur)) return { ok: false, error: t('erp.pairBad'), fields: ['value'] };
+      }
       const { error } = await sb.from('tenant_rule').upsert({ key: x.key, value, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id,key' });
       return fail(error) ?? { ok: true, msg: t('xfer.ruleSaved') };
+    }
+    // ---- breeder flock (0038/0039). A record is re-submitted by upsert, which is how a rejected one is corrected; approved ones are locked by the DB.
+    case 'breederDaily': {
+      const x = v as In<'breederDaily'>;
+      const { error } = await sb.from('breeder_daily').upsert({
+        batch_id: x.batch_id, log_date: x.date, female_mort: x.female_mort, male_mort: x.male_mort, female_culls: x.female_culls, male_culls: x.male_culls,
+        feed_f_kg: x.feed_f_kg ?? null, feed_m_kg: x.feed_m_kg ?? null, diet_stage: x.diet_stage ?? null, cleanup_hours: x.cleanup_hours ?? null,
+        water_l: x.water_l ?? null, water_treatment: x.water_treatment ?? null, water_quality: x.water_quality ?? null, light_hours: x.light_hours ?? null,
+        remarks: x.remarks ?? null, status: 'submitted',
+      }, { onConflict: 'batch_id,log_date' });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'bodyWeight': {
+      const x = v as In<'bodyWeight'>;
+      const { error } = await sb.from('body_weight_record').upsert({
+        batch_id: x.batch_id, weighed_on: x.date, sex: x.sex, sample_size: x.sample_size, avg_g: x.avg_g,
+        uniformity_pct: x.uniformity_pct ?? null, cv_pct: x.cv_pct ?? null, fleshing_score: x.fleshing_score ?? null,
+      }, { onConflict: 'batch_id,weighed_on,sex' });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'eggCollection': {
+      const { date: d, ...x } = v as In<'eggCollection'>;
+      const { error } = await sb.from('hatching_egg_collection').upsert({ ...x, collected_on: d, status: 'submitted' }, { onConflict: 'batch_id,collected_on,collection_no' });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'medication': {
+      const x = v as In<'medication'>;
+      const { error } = await sb.from('medication_record').insert({
+        batch_id: x.batch_id, given_on: x.date, medicine: x.medicine, dosage: x.dosage, duration_days: x.duration_days, reason: x.reason,
+        prescribed_by: x.prescribed_by ?? null, withdrawal_days: x.withdrawal_days ?? null,
+      });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'biosecurity': {
+      const x = v as In<'biosecurity'>;
+      const { data: b } = await sb.from('batch').select('farm_id,shed_id').eq('id', x.batch_id).maybeSingle();
+      if (!b) return { ok: false, error: t('notFound') };
+      const { error } = await sb.from('biosecurity_incident').insert({
+        farm_id: b.farm_id, shed_id: b.shed_id, occurred_on: x.date, nature: x.nature, birds_affected: x.birds_affected ?? null,
+        action_taken: x.action_taken ?? null, responsible: x.responsible ?? null, follow_up_on: x.follow_up_on ?? null,
+      });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'houseReading': {
+      const x = v as In<'houseReading'>;
+      const { error } = await sb.from('env_reading').insert({
+        shed_id: x.shed_id, read_at: new Date().toISOString(), temp_c: x.temp_c ?? null, rh_pct: x.rh_pct ?? null, nh3_ppm: x.nh3_ppm ?? null, lux: x.lux ?? null,
+        ventilation: x.ventilation ?? null, litter: x.litter ?? null, power: x.power ?? null, source: 'manual',
+      });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    // ---- hatchery (0041/0042/0044)
+    case 'addMachine': {
+      const x = v as In<'addMachine'>;
+      const { error } = await sb.from('asset').insert({
+        farm_id: x.farm_id, name: x.name, category: 'incubator', machine_kind: x.machine_kind, machine_no: x.machine_no ?? null, capacity_eggs: x.capacity_eggs, stage: x.stage, status: 'ok',
+      });
+      return fail(error) ?? { ok: true, msg: t('erp.machineAdded', { name: x.name }) };
+    }
+    case 'machineReading': {
+      const x = v as In<'machineReading'>;
+      const { error } = await sb.from('env_reading').insert({
+        asset_id: x.asset_id, read_at: new Date().toISOString(), temp_c: x.temp_c ?? null, wet_bulb_c: x.wet_bulb_c ?? null, rh_pct: x.rh_pct ?? null,
+        fan_rpm: x.fan_rpm ?? null, alarm: x.alarm ? x.alarm === 'yes' : null, source: 'manual',
+      });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'loadSetter': {
+      const x = v as In<'loadSetter'>;
+      const { error } = await sb.rpc('load_setter', { p_batch: x.batch_id, p_setter: x.setter_id });
+      return fail(error) ?? { ok: true, msg: t('erp.setterLoaded') };
+    }
+    case 'candling': {
+      const x = v as In<'candling'>;
+      const first = x.stage === 1;
+      const { error } = await sb.from('candling').upsert({
+        batch_id: x.batch_id, stage: x.stage, candled_on: x.date, eggs_candled: x.eggs_candled,
+        infertile: first ? x.infertile : null, early_dead: first ? x.early_dead : null, dirty: first ? x.dirty : null,
+        mid_dead: first ? null : x.mid_dead, late_dead: first ? null : x.late_dead, status: 'submitted',
+      }, { onConflict: 'batch_id,stage' });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'hatcherTransfer': {
+      const x = v as In<'hatcherTransfer'>;
+      const { error } = await sb.from('hatcher_transfer').upsert({ batch_id: x.batch_id, hatcher_id: x.hatcher_id, moved_on: x.date, eggs: x.eggs, status: 'submitted' }, { onConflict: 'batch_id' });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'hatchFull': {
+      const { date: d, ...x } = v as In<'hatchFull'>;
+      const { error } = await sb.from('hatch_record').upsert({ ...x, hatched_on: d, status: 'submitted' }, { onConflict: 'batch_id' });
+      return fail(error) ?? { ok: true, msg: t('hatch.resultOk', { n: x.chicks_a + x.chicks_b }) };
+    }
+    case 'releaseHatcher': {
+      const x = v as In<'releaseHatcher'>;
+      const { data: h } = await sb.from('hatcher_transfer').select('hatcher_id').eq('batch_id', x.batch_id).maybeSingle();
+      if (!h) return { ok: false, error: t('notFound') };
+      const { error } = await sb.from('machine_release').insert({
+        batch_id: x.batch_id, hatcher_id: h.hatcher_id, chicks_removed: true, waste_recorded: true, cleaned: true, disinfected: true, inspected: true,
+        disinfectant: x.disinfectant ?? null, notes: x.notes ?? null,
+      });
+      return fail(error) ?? { ok: true, msg: t('erp.released') };
+    }
+    case 'chickQuality': {
+      const x = v as In<'chickQuality'>;
+      const { error } = await sb.from('chick_quality_inspection').upsert({
+        batch_id: x.batch_id, inspected_on: x.date, sample_size: x.sample_size, avg_weight_g: x.avg_weight_g ?? null, uniformity_pct: x.uniformity_pct ?? null,
+        navel_defects: x.navel_defects, leg_defects: x.leg_defects, other_defects: x.other_defects, dispatch_eligible: x.dispatch_eligible === 'yes',
+        remarks: x.remarks ?? null, status: 'submitted',
+      }, { onConflict: 'batch_id' });
+      return fail(error) ?? { ok: true, msg: t('erp.saved') };
+    }
+    case 'chickVaccine': {
+      const x = v as In<'chickVaccine'>;
+      const { error } = await sb.from('chick_vaccination').insert({
+        batch_id: x.batch_id, vaccine_id: x.vaccine_id, vaccine_lot: x.vaccine_lot, expiry: x.expiry, qty: x.qty, expired_override_reason: x.override_reason ?? null,
+      });
+      if (error) return fail(error)!;
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      return { ok: true, msg: x.expiry < today ? t('erp.vaccExpired', { lot: x.vaccine_lot }) : t('erp.saved') }; // the DB flags it and alerts the owner either way
+    }
+    case 'decideDaily': case 'decideEggs': case 'decideCandling': case 'decideXfer': case 'decideHatch': case 'decideQuality': {
+      const x = v as In<'decideDaily'>;
+      const ok = x.decision === 'approve';
+      const patch = ok ? { status: 'approved' } : { status: 'rejected', reject_reason: x.reason };
+      return touched(await sb.from(DECIDE_TABLE[act as keyof typeof DECIDE_TABLE]).update(patch).eq('id', x.id).in('status', ['draft', 'submitted']).select('id'), { ok: true, msg: ok ? t('erp.approved') : t('erp.rejected') }, t);
     }
     case 'remind': {
       const x = v as In<'remind'>;

@@ -900,6 +900,16 @@
       "received": "{n} settable eggs received",
       "loaded": "{n} eggs loaded into the setting",
       "ruleSaved": "Rule saved"
+    },
+    "erp": {
+      "saved": "Saved",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "machineAdded": "Machine {name} added",
+      "pairBad": "The minimum must stay below the maximum.",
+      "released": "Hatcher released",
+      "setterLoaded": "Setting loaded into the setter",
+      "vaccExpired": "Saved. Lot {lot} is expired and was flagged to the owner."
     }
   },
   "billCat": {
@@ -1402,6 +1412,351 @@
       "formTitle": "Change rule",
       "value": "Value",
       "daysVal": "Days (1–30)"
+    }
+  },
+  "erp": {
+    "yes": "Yes",
+    "no": "No",
+    "submit": "Submit for approval",
+    "f": {
+      "females": "Females placed",
+      "males": "Males placed",
+      "femaleMort": "Female deaths",
+      "maleMort": "Male deaths",
+      "femaleCulls": "Female culls",
+      "maleCulls": "Male culls",
+      "feedF": "Female feed (kg)",
+      "feedM": "Male feed (kg)",
+      "diet": "Diet stage",
+      "cleanup": "Clean-up hours",
+      "water": "Water (L)",
+      "light": "Light hours",
+      "waterTreat": "Water treatment",
+      "waterQual": "Water quality",
+      "sex": "Sex",
+      "female": "Female",
+      "male": "Male",
+      "sample": "Sample size",
+      "avgG": "Average weight (g)",
+      "uniformity": "Uniformity (%)",
+      "cv": "CV (%)",
+      "fleshing": "Fleshing score (males)",
+      "temp": "Temperature (°C)",
+      "rh": "Humidity (%)",
+      "nh3": "Ammonia (ppm)",
+      "lux": "Light (lux)",
+      "vent": "Ventilation",
+      "litter": "Litter",
+      "power": "Power",
+      "wetBulb": "Wet bulb (°C)",
+      "fan": "Fan (rpm)",
+      "alarm": "Alarm on",
+      "capShort": "{n} eggs"
+    },
+    "diet": {
+      "starter": "Starter",
+      "grower": "Grower",
+      "pre_breeder": "Pre-breeder",
+      "breeder_1": "Breeder 1",
+      "breeder_2": "Breeder 2"
+    },
+    "wtreat": {
+      "none": "None",
+      "chlorine": "Chlorine",
+      "sanitizer": "Sanitizer",
+      "medication": "Medication"
+    },
+    "wqual": {
+      "normal": "Normal",
+      "cloudy": "Cloudy",
+      "discolored": "Discoloured",
+      "odor": "Odour"
+    },
+    "vent": {
+      "normal": "Normal",
+      "reduced": "Reduced",
+      "off": "Off"
+    },
+    "litter": {
+      "good": "Good",
+      "damp": "Damp",
+      "wet": "Wet",
+      "caked": "Caked"
+    },
+    "power": {
+      "mains": "Mains",
+      "generator": "Generator",
+      "off": "Off"
+    },
+    "daily": {
+      "title": "Daily breeder record",
+      "intro": "Females and males are counted separately. It goes to the farm manager for approval."
+    },
+    "bw": {
+      "title": "Weekly body weight",
+      "intro": "One sex per entry. Weigh at least 50 females or 15 males (or 2% / 10% of the birds).",
+      "weighedOn": "Weighed on"
+    },
+    "egg": {
+      "title": "Hatching-egg collection",
+      "intro": "Rejects are taken out of the nest eggs. Floor eggs are counted apart and are not settable unless the farm rule allows it.",
+      "collectedOn": "Collected on",
+      "no": "Collection no.",
+      "nest": "Nest eggs",
+      "floor": "Floor eggs",
+      "broken": "Broken",
+      "cracked": "Cracked",
+      "dirty": "Dirty",
+      "dirtyTreated": "Dirty, cleaned and treated",
+      "misshapen": "Misshapen",
+      "doubleYolk": "Double yolk",
+      "small": "Small",
+      "softShell": "Soft shell"
+    },
+    "med": {
+      "title": "Medication",
+      "givenOn": "Given on",
+      "medicine": "Medicine",
+      "dosage": "Dosage",
+      "days": "Days of treatment",
+      "reason": "Reason",
+      "by": "Prescribed by",
+      "withdrawal": "Withdrawal (days)"
+    },
+    "bio": {
+      "title": "Biosecurity incident",
+      "on": "Date of incident",
+      "nature": "What happened",
+      "birds": "Birds affected",
+      "responsible": "Responsible person",
+      "action": "Action taken",
+      "followUp": "Follow up by"
+    },
+    "house": {
+      "title": "House reading"
+    },
+    "b": {
+      "daily": "Daily record (females / males)",
+      "addDaily": "+ Daily record",
+      "noDaily": "No daily records yet.",
+      "fDead": "F dead",
+      "mDead": "M dead",
+      "fLeft": "F alive",
+      "mLeft": "M alive",
+      "feedF": "g / female",
+      "feedM": "g / male",
+      "status": "Status",
+      "weights": "Body weight vs standard",
+      "addWeight": "+ Weight",
+      "noWeights": "No weights recorded yet.",
+      "week": "Week · date",
+      "std": "Standard (g)",
+      "diff": "Diff (g)",
+      "sampleSmall": "Small sample",
+      "eggs": "Hatching eggs",
+      "addEggs": "+ Collection",
+      "inStore": "Eggs in farm store",
+      "storeLine": "{c} collected · {s} sent",
+      "oldest": "Oldest collection",
+      "noEggDays": "No egg collections yet.",
+      "total": "Total",
+      "settable": "Settable",
+      "floorEggs": "Floor",
+      "henDay": "Hen-day %",
+      "settablePct": "Settable %",
+      "floorPct": "Floor %",
+      "collections": "Collections",
+      "noColl": "No collections yet.",
+      "calendar": "Production calendar",
+      "age": "Age",
+      "placedOn": "placed {d}",
+      "light": "Light stimulation",
+      "firstEgg": "First egg",
+      "peak": "Peak production",
+      "depletion": "Depletion",
+      "health": "Health: medication and biosecurity",
+      "addMed": "+ Medication",
+      "addBio": "+ Biosecurity",
+      "open": "Open",
+      "noHealth": "Nothing recorded yet.",
+      "forDays": "{n} days",
+      "withdrawal": "withdrawal {n} d",
+      "followUp": "follow-up {d}",
+      "house": "House readings",
+      "addReading": "+ Reading",
+      "noReadings": "No readings yet.",
+      "at": "Time"
+    },
+    "kind": {
+      "setter": "Setter",
+      "hatcher": "Hatcher",
+      "combined": "Setter + hatcher"
+    },
+    "stage": {
+      "single": "Single-stage",
+      "multi": "Multi-stage"
+    },
+    "state": {
+      "available": "Available",
+      "in_use": "In use",
+      "cleaning": "Cleaning",
+      "breakdown": "Breakdown"
+    },
+    "machine": {
+      "title": "Machines",
+      "add": "+ Machine",
+      "addTitle": "Add a machine",
+      "open": "Machines ›",
+      "intro": "A setter, hatcher or combined machine. Its state (available, in use, cleaning, breakdown) is worked out from what is loaded and the repair tickets.",
+      "no": "Machine no.",
+      "kind": "Type",
+      "stage": "Loading",
+      "capacity": "Capacity (eggs)",
+      "reading": "Reading · {name}",
+      "read": "+ Reading",
+      "none": "No machines yet. Add a setter or hatcher.",
+      "capLine": "capacity {n} eggs · {used} loaded",
+      "today": "Today: {r} of {e} readings · temperature in range {temp} · humidity in range {rh}",
+      "alarms": "{n} alarms",
+      "noReadings": "No readings today."
+    },
+    "rejectTitle": "Reject record",
+    "setter": {
+      "title": "Load into setter",
+      "intro": "{n} eggs. Pick a setter with room.",
+      "none": "Add a setter first (Farm › Machines).",
+      "pick": "Setter"
+    },
+    "candle": {
+      "title1": "Candling · day 10",
+      "title2": "Candling · day 18",
+      "intro": "Counts of eggs taken out. The hatchery operations manager approves it.",
+      "on": "Candled on",
+      "candled": "Eggs candled",
+      "infertile": "Infertile",
+      "earlyDead": "Early dead",
+      "dirty": "Dirty / exploded",
+      "midDead": "Mid dead",
+      "lateDead": "Late dead"
+    },
+    "xfer": {
+      "title": "Move to hatcher",
+      "intro": "Day-18 transfer. The hatchery operations manager approves it.",
+      "hatcher": "Hatcher",
+      "none": "Add a hatcher first (Farm › Machines).",
+      "movedOn": "Moved on",
+      "eggs": "Eggs moved"
+    },
+    "hatch": {
+      "intro": "Chicks hatched = grade A + grade B + culls. The hatchery manager approves it.",
+      "on": "Hatched on",
+      "deadIn": "Dead in hatcher",
+      "unhatched": "Unhatched eggs"
+    },
+    "release": {
+      "title": "Release hatcher",
+      "intro": "Confirm every step before the hatcher can be used again.",
+      "submit": "Release",
+      "chicks_removed": "Chicks removed and counted",
+      "waste_recorded": "Waste recorded",
+      "cleaned": "Cleaned",
+      "disinfected": "Disinfected",
+      "inspected": "Checked",
+      "disinfectant": "Disinfectant used"
+    },
+    "quality": {
+      "title": "Chick quality",
+      "on": "Inspected on",
+      "weight": "Average weight (g)",
+      "navel": "Navel defects",
+      "leg": "Leg defects",
+      "other": "Other defects",
+      "eligible": "OK to dispatch"
+    },
+    "vacc": {
+      "title": "Vaccinate chicks",
+      "intro": "An expired lot is flagged and alerts the owner. If the farm blocks expired vaccines, an override reason is needed (owner or hatchery manager only).",
+      "vaccine": "Vaccine",
+      "lot": "Lot no.",
+      "expiry": "Expiry date",
+      "qty": "Chicks vaccinated",
+      "override": "Override reason (expired lot only)"
+    },
+    "flow": {
+      "title": "Hatch flow",
+      "todo": "To do",
+      "setter": "Setter",
+      "noSetter": "Not loaded yet · {n} eggs",
+      "loaded": "Loaded",
+      "load": "Load into setter",
+      "d10": "Candling · day 10",
+      "d10Line": "{i} infertile · {e} early dead · {d} dirty",
+      "expected": "Expected hatch {d}",
+      "record": "Record",
+      "d18": "Candling · day 18",
+      "d18Line": "{m} mid dead · {l} late dead",
+      "xfer": "Transfer to hatcher",
+      "xferEggs": "{n} live eggs to move",
+      "xferLine": "{n} eggs → {m}",
+      "hatch": "Hatch result",
+      "hatchLine": "{a} grade A · {b} grade B · {c} culls",
+      "release": "Release hatcher",
+      "releaseHint": "Clean and disinfect the hatcher, then release it.",
+      "released": "Released",
+      "releaseBtn": "Release",
+      "quality": "Chick quality",
+      "qualityLine": "sample {n} · OK to dispatch: {ok}",
+      "vacc": "Vaccination",
+      "vaccBtn": "+ Vaccinate",
+      "vaccLine": "lot {lot} · {n} chicks · expires {d}",
+      "expired": "Expired"
+    },
+    "kpi": {
+      "title": "Hatch KPIs",
+      "fertility": "Fertility",
+      "hes": "Hatch of eggs set (HES)",
+      "hof": "Hatch of fertile (HOF)",
+      "hot": "Hatch of transfer",
+      "early": "Early embryo mortality",
+      "mid": "Mid embryo mortality",
+      "late": "Late embryo mortality",
+      "embryo": "Total embryo mortality",
+      "cull": "Cull chicks",
+      "dih": "Dead in hatcher",
+      "waste": "Hatch waste",
+      "e2c": "Egg to chick"
+    },
+    "stock": {
+      "title": "Chick stock",
+      "saleable": "Saleable chicks",
+      "sold": "Sold",
+      "available": "Available",
+      "age": "Age",
+      "quality": "Quality check",
+      "cleared": "Cleared",
+      "pending": "Pending",
+      "vaccinated": "All vaccinated"
+    },
+    "rule": {
+      "allow_self_approval": "Approve own submissions",
+      "egg_max_storage_days": "Max egg storage (days)",
+      "breeder_mortality_alert_pct": "Breeder mortality alert (% per day)",
+      "floor_egg_alert_pct": "Floor-egg alert (%)",
+      "allow_treated_dirty_eggs": "Set treated dirty eggs",
+      "floor_eggs_settable": "Floor eggs can be set",
+      "expired_vaccine_policy": "Expired vaccine",
+      "simple_hatch_flow": "Simple hatch flow (one form, no day 10 / 18 steps)",
+      "machine_temp_min_c": "Machine temperature min (°C)",
+      "machine_temp_max_c": "Machine temperature max (°C)",
+      "machine_rh_min_pct": "Machine humidity min (%)",
+      "machine_rh_max_pct": "Machine humidity max (%)",
+      "house_temp_min_c": "House temperature min (°C)",
+      "house_temp_max_c": "House temperature max (°C)",
+      "incubation_days": "Incubation days",
+      "v": {
+        "warn": "Warn only",
+        "block": "Block (needs an override)"
+      }
     }
   }
 }

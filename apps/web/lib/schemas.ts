@@ -1,5 +1,6 @@
 // Form schemas: validated in the browser for instant feedback and again in the server action (the real guard).
 import { z } from 'zod';
+import { RULE_KEYS, parseRule } from './rules';
 
 const blank = (v: unknown) => (v === '' || v === null ? undefined : v);
 const opt = <T extends z.ZodTypeAny>(s: T) => z.preprocess(blank, s.optional());
@@ -11,6 +12,18 @@ const notFuture = date.refine((d) => d <= new Date().toLocaleDateString('en-CA',
 const phone = opt(z.string().trim().regex(/^\+?[\d\s-]{10,16}$/)); // mobile or STD landline
 const int = (min = 0) => z.coerce.number().int().min(min);
 const money = z.coerce.number().positive().max(1e10);
+
+const dec = (min: number, max: number) => z.coerce.number().min(min).max(max);
+const yes = z.literal('yes');
+export const DIET_STAGES = ['starter', 'grower', 'pre_breeder', 'breeder_1', 'breeder_2'] as const;
+export const WATER_TREAT = ['none', 'chlorine', 'sanitizer', 'medication'] as const;
+export const WATER_QUAL = ['normal', 'cloudy', 'discolored', 'odor'] as const;
+export const VENT = ['normal', 'reduced', 'off'] as const;
+export const LITTER = ['good', 'damp', 'wet', 'caked'] as const;
+export const POWER = ['mains', 'generator', 'off'] as const;
+export const MACHINE_KINDS = ['setter', 'hatcher', 'combined'] as const;
+const DECIDE = z.object({ id, decision: z.enum(['approve', 'reject']), reason: opt(z.string().trim().max(300)) })
+  .refine((x) => x.decision === 'approve' || !!x.reason, { path: ['reason'] });
 
 export const FARM_TYPES = ['broiler', 'layer', 'hatchery', 'breeder'] as const;
 export const SHED_TYPES = ['cage', 'deep_litter', 'environment_controlled'] as const;
@@ -28,7 +41,6 @@ export const ASSET_CATS = ['feeder', 'drinker', 'fan', 'generator', 'incubator',
 export const ITEM_CATS = ['feed', 'feed_ingredient', 'medicine', 'vaccine', 'disinfectant', 'equipment', 'spare', 'packaging', 'fuel', 'other'] as const;
 export const RATE_PRODUCTS = ['egg', 'broiler_farmgate', 'maize', 'soya'] as const;
 export const STAFF_ROLES = ['farm_manager', 'finance', 'shed_supervisor', 'labour', 'veterinarian', 'store_keeper', 'auditor', 'hatchery_manager', 'hatchery_ops_manager', 'hatchery_technician', 'sales_officer', 'dispatch_officer', 'procurement_officer'] as const;
-export const RULE_KEYS = ['allow_self_approval', 'egg_max_storage_days'] as const; // tenant_rule keys the app edits (0036)
 export const LANGS = ['en', 'te', 'hi', 'ta', 'kn'] as const;
 /** Indian mobile: any formatting, last 10 digits starting 6-9 */
 const mobile = z.string().transform((s) => s.replace(/\D/g, '').slice(-10)).pipe(z.string().regex(/^[6-9]\d{9}$/));
@@ -36,7 +48,10 @@ const mobile = z.string().transform((s) => s.replace(/\D/g, '').slice(-10)).pipe
 export const SCHEMAS = {
   addFarm: z.object({ name: text, farm_type: z.enum(FARM_TYPES), district: opt(text), village: opt(text), capacity: opt(int(1)) }),
   addShed: z.object({ farm_id: id, name: text, shed_type: z.enum(SHED_TYPES), capacity: int(1), area_sqft: opt(int(1)) }),
-  addBatch: z.object({ shed_id: id, code: text, breed_id: opt(id), placed: notFuture, doc: int(1), doc_rate: z.coerce.number().min(0), vendor_id: opt(id) }),
+  // breeder flocks also split the birds placed into females + males (0038): both or neither, and they add up to the chicks placed
+  addBatch: z.object({ shed_id: id, code: text, breed_id: opt(id), placed: notFuture, doc: int(1), doc_rate: z.coerce.number().min(0), vendor_id: opt(id), females_placed: opt(int(0)), males_placed: opt(int(0)) })
+    .refine((x) => (x.females_placed == null) === (x.males_placed == null), { path: ['females_placed'] })
+    .refine((x) => x.females_placed == null || x.females_placed + (x.males_placed ?? 0) === x.doc, { path: ['doc'] }),
   mort: z.object({ batch_id: id, date, count: int(1), cause: opt(z.string().max(20)), notes: opt(z.string().max(500)) }),
   vaccDone: z.object({ vacc_id: id, date }),
   addVisit: z.object({ batch_id: id, date, vet: text, findings: opt(z.string().max(1000)), prescription: opt(z.string().max(1000)) }),
@@ -110,8 +125,61 @@ export const SCHEMAS = {
   receiveTransfer: z.object({ transfer_id: id, received_qty: int(0), rejects: int(0), date: notFuture, note: opt(z.string().trim().max(500)) })
     .refine((x) => x.rejects <= x.received_qty, { path: ['rejects'] }),
   loadSetting: z.object({ batch_id: id, transfer_id: id, qty: int(1), age_override_reason: opt(z.string().trim().max(300)) }),
-  setRule: z.object({ key: z.enum(RULE_KEYS), value: z.string().trim().min(1).max(10) })
-    .refine((x) => (x.key === 'allow_self_approval' ? ['yes', 'no'].includes(x.value) : /^\d{1,2}$/.test(x.value) && +x.value >= 1 && +x.value <= 30), { path: ['value'] }),
+  setRule: z.object({ key: z.string().refine((k) => RULE_KEYS.includes(k)), value: z.string().trim().min(1).max(10) })
+    .refine((x) => parseRule(x.key, x.value) !== null, { path: ['value'] }),
+  // ---- breeder flock (0038/0039): daily record, weights, egg collection, health, house readings
+  breederDaily: z.object({
+    batch_id: id, date: notFuture, female_mort: int(0), male_mort: int(0), female_culls: int(0), male_culls: int(0),
+    feed_f_kg: opt(dec(0, 1e5)), feed_m_kg: opt(dec(0, 1e5)), diet_stage: opt(z.enum(DIET_STAGES)), cleanup_hours: opt(dec(0, 24)),
+    water_l: opt(dec(0, 1e6)), water_treatment: opt(z.enum(WATER_TREAT)), water_quality: opt(z.enum(WATER_QUAL)), light_hours: opt(dec(0, 24)), remarks: opt(z.string().max(500)),
+  }),
+  bodyWeight: z.object({
+    batch_id: id, date: notFuture, sex: z.enum(['F', 'M']), sample_size: int(1), avg_g: int(1),
+    uniformity_pct: opt(dec(0, 100)), cv_pct: opt(dec(0, 100)), fleshing_score: opt(int(1).max(5)),
+  }).refine((x) => x.sex === 'M' || x.fleshing_score == null, { path: ['fleshing_score'] }),
+  eggCollection: z.object({
+    batch_id: id, date: notFuture, collection_no: int(1).max(6), nest: int(0), floor: int(0).default(0), broken: int(0).default(0), cracked: int(0).default(0), dirty: int(0).default(0),
+    dirty_treated: int(0).default(0), misshapen: int(0).default(0), double_yolk: int(0).default(0), small: int(0).default(0), soft_shell: int(0).default(0),
+  }).refine((x) => x.dirty_treated <= x.dirty, { path: ['dirty_treated'] })
+    .refine((x) => x.broken + x.cracked + x.dirty + x.misshapen + x.double_yolk + x.small + x.soft_shell <= x.nest, { path: ['nest'] }),
+  medication: z.object({
+    batch_id: id, date: notFuture, medicine: text, dosage: z.string().trim().min(1).max(60), duration_days: int(1).max(90),
+    reason: z.string().trim().min(1).max(500), prescribed_by: opt(z.string().trim().max(120)), withdrawal_days: opt(int(0).max(120)),
+  }),
+  biosecurity: z.object({
+    batch_id: id, date, nature: z.string().trim().min(3).max(500), birds_affected: opt(int(0)), action_taken: opt(z.string().trim().max(1000)),
+    responsible: opt(z.string().trim().max(120)), follow_up_on: opt(date),
+  }).refine((x) => !x.follow_up_on || x.follow_up_on >= x.date, { path: ['follow_up_on'] }),
+  houseReading: z.object({
+    shed_id: id, temp_c: opt(dec(-20, 60)), rh_pct: opt(dec(0, 100)), nh3_ppm: opt(dec(0, 1000)), lux: opt(dec(0, 1e5)),
+    ventilation: opt(z.enum(VENT)), litter: opt(z.enum(LITTER)), power: opt(z.enum(POWER)),
+  }),
+  // ---- hatchery (0041/0042): machines, setter loading, candling, hatcher, hatch, release, chick quality, vaccination
+  addMachine: z.object({ farm_id: id, name: text, machine_kind: z.enum(MACHINE_KINDS), machine_no: opt(z.string().trim().max(20)), capacity_eggs: int(1), stage: z.enum(['single', 'multi']) }),
+  machineReading: z.object({
+    asset_id: id, temp_c: opt(dec(-20, 60)), wet_bulb_c: opt(dec(-20, 60)), rh_pct: opt(dec(0, 100)), fan_rpm: opt(int(0)), alarm: opt(z.enum(['yes', 'no'])),
+  }),
+  loadSetter: z.object({ batch_id: id, setter_id: id }),
+  // stage 1 = day 10 (infertile / early dead / dirty), stage 2 = day 18 (mid / late dead)
+  candling: z.object({
+    batch_id: id, stage: z.coerce.number().int().min(1).max(2), date: notFuture, eggs_candled: int(0),
+    infertile: opt(int(0)), early_dead: opt(int(0)), dirty: opt(int(0)), mid_dead: opt(int(0)), late_dead: opt(int(0)),
+  }).refine((x) => (x.stage === 1 ? [x.infertile, x.early_dead, x.dirty] : [x.mid_dead, x.late_dead]).every((n) => n != null), { path: ['infertile'] }),
+  hatcherTransfer: z.object({ batch_id: id, hatcher_id: id, date: notFuture, eggs: int(1) }),
+  hatchFull: z.object({ batch_id: id, date: notFuture, chicks_a: int(0), chicks_b: int(0), culls: int(0), dead_in_hatcher: int(0), unhatched: int(0) }),
+  releaseHatcher: z.object({
+    batch_id: id, chicks_removed: yes, waste_recorded: yes, cleaned: yes, disinfected: yes, inspected: yes,
+    disinfectant: opt(z.string().trim().max(80)), notes: opt(z.string().trim().max(500)),
+  }),
+  chickQuality: z.object({
+    batch_id: id, date: notFuture, sample_size: int(1), avg_weight_g: opt(dec(1, 200)), uniformity_pct: opt(dec(0, 100)),
+    navel_defects: int(0), leg_defects: int(0), other_defects: int(0), dispatch_eligible: z.enum(['yes', 'no']), remarks: opt(z.string().trim().max(500)),
+  }).refine((x) => x.navel_defects + x.leg_defects + x.other_defects <= x.sample_size, { path: ['sample_size'] }),
+  chickVaccine: z.object({
+    batch_id: id, vaccine_id: id, vaccine_lot: z.string().trim().min(1).max(40), expiry: date, qty: int(1), override_reason: opt(z.string().trim().max(300)),
+  }),
+  // approve / reject one record: the six approval flows share one shape, each act key carries its own role list
+  decideDaily: DECIDE, decideEggs: DECIDE, decideCandling: DECIDE, decideXfer: DECIDE, decideHatch: DECIDE, decideQuality: DECIDE,
   inviteUser: z.object({ name: text, phone: mobile, role: z.enum(STAFF_ROLES), language: z.enum(LANGS), farm_id: opt(id) }),
 } as const;
 

@@ -10,6 +10,8 @@ import { dateFmt, daysBetween, fmtINR, fmtL, fmtN } from '@/lib/format';
 import { Back, RagPill } from '@/components/ui/bits';
 import { ActBtn } from '@/components/ui/ActBtn';
 import { SettingSources, FlockTransfers } from '@/components/trace/Transfers';
+import { BreederPanel } from '@/components/erp/Breeder';
+import { HatchFlow, HatchKpi, isFullFlow } from '@/components/erp/Hatchery';
 import { LineChart } from '@/components/charts/LineChart';
 import { BarChart } from '@/components/charts/BarChart';
 
@@ -27,6 +29,7 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
   const wk = (i: number) => Math.floor(logs[i].day / 7);
   const mid = Math.floor(logs.length / 2);
   const hatch = b.ft === 'hatchery';
+  const full = hatch && (await isFullFlow(b.id)); // 0044: new settings use the D10/D18/transfer screens
 
   let chart: React.ReactNode = null;
   if (b.ft === 'layer' && k.eggs && logs.length) {
@@ -94,9 +97,12 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
         </div>
       </div>
 
-      {hatch && <HatchCard b={b} invoices={tn.invoices} t={t} dmy={dmy} />}
+      {hatch && <HatchCard b={b} invoices={tn.invoices} t={t} dmy={dmy} full={full} />}
+      {full && <HatchFlow batchId={b.id} eggsSet={b.doc} />}
+      {hatch && <HatchKpi batchId={b.id} />}
       {hatch && <SettingSources batchId={b.id} eggsSet={b.doc} locked={!!b.hatch} />}
       {b.ft === 'breeder' && <FlockTransfers flockId={b.id} />}
+      {b.ft === 'breeder' && <BreederPanel batchId={b.id} />}
       {b.ft === 'broiler' && <ContractCard b={b} tn={tn} k={k} t={t} dmy={dmy} />}
 
       {chart && (
@@ -242,7 +248,7 @@ function ContractCard({ b, tn, k, t, dmy }: { b: Batch; tn: Tenant; k: BatchKpi;
 }
 
 // Hatchery setting: set → candle → hatch → dispatch (hatch_record, 0025; dispatch = 'doc' sale of this batch).
-function HatchCard({ b, invoices, t, dmy }: { b: Batch; invoices: Invoice[]; t: Awaited<ReturnType<typeof getTranslations>>; dmy: (s: string) => string }) {
+function HatchCard({ b, invoices, t, dmy, full }: { b: Batch; invoices: Invoice[]; t: Awaited<ReturnType<typeof getTranslations>>; dmy: (s: string) => string; full: boolean }) {
   const h = hatchKpi(b, invoices), r = b.hatch;
   const pct = (x: number | null) => (x == null ? '—' : `${x}%`);
   const candled: Record<string, string> = r?.candled_on ? { candled: r.candled_on, clears: String(r.clears), dead: String(r.dead_germ) } : {};
@@ -263,8 +269,8 @@ function HatchCard({ b, invoices, t, dmy }: { b: Batch; invoices: Invoice[]; t: 
         {h.chicks != null && <><div>{t('hatch.dispatched')}</div><div>{fmtN(h.dispatched)} / {fmtN(h.chicks)}</div></>}
       </div>
       <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-        <ActBtn act="hatchCandle" ctx={{ batch: b.id, set: fmtN(h.set), ...candled }} className="btn small secondary">{t('hatch.candleBtn')}</ActBtn>
-        <ActBtn act="hatchResult" ctx={{ batch: b.id, ...hatched }} className="btn small secondary">{t('hatch.resultBtn')}</ActBtn>
+        {!full && <ActBtn act="hatchCandle" ctx={{ batch: b.id, set: fmtN(h.set), ...candled }} className="btn small secondary">{t('hatch.candleBtn')}</ActBtn>}
+        {!full && <ActBtn act="hatchResult" ctx={{ batch: b.id, ...hatched }} className="btn small secondary">{t('hatch.resultBtn')}</ActBtn>}
         {!!h.inStock && h.inStock > 0 && <ActBtn act="saleOpen" ctx={{ batch: b.id, product: 'doc', unit: 'chick', qty: String(h.inStock) }} className="btn small">{t('hatch.dispatchBtn')}</ActBtn>}
       </div>
     </div>

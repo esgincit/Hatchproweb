@@ -8,11 +8,12 @@ import { createClient } from '@/lib/supabase/client';
 import { runAct } from '@/app/actions/forms';
 import {
   SCHEMAS, isAct, FARM_TYPES, SHED_TYPES, VENDOR_CATS, BILL_CATS, PRODUCTS, CUSTOMER_KINDS, WORKER_ROLES, PAY_MODES,
-  STAGES, PRIORITIES, ASSET_CATS, ITEM_CATS, RATE_PRODUCTS, STAFF_ROLES,
+  STAGES, PRIORITIES, ASSET_CATS, ITEM_CATS, RATE_PRODUCTS, STAFF_ROLES, DIET_STAGES, WATER_TREAT, WATER_QUAL, VENT, LITTER, POWER, MACHINE_KINDS,
 } from '@/lib/schemas';
 import { LOCALES, LOCALE_NAMES } from '@/lib/i18n/locales';
 import { addDays, fmtINR } from '@/lib/format';
 import { settleable } from '@/lib/trace';
+import { ruleDef } from '@/lib/rules';
 import { toast } from '@/components/ui/Toast';
 import { FormSheet, type FormSpec, type Field } from './FormSheet';
 
@@ -26,7 +27,9 @@ type Lookups = {
   breeds: { id: string; name: string; farm_type: string }[];
   vendors: { id: string; name: string; category: string }[];
   customers: { id: string; name: string }[];
-  batches: { id: string; code: string; shed: string; ft: string; active: boolean }[];
+  batches: { id: string; code: string; shed: string; shed_id: string; ft: string; active: boolean }[];
+  /** setters, hatchers and combined machines (assets with a machine kind, 0041) */
+  machines: { id: string; name: string; no: string | null; kind: string; cap: number }[];
   diseases: { code: string; name: string }[];
   open: { kind: 'bill' | 'invoice'; id: string; no: string; party: string; out: number }[];
   assets: { id: string; name: string }[];
@@ -42,13 +45,13 @@ type Lookups = {
 /* eslint-disable @typescript-eslint/no-explicit-any -- PostgREST embeds */
 async function loadLookups(): Promise<Lookups> {
   const sb = createClient();
-  const [farms, sheds, breeds, vendors, customers, batches, diseases, bills, invoices, assets, items, pos, vaccines, workers, contracts, lots] = await Promise.all([
+  const [farms, sheds, breeds, vendors, customers, batches, diseases, bills, invoices, assets, items, pos, vaccines, workers, contracts, lots, machines] = await Promise.all([
     sb.from('farm').select('id,name,farm_type').order('created_at'),
     sb.from('shed').select('id,name,farm_id,batch(state)').order('name'),
     sb.from('breed').select('id,name,farm_type').order('name'),
     sb.from('vendor').select('id,name,category').order('name'),
     sb.from('customer').select('id,name').order('name'),
-    sb.from('batch').select('id,code,farm_type,state,shed(name)').order('placed_on', { ascending: false }),
+    sb.from('batch').select('id,code,farm_type,state,shed_id,shed(name)').order('placed_on', { ascending: false }),
     sb.from('disease_master').select('code,name').order('name'),
     sb.from('bill').select('id,bill_no,total,paid,vendor(name)').neq('status', 'paid').order('due_date'),
     sb.from('invoice').select('id,invoice_no,total,paid,customer(name)').neq('status', 'paid').order('due_date'),
@@ -59,6 +62,7 @@ async function loadLookups(): Promise<Lookups> {
     sb.from('worker').select('id,name').eq('active', true).order('name'),
     sb.from('contract').select('id,name').eq('active', true).order('created_at'),
     sb.from('egg_transfer').select('id,ref,received_qty,receipt_rejects,batch(code),vendor(name),setting_lot(qty)').eq('status', 'received').order('received_on'),
+    sb.from('asset').select('id,name,machine_no,machine_kind,capacity_eggs').not('machine_kind', 'is', null).order('name'),
   ]);
   const d = (r: { data: unknown }) => (r.data ?? []) as any[];
   const one = (x: any) => (Array.isArray(x) ? x[0] : x);
@@ -68,7 +72,7 @@ async function loadLookups(): Promise<Lookups> {
     breeds: d(breeds),
     vendors: d(vendors),
     customers: d(customers),
-    batches: d(batches).map((b) => ({ id: b.id, code: b.code, shed: one(b.shed)?.name ?? '', ft: b.farm_type, active: b.state !== 'closed' })),
+    batches: d(batches).map((b) => ({ id: b.id, code: b.code, shed: one(b.shed)?.name ?? '', shed_id: b.shed_id, ft: b.farm_type, active: b.state !== 'closed' })),
     diseases: d(diseases),
     open: [
       ...d(bills).map((b) => ({ kind: 'bill' as const, id: b.id, no: b.bill_no, party: one(b.vendor)?.name ?? '', out: Number(b.total) - Number(b.paid) })),
@@ -81,6 +85,7 @@ async function loadLookups(): Promise<Lookups> {
       return { id: p.id, no: p.po_no, vendor: one(p.vendor)?.name ?? '', item: one(l?.item)?.name ?? '', qty: Number(l?.qty ?? 0), rate: Number(l?.rate ?? 0) };
     }),
     vaccines: d(vaccines),
+    machines: d(machines).map((m) => ({ id: m.id, name: m.name, no: m.machine_no, kind: m.machine_kind, cap: m.capacity_eggs })),
     workers: d(workers),
     contracts: d(contracts),
     lots: d(lots).map((x) => ({
@@ -101,6 +106,7 @@ export function nextBatchCode(codes: string[], year: string) {
 
 // Acts that reuse another form, and acts that just navigate.
 const ALIAS: Record<string, string> = { addShedPick: 'addShed', addVisitPick: 'addVisit', rejectTransfer: 'decideTransfer' };
+const keyOf = (a: string) => ALIAS[a] ?? a.replace(/^(approve|reject):/, ''); // approve:decideDaily / reject:decideDaily act on that approval flow
 const NAV: Record<string, string> = { attToday: '/more/people' };
 // file downloads (app/api/export/[kind]); `report` rows pass the kind they export, or the printable page (app/(app)/report/[kind])
 const DOWNLOAD: Record<string, (c: ActCtx) => string | null> = {
@@ -139,7 +145,7 @@ export function ActionHost({ today }: { today: string }) {
   }, [router]);
 
   const submit = useCallback(async (values: Record<string, unknown>) => {
-    const key = ALIAS[act] ?? act;
+    const key = keyOf(act);
     if (!isAct(key)) return { error: t('forms.unknown') };
     const local = SCHEMAS[key].safeParse(values);
     if (!local.success) return { fields: local.error.issues.map((i) => String(i.path[0])), error: t('forms.invalid') };
@@ -161,8 +167,12 @@ export function ActionHost({ today }: { today: string }) {
         lookups.current = null;
         return r.ok ? (toast(r.msg), router.refresh()) : toast(r.error);
       }
+      if (a.startsWith('approve:')) { // one tap on a record row
+        const r = await runAct(keyOf(a), { id: ctx.id, decision: 'approve' });
+        return r.ok ? (toast(r.msg), router.refresh()) : toast(r.error);
+      }
       lookups.current ??= await loadLookups();
-      const s = build(ALIAS[a] ?? a, ctx, lookups.current, t, today);
+      const s = build(keyOf(a), ctx, lookups.current, t, today);
       if (!s) return toast(t('common.comingNext'));
       setAct(a);
       setSpec(s);
@@ -186,6 +196,11 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
   const vendorOpts = (cat?: string): Opt[] => L.vendors.filter((v) => !cat || v.category === cat).map((v) => [v.id, v.name]);
   const tr = (k: string, p?: Record<string, string | number>) => t(`trace.${k}`, p);
   const enumOpts = (vals: readonly string[], ns: string): Opt[] => vals.map((v) => [v, t(`${ns}.${v}`)]);
+  const e = (k: string, p?: Record<string, string | number>) => t(`erp.${k}`, p);
+  const num = (id: string, label: string, o: Partial<Field> = {}): Field => ({ id, label, type: 'number', half: true, ...o });
+  const pick = (id: string, label: string, vals: readonly string[], ns: string): Field => ({ id, label, type: 'select', half: true, options: [none, ...enumOpts(vals, `erp.${ns}`)] });
+  const yn: Opt[] = [['no', e('no')], ['yes', e('yes')]];
+  const machineOpts = (kinds: string[]): Opt[] => L.machines.filter((m) => kinds.includes(m.kind)).map((m): Opt => [m.id, `${m.name}${m.no ? ` · ${m.no}` : ''} · ${e('f.capShort', { n: m.cap })}`]);
 
   switch (act) {
     case 'addFarm':
@@ -224,10 +239,14 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
           { id: 'code', label: f('batch.code'), value: nextBatchCode(L.batches.filter((b) => b.ft === ft).map((b) => b.code), today.slice(0, 4)), required: true },
           { id: 'breed_id', label: f('batch.breed'), type: 'select', options: [none, ...L.breeds.map((b): Opt => [b.id, `${b.name} · ${t(`farmType.${b.farm_type}`)}`])] },
           date('placed', f('batch.placed')),
-          { id: 'doc', label: f('batch.doc'), type: 'number', half: true, required: true },
+          ...(ft === 'breeder'
+            ? [{ id: 'females_placed', label: e('f.females'), type: 'number', half: true, required: true } as Field, { id: 'males_placed', label: e('f.males'), type: 'number', half: true, required: true } as Field]
+            : [{ id: 'doc', label: f('batch.doc'), type: 'number', half: true, required: true } as Field]),
           { id: 'doc_rate', label: f('batch.rate'), type: 'number', half: true, value: 0 },
           { id: 'vendor_id', label: f('batch.vendor'), type: 'select', options: [none, ...vendorOpts('doc_hatchery')], half: true },
         ],
+        // breeder flock: the chicks placed are females + males
+        transform: ft === 'breeder' ? (v) => ({ ...v, doc: String((+v.females_placed || 0) + (+v.males_placed || 0)) }) : undefined,
       };
     }
     case 'mort':
@@ -583,14 +602,173 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
       };
     }
     case 'setRule': {
-      const days = ctx.key === 'egg_max_storage_days';
+      const r = ruleDef(ctx.key ?? '');
+      if (!r) return null;
+      const bool = r.key === 'allow_self_approval' ? [tr('rules.allowed'), tr('rules.blocked')] : [e('yes'), e('no')];
+      const field: Field = r.kind === 'bool' ? { id: 'value', label: e(`rule.${r.key}`), type: 'select', value: ctx.value, options: [['yes', bool[0]], ['no', bool[1]]] }
+        : r.kind === 'enum' ? { id: 'value', label: e(`rule.${r.key}`), type: 'select', value: ctx.value, options: enumOpts(r.opts!, 'erp.rule.v') }
+        : { id: 'value', label: r.key === 'egg_max_storage_days' ? tr('rules.daysVal') : e(`rule.${r.key}`), type: 'number', step: 'any', required: true, value: ctx.value, hint: `(${r.min}–${r.max})` };
+      return { title: tr('rules.formTitle'), submit: f('save'), hidden: { key: ctx.key }, fields: [field] };
+    }
+    // ---- breeder flock (0038/0039): the flock / house / machine id comes from the button that opened the form
+    case 'breederDaily':
       return {
-        title: tr('rules.formTitle'), submit: f('save'), hidden: { key: ctx.key },
-        fields: [days
-          ? { id: 'value', label: tr('rules.daysVal'), type: 'number', required: true, value: ctx.value }
-          : { id: 'value', label: tr('rules.selfApproval'), type: 'select', value: ctx.value, options: [['yes', tr('rules.allowed')], ['no', tr('rules.blocked')]] }],
+        title: e('daily.title'), intro: e('daily.intro'), submit: e('submit'), hidden: { batch_id: ctx.batch },
+        fields: [
+          date(),
+          num('female_mort', e('f.femaleMort'), { value: '0', required: true }), num('male_mort', e('f.maleMort'), { value: '0', required: true }),
+          num('female_culls', e('f.femaleCulls'), { value: '0', required: true }), num('male_culls', e('f.maleCulls'), { value: '0', required: true }),
+          num('feed_f_kg', e('f.feedF'), { step: 'any' }), num('feed_m_kg', e('f.feedM'), { step: 'any' }),
+          pick('diet_stage', e('f.diet'), DIET_STAGES, 'diet'), num('cleanup_hours', e('f.cleanup'), { step: 'any' }),
+          num('water_l', e('f.water'), { step: 'any' }), num('light_hours', e('f.light'), { step: 'any' }),
+          pick('water_treatment', e('f.waterTreat'), WATER_TREAT, 'wtreat'), pick('water_quality', e('f.waterQual'), WATER_QUAL, 'wqual'),
+          { id: 'remarks', label: f('notes'), type: 'textarea' },
+        ],
+      };
+    case 'bodyWeight':
+      return {
+        title: e('bw.title'), intro: e('bw.intro'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [
+          date('date', e('bw.weighedOn')),
+          { id: 'sex', label: e('f.sex'), type: 'select', half: true, options: [['F', e('f.female')], ['M', e('f.male')]] },
+          num('sample_size', e('f.sample'), { required: true }), num('avg_g', e('f.avgG'), { required: true }),
+          num('uniformity_pct', e('f.uniformity'), { step: 'any' }), num('cv_pct', e('f.cv'), { step: 'any' }),
+          num('fleshing_score', e('f.fleshing'), { hint: '1–5' }),
+        ],
+      };
+    case 'eggCollection':
+      return {
+        title: e('egg.title'), intro: e('egg.intro'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [
+          date('date', e('egg.collectedOn')), num('collection_no', e('egg.no'), { value: '1', required: true, hint: '1–6' }),
+          num('nest', e('egg.nest'), { required: true }), num('floor', e('egg.floor'), { value: '0', required: true }),
+          num('broken', e('egg.broken'), { value: '0' }), num('cracked', e('egg.cracked'), { value: '0' }),
+          num('dirty', e('egg.dirty'), { value: '0' }), num('dirty_treated', e('egg.dirtyTreated'), { value: '0' }),
+          num('misshapen', e('egg.misshapen'), { value: '0' }), num('double_yolk', e('egg.doubleYolk'), { value: '0' }),
+          num('small', e('egg.small'), { value: '0' }), num('soft_shell', e('egg.softShell'), { value: '0' }),
+        ],
+      };
+    case 'medication':
+      return {
+        title: e('med.title'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [
+          date('date', e('med.givenOn')), { id: 'medicine', label: e('med.medicine'), required: true },
+          { id: 'dosage', label: e('med.dosage'), half: true, required: true, placeholder: '0.5 g/L' }, num('duration_days', e('med.days'), { required: true }),
+          { id: 'reason', label: e('med.reason'), type: 'textarea', required: true },
+          { id: 'prescribed_by', label: e('med.by'), half: true }, num('withdrawal_days', e('med.withdrawal')),
+        ],
+      };
+    case 'biosecurity':
+      return {
+        title: e('bio.title'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [
+          date('date', e('bio.on')), { id: 'nature', label: e('bio.nature'), type: 'textarea', required: true },
+          num('birds_affected', e('bio.birds')), { id: 'responsible', label: e('bio.responsible'), half: true },
+          { id: 'action_taken', label: e('bio.action'), type: 'textarea' },
+          { ...date('follow_up_on', e('bio.followUp')), required: false, max: undefined, value: '' },
+        ],
+      };
+    case 'houseReading':
+      return {
+        title: e('house.title'), submit: f('save'), hidden: { shed_id: ctx.shed },
+        fields: [
+          num('temp_c', e('f.temp'), { step: 'any' }), num('rh_pct', e('f.rh'), { step: 'any' }),
+          num('nh3_ppm', e('f.nh3'), { step: 'any' }), num('lux', e('f.lux'), { step: 'any' }),
+          pick('ventilation', e('f.vent'), VENT, 'vent'), pick('litter', e('f.litter'), LITTER, 'litter'), pick('power', e('f.power'), POWER, 'power'),
+        ],
+      };
+    // ---- hatchery (0041/0042/0044)
+    case 'addMachine': {
+      const hf = L.farms.filter((x) => x.farm_type === 'hatchery');
+      if (!hf.length) return { title: e('machine.addTitle'), intro: tr('form.needHatchery'), fields: [], submit: f('save') };
+      return {
+        title: e('machine.addTitle'), intro: e('machine.intro'), submit: f('save'),
+        fields: [
+          { id: 'farm_id', label: f('shed.farm'), type: 'select', options: hf.map((x): Opt => [x.id, x.name]) },
+          { id: 'name', label: f('name'), required: true, half: true }, { id: 'machine_no', label: e('machine.no'), half: true },
+          { id: 'machine_kind', label: e('machine.kind'), type: 'select', half: true, options: enumOpts(MACHINE_KINDS, 'erp.kind') },
+          { id: 'stage', label: e('machine.stage'), type: 'select', half: true, options: [['multi', e('stage.multi')], ['single', e('stage.single')]] },
+          num('capacity_eggs', e('machine.capacity'), { required: true }),
+        ],
       };
     }
+    case 'machineReading':
+      return {
+        title: e('machine.reading', { name: ctx.name ?? '' }), submit: f('save'), hidden: { asset_id: ctx.asset },
+        fields: [
+          num('temp_c', e('f.temp'), { step: 'any' }), num('wet_bulb_c', e('f.wetBulb'), { step: 'any' }),
+          num('rh_pct', e('f.rh'), { step: 'any' }), num('fan_rpm', e('f.fan')),
+          { id: 'alarm', label: e('f.alarm'), type: 'select', half: true, options: [none, ['no', e('no')], ['yes', e('yes')]] },
+        ],
+      };
+    case 'loadSetter': {
+      const opts = machineOpts(['setter', 'combined']);
+      if (!opts.length) return { title: e('setter.title'), intro: e('setter.none'), fields: [], submit: f('save') };
+      return { title: e('setter.title'), intro: e('setter.intro', { n: ctx.eggs ?? '' }), submit: f('save'), hidden: { batch_id: ctx.batch }, fields: [{ id: 'setter_id', label: e('setter.pick'), type: 'select', options: opts }] };
+    }
+    case 'candling': {
+      const first = ctx.stage === '1';
+      return {
+        title: e(first ? 'candle.title1' : 'candle.title2'), intro: e('candle.intro'), submit: f('save'), hidden: { batch_id: ctx.batch, stage: ctx.stage },
+        fields: [
+          date('date', e('candle.on')), num('eggs_candled', e('candle.candled'), { required: true, value: ctx.eggs }),
+          ...(first
+            ? [num('infertile', e('candle.infertile'), { required: true, value: '0' }), num('early_dead', e('candle.earlyDead'), { required: true, value: '0' }), num('dirty', e('candle.dirty'), { required: true, value: '0' })]
+            : [num('mid_dead', e('candle.midDead'), { required: true, value: '0' }), num('late_dead', e('candle.lateDead'), { required: true, value: '0' })]),
+        ],
+      };
+    }
+    case 'hatcherTransfer': {
+      const opts = machineOpts(['hatcher', 'combined']);
+      if (!opts.length) return { title: e('xfer.title'), intro: e('xfer.none'), fields: [], submit: f('save') };
+      return {
+        title: e('xfer.title'), intro: e('xfer.intro'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [
+          { id: 'hatcher_id', label: e('xfer.hatcher'), type: 'select', options: opts }, date('date', e('xfer.movedOn')),
+          num('eggs', e('xfer.eggs'), { required: true, value: ctx.eggs }),
+        ],
+      };
+    }
+    case 'hatchFull':
+      return {
+        title: f('hatch.resultTitle'), intro: e('hatch.intro'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [
+          date('date', e('hatch.on')), num('chicks_a', f('hatch.chicksA'), { required: true }), num('chicks_b', f('hatch.chicksB'), { required: true, value: '0' }),
+          num('culls', f('hatch.culls'), { required: true, value: '0' }), num('dead_in_hatcher', e('hatch.deadIn'), { required: true, value: '0' }),
+          num('unhatched', e('hatch.unhatched'), { required: true, value: '0' }),
+        ],
+      };
+    case 'releaseHatcher':
+      return {
+        title: e('release.title'), intro: e('release.intro'), submit: e('release.submit'), hidden: { batch_id: ctx.batch },
+        fields: [
+          ...(['chicks_removed', 'waste_recorded', 'cleaned', 'disinfected', 'inspected'] as const).map((k): Field => ({ id: k, label: e(`release.${k}`), type: 'select', options: yn, value: 'no' })),
+          { id: 'disinfectant', label: e('release.disinfectant'), half: true }, { id: 'notes', label: f('notes'), half: true },
+        ],
+      };
+    case 'chickQuality':
+      return {
+        title: e('quality.title'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [
+          date('date', e('quality.on')), num('sample_size', e('f.sample'), { required: true }),
+          num('avg_weight_g', e('quality.weight'), { step: 'any' }), num('uniformity_pct', e('f.uniformity'), { step: 'any' }),
+          num('navel_defects', e('quality.navel'), { value: '0', required: true }), num('leg_defects', e('quality.leg'), { value: '0', required: true }),
+          num('other_defects', e('quality.other'), { value: '0', required: true }),
+          { id: 'dispatch_eligible', label: e('quality.eligible'), type: 'select', half: true, options: [['yes', e('yes')], ['no', e('no')]] },
+          { id: 'remarks', label: f('notes'), type: 'textarea' },
+        ],
+      };
+    case 'chickVaccine':
+      return {
+        title: e('vacc.title'), intro: e('vacc.intro'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [
+          { id: 'vaccine_id', label: e('vacc.vaccine'), type: 'select', options: L.vaccines.map((v): Opt => [v.id, v.name]) },
+          { id: 'vaccine_lot', label: e('vacc.lot'), half: true, required: true }, { ...date('expiry', e('vacc.expiry')), max: undefined, value: '' },
+          num('qty', e('vacc.qty'), { required: true, value: ctx.qty }), { id: 'override_reason', label: e('vacc.override') },
+        ],
+      };
+    case 'decideDaily': case 'decideEggs': case 'decideCandling': case 'decideXfer': case 'decideHatch': case 'decideQuality': // opened by reject:<act>
+      return { title: e('rejectTitle'), submit: tr('reject'), danger: true, hidden: { id: ctx.id, decision: 'reject' }, fields: [{ id: 'reason', label: tr('form.reason'), type: 'textarea', required: true }] };
     case 'inviteUser':
       return {
         title: f('invite.title'), intro: f('invite.intro'), submit: f('invite.submit'),

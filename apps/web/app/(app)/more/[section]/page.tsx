@@ -10,6 +10,7 @@ import { ActBtn } from '@/components/ui/ActBtn';
 import { PushToggle } from '@/components/shell/PushToggle';
 import { ContactButton } from '@/components/marketplace/Market';
 import { TransferList } from '@/components/trace/Transfers';
+import { MachineList } from '@/components/erp/Hatchery';
 import type { View } from '@/lib/view/types';
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
@@ -28,6 +29,7 @@ export default async function Section({ params, searchParams }: { params: Promis
     case 'transfers': return (
       <>{B}<Header title={t('trace.title')} action={<ActBtn act="addTransfer" className="btn small">{t('trace.add')}</ActBtn>} /><TransferList /></>
     );
+    case 'machines': return <>{B}<Header title={t('erp.machine.title')} /><MachineList /></>;
     case 'vendors': return <Vendors c={c} B={B} />;
     case 'customers': return <Customers c={c} B={B} />;
     case 'stock': return <Stock c={c} B={B} />;

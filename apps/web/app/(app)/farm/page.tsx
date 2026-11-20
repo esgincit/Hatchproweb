@@ -17,6 +17,7 @@ export default async function Farm() {
     <>
       <Header title={t('farm.title')} action={<ActBtn act="addFarm" className="btn small">{t('farm.addFarm')}</ActBtn>} />
       <Link className="back" href="/more/transfers">{t('trace.open')}</Link>
+      {tn.farms.some((f) => f.farm_type === 'hatchery') && <Link className="back" href="/more/machines" style={{ marginLeft: 12 }}>{t('erp.machine.open')}</Link>}
       {tn.farms.length > 0 && <Farm3DView farms={farmScene(tn, today)} />}
       {tn.farms.length ? (
         tn.farms.map((f) => {

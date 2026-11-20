@@ -29,6 +29,8 @@ export function tabsFor(roles: string[]): Tab[] {
 // ponytail: RLS is still tenant-only — mirror this in role-aware policies (roadmap Phase 13).
 const OWN = ['tenant_owner', 'farm_manager'];
 const MONEY = [...OWN, 'finance'];
+const BREED = [...OWN, 'shed_supervisor'];
+const HATCH = ['hatchery_technician', 'hatchery_ops_manager'];
 const SHED = [...OWN, 'shed_supervisor', 'labour', 'veterinarian'];
 /** which platform team sees/does what on the console (DB mirrors `billing` in 0016) */
 export const TEAM = {
@@ -62,6 +64,15 @@ export const ACT_ROLES: Record<string, string[]> = {
   receiveTransfer: [...OWN, 'shed_supervisor', 'hatchery_technician', 'hatchery_ops_manager'],
   loadSetting: [...OWN, 'shed_supervisor', 'hatchery_technician', 'hatchery_ops_manager'],
   setRule: ['tenant_owner'],
+  // breeder + hatchery (0038–0044): each list mirrors that table's RLS roles; approvals mirror its guard_locked() approvers
+  breederDaily: BREED, bodyWeight: BREED, eggCollection: BREED, medication: [...OWN, 'veterinarian'],
+  biosecurity: [...BREED, 'veterinarian', 'hatchery_ops_manager'], houseReading: [...BREED, ...HATCH], machineReading: [...BREED, ...HATCH],
+  addMachine: OWN, loadSetter: [...OWN, ...HATCH], candling: [...BREED, ...HATCH], hatcherTransfer: [...OWN, ...HATCH],
+  hatchFull: [...BREED, ...HATCH, 'hatchery_manager'], releaseHatcher: ['tenant_owner', 'hatchery_ops_manager', 'hatchery_manager'],
+  chickQuality: ['tenant_owner', 'veterinarian', 'hatchery_manager', 'hatchery_ops_manager'],
+  chickVaccine: ['tenant_owner', 'veterinarian', 'hatchery_manager', 'hatchery_technician'],
+  decideDaily: OWN, decideEggs: OWN, decideCandling: ['tenant_owner', 'hatchery_ops_manager'], decideXfer: ['tenant_owner', 'hatchery_ops_manager'],
+  decideHatch: ['tenant_owner', 'hatchery_manager'], decideQuality: ['tenant_owner', 'veterinarian', 'hatchery_manager'],
   decidePay: ['tenant_owner'], // payments > ₹50,000 by others wait for the owner (0012)
   inviteUser: ['tenant_owner'], // matches invite-user edge function + user_role_assignment policy
   // downloads (app/api/export) — the route enforces the same lists

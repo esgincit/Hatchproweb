@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import { dateFmt, fmtN } from '@/lib/format';
 import { ActBtn } from '@/components/ui/ActBtn';
+import { RULES, ruleText, type RuleDef } from '@/lib/rules';
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
 /* eslint-disable @typescript-eslint/no-explicit-any -- PostgREST embeds */
@@ -142,22 +143,29 @@ export async function SettingSources({ batchId, eggsSet, locked }: { batchId: st
   );
 }
 
-/** Owner-only tenant rules (tenant_rule): the two thresholds the transfer workflow reads. */
+/** Owner-only tenant rules (tenant_rule): the thresholds the transfer, breeder and hatchery workflows read. Defaults mirror the SQL ones. */
 export async function RulesCard() {
   const [sb, t] = [await createClient(), await getTranslations()];
   const { data } = await sb.from('tenant_rule').select('key,value');
-  const v = (k: string) => data?.find((r) => r.key === k)?.value;
-  const self = v('allow_self_approval') !== false, days = Number(v('egg_max_storage_days') ?? 7);
+  const shown = (r: RuleDef, v: unknown) => {
+    if (r.key === 'allow_self_approval') return v ? t('trace.rules.allowed') : t('trace.rules.blocked');
+    if (r.kind === 'bool') return v ? t('erp.yes') : t('erp.no');
+    if (r.kind === 'enum') return t(`erp.rule.v.${v}`);
+    return r.unit === 'days' ? t('trace.rules.days', { n: v as number }) : `${v}${r.unit === 'pct' ? ' %' : ' °C'}`;
+  };
+  const label = (k: string) => (k === 'allow_self_approval' ? t('trace.rules.selfApproval') : k === 'egg_max_storage_days' ? t('trace.rules.maxDays') : t(`erp.rule.${k}`));
   return (
     <div className="card" data-testid="rules-card">
       <div className="eyebrow" style={{ marginBottom: 6 }}>{t('trace.rules.title')}</div>
       <div className="list">
-        <div className="item"><div className="t">{t('trace.rules.selfApproval')}</div>
-          <div className="r"><span className="pill neutral">{self ? t('trace.rules.allowed') : t('trace.rules.blocked')}</span>{' '}
-            <ActBtn act="setRule" ctx={{ key: 'allow_self_approval', value: self ? 'yes' : 'no' }} className="btn small secondary">{t('trace.rules.change')}</ActBtn></div></div>
-        <div className="item"><div className="t">{t('trace.rules.maxDays')}</div>
-          <div className="r"><span className="pill neutral">{t('trace.rules.days', { n: days })}</span>{' '}
-            <ActBtn act="setRule" ctx={{ key: 'egg_max_storage_days', value: String(days) }} className="btn small secondary">{t('trace.rules.change')}</ActBtn></div></div>
+        {RULES.map((r) => {
+          const v = data?.find((x) => x.key === r.key)?.value ?? r.def;
+          return (
+            <div className="item" key={r.key} data-rule={r.key}><div className="t">{label(r.key)}</div>
+              <div className="r"><span className="pill neutral">{shown(r, v)}</span>{' '}
+                <ActBtn act="setRule" ctx={{ key: r.key, value: ruleText(v) }} className="btn small secondary">{t('trace.rules.change')}</ActBtn></div></div>
+          );
+        })}
       </div>
     </div>
   );
