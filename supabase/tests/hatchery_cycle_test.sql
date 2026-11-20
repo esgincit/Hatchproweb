@@ -15,7 +15,7 @@ begin
     values (ks, 'TRF-C1', fl, hat, '2026-10-15', '2026-10-15', '2026-10-16', 1000, 'submitted') returning id into tr;
   update egg_transfer set status = 'approved' where id = tr;
   update egg_transfer set status = 'received', received_qty = 1000, received_on = '2026-10-17' where id = tr;
-  insert into batch (tenant_id, farm_id, shed_id, code, farm_type, placed_on, doc_count) values (ks, hat, hs, 'KS-H-C1', 'hatchery', '2026-10-20', 1000) returning id into st;
+  insert into batch (tenant_id, farm_id, shed_id, code, farm_type, placed_on, doc_count, full_hatch_flow) values (ks, hat, hs, 'KS-H-C1', 'hatchery', '2026-10-20', 1000, true) returning id into st;
   insert into batch (tenant_id, farm_id, shed_id, code, farm_type, placed_on, doc_count) values (ks, hat, hs, 'KS-H-C2', 'hatchery', '2026-10-20', 300) returning id into st2;
   insert into setting_lot (tenant_id, batch_id, transfer_id, qty) values (ks, st, tr, 1000);
   insert into asset (tenant_id, farm_id, name, category, machine_kind, machine_no, capacity_eggs, stage)
