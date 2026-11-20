@@ -11,7 +11,8 @@ begin
   insert into breed_standard_curve (breed_id, age_week, std_weight_g, std_male_weight_g) values (br, 30, 3000, 3900);
   insert into batch (tenant_id, farm_id, shed_id, code, farm_type, breed_id, placed_on, doc_count, females_placed, males_placed)
     values (ks, bf, bs, 'KS-BR-T1', 'breeder', br, '2026-03-01', 5500, 5000, 500) returning id into fl;
-  perform set_config('t.fl', fl::text, true), set_config('t.shed', bs::text, true), set_config('t.farm', bf::text, true);
+  perform set_config('t.fl', fl::text, true), set_config('t.shed', bs::text, true), set_config('t.farm', bf::text, true),
+          set_config('t.vkr', (select id::text from batch where tenant_id = '4c593c59-b79c-5b92-8601-fd7c0d7a3b4c' limit 1), true);
   delete from notification where tenant_id = ks;
 end $$;
 set local role authenticated;
@@ -55,12 +56,22 @@ begin
   exception when insufficient_privilege then null; end;
   insert into biosecurity_incident (farm_id, occurred_on, nature, action_taken) values (current_setting('t.farm')::uuid, '2026-10-04', 'Visitor entered without foot dip', 'Retrained gate staff');
   assert (select first_egg_on from breeder_calendar where batch_id = fl) = '2026-08-23', 'first egg = placement + 25 weeks';
+  -- 0040: editing a day up past the limit alerts too
+  update breeder_daily set female_mort = 40 where log_date = '2026-10-03';
+  assert (select count(*) from notification where title like 'High mortality%') = 2, 'alert on update';
+  begin insert into biosecurity_incident (farm_id, shed_id, occurred_on, nature) values (current_setting('t.farm')::uuid, '3cc7357e-09d6-5972-a12d-5f5aa2949a3c', '2026-10-04', 'Wrong house');
+    assert false, 'shed from another farm'; exception when raise_exception then null; end;
 end $$;
 
 -- vet medicates; manager approves day 1; approved locks
 set local request.jwt.claims = '{"sub":"6cb2dade-5f3d-57c1-b062-f3b65a76db16","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["veterinarian"]}}';
 insert into medication_record (batch_id, given_on, medicine, dosage, duration_days, reason, withdrawal_days)
   values (current_setting('t.fl')::uuid, '2026-10-04', 'Amoxicillin', '0.5 g/L', 5, 'CRD', 3);
+do $$ begin
+  begin insert into medication_record (batch_id, given_on, medicine, dosage, duration_days, reason)
+    values (current_setting('t.vkr')::uuid, '2026-10-04', 'X', '1', 1, 'x');
+    assert false, 'medicated another tenant''s batch'; exception when raise_exception then null; end;
+end $$;
 set local request.jwt.claims = '{"sub":"9a7b4e00-d286-5aa1-9627-b38cdd6051a3","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["farm_manager"]}}';
 do $$ begin
   update breeder_daily set status = 'approved' where log_date = '2026-10-01';

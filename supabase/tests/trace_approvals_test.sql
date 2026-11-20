@@ -10,6 +10,7 @@ begin
   insert into shed (tenant_id, farm_id, name, capacity_birds) values (ks, bf, 'BR House 1', 6000) returning id into bs;
   insert into batch (tenant_id, farm_id, shed_id, code, farm_type, placed_on, doc_count)
     values (ks, bf, bs, 'KS-BR-T1', 'breeder', '2026-03-01', 5000) returning id into fl;
+  insert into hatching_egg_collection (tenant_id, batch_id, collected_on, collection_no, nest) values (ks, fl, '2026-10-10', 1, 1300); -- 0039 egg store
   insert into batch (tenant_id, farm_id, shed_id, code, farm_type, placed_on, doc_count)
     values (ks, '72c46a7d-d72c-5676-bc8a-70c996df7088', '3cc7357e-09d6-5972-a12d-5f5aa2949a3c', 'KS-H-T1', 'hatchery', '2026-10-20', 1000)
     returning id into st;
@@ -96,7 +97,8 @@ begin
   select * into r from setting_trace where transfer_ref = 'TRF-T1';
   assert r.estimated and r.share = 0.68 and r.chicks = 510 and r.eggs_set = 680, format('trace row %s', to_jsonb(r));
   assert (select sum(chicks) from setting_trace where batch_id = st) = 750, 'shares add up to the hatch';
-  assert (select count(*) from audit_log where entity_type = 'egg_transfer' and action = 'approved') = 2, 'approvals audit-logged';
+  assert (select count(*) from audit_log where entity_type = 'egg_transfer' and action = 'approved'
+            and entity_id in (select id from egg_transfer where ref in ('TRF-T1', 'TRF-T2'))) = 2, 'approvals audit-logged';
   -- C1 self-approval switch
   insert into tenant_rule (key, value) values ('allow_self_approval', 'false');
 end $$;
@@ -120,7 +122,7 @@ end $$;
 -- finance can read but not raise transfers; other tenant sees nothing
 set local request.jwt.claims = '{"sub":"e6ba8ba8-f28f-568d-86d6-09dc87b5cb59","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["finance"]}}';
 do $$ begin
-  assert (select count(*) from egg_transfer) = 3, 'finance reads transfers';
+  assert (select count(*) from egg_transfer where ref like 'TRF-T_') = 3, 'finance reads transfers';
   begin insert into egg_transfer (ref, flock_id, to_farm_id, laid_from, laid_to, sent_on, qty)
     values ('TRF-F', current_setting('t.fl')::uuid, '72c46a7d-d72c-5676-bc8a-70c996df7088', '2026-10-20', '2026-10-21', '2026-10-22', 1); assert false, 'finance raised transfer';
   exception when insufficient_privilege then null; end;
