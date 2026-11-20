@@ -92,5 +92,17 @@ do $$ begin
   assert (select tenant_id from api_key_lookup(current_setting('t.k'))) = 'b146bf5d-6213-556e-8e71-8d4c156ad36d', 'key resolves';
   assert (select count(*) from api_key_lookup('nope')) = 0, 'bad key';
 end $$;
+
+-- 0058: internal webhook targets are refused when saved
+reset role;
+do $$ declare u text; begin
+  insert into webhook_subscription (tenant_id, url, events, secret) values ('b146bf5d-6213-556e-8e71-8d4c156ad36d', 'https://hooks.example.com/x?a=1', '{order.status}', repeat('s', 32));
+  foreach u in array array['http://hooks.example.com', 'https://127.0.0.1/x', 'https://[::1]/', 'https://localhost/x', 'https://localhost./x',
+    'https://metadata.google.internal/', 'https://intranet/', 'https://x.example.com:8443/', 'https://u:p@example.com/', 'https://169.254.169.254/'] loop
+    begin insert into webhook_subscription (tenant_id, url, events, secret) values ('b146bf5d-6213-556e-8e71-8d4c156ad36d', u, '{order.status}', repeat('s', 32));
+      assert false, 'saved ' || u;
+    exception when check_violation then null; end;
+  end loop;
+end $$;
 rollback;
 \echo phase3_test OK
