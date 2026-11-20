@@ -100,7 +100,7 @@ test('apply → approve → owner gets farm + sheds → invites a supervisor', a
   await sheet.getByLabel('Mobile number').fill('9999000002');
   await sheet.getByRole('button', { name: 'Send invite' }).click();
   await expect(page.locator('.toast')).toContainText('can now log in', { timeout: 20_000 });
-  await expect(page.getByText('Suresh Supervisor')).toBeVisible();
+  await expect(page.getByText('Suresh Supervisor', { exact: true })).toBeVisible(); // the toast also names them
 
   // 6. supervisor logs in to the same tenant with supervisor tabs (no Money)
   await otp(page, '/login', '9999000002');

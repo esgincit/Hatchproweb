@@ -11,7 +11,9 @@ test('a new alert pops up live and push can be turned on', async ({ page, contex
   const key = `e2e:${info.project.name}:${Date.now()}`;
   const title = `E2E heat stress ${info.project.name} ${Date.now() % 100000}`;
   await context.clearCookies();
-  await context.grantPermissions(['notifications']); // headless phone emulation defaults to "denied"
+  // headless Chromium reports notifications as "denied" even after grantPermissions: present a not-yet-asked browser
+  // (as p2b-push does) so the card offers "Turn on"; real subscribing is checked by hand (docs/QA.md)
+  await context.addInitScript(() => { Object.defineProperty(Notification, 'permission', { get: () => 'default' }); });
   await context.addCookies([{ name: 'NEXT_LOCALE', value: 'en', url: 'http://localhost:3100' }]);
   try {
     await page.goto('/login');
