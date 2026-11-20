@@ -107,6 +107,10 @@ do $$ begin
   exception when raise_exception then null; end;
   begin perform link_portal_user(current_setting('t.cust')::uuid, 'unconfirmed@example.invalid'); assert false, 'linked unconfirmed email';
   exception when raise_exception then null; end;
+  -- 0059: an existing link is never silently moved to another customer
+  begin perform link_portal_user((select id from customer where tenant_id = 'b146bf5d-6213-556e-8e71-8d4c156ad36d' and id <> current_setting('t.cust')::uuid limit 1), 'portal-two@example.invalid');
+    assert false, 'moved a link to another customer';
+  exception when raise_exception then null; end;
 end $$;
 set local request.jwt.claims = '{"sub":"e6ba8ba8-f28f-568d-86d6-09dc87b5cb59","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["finance"]}}';
 do $$ begin

@@ -104,5 +104,25 @@ do $$ declare u text; begin
     exception when check_violation then null; end;
   end loop;
 end $$;
+-- 0059: with allow_self_approval off, whoever raised a PO cannot approve it; another approver can
+set local request.jwt.claims = '{"sub":"436f615f-c815-5957-8623-ca639dcdb5e4","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["tenant_owner"]}}';
+set local role authenticated;
+do $$ declare no text; po uuid; begin
+  insert into tenant_rule (tenant_id, key, value) values ('b146bf5d-6213-556e-8e71-8d4c156ad36d', 'allow_self_approval', 'false');
+  no := raise_po(current_setting('t.v')::uuid, current_setting('t.i')::uuid, 1, 1, current_date + 5, current_date);
+  select id into po from purchase_order where po_no = no;
+  assert (select status from purchase_order where id = po) = 'submitted', 'own PO not auto-approved';
+  assert (select created_by from purchase_order where id = po) = '436f615f-c815-5957-8623-ca639dcdb5e4', 'creator stamped';
+  begin update purchase_order set status = 'approved' where id = po; assert false, 'raiser approved own PO';
+  exception when raise_exception then null; end;
+  perform set_config('t.po3', po::text, true);
+end $$;
+set local request.jwt.claims = '{"sub":"fffcd169-07c0-5f0d-aa8b-3c382ca8f861","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["procurement_officer"]}}';
+do $$ begin
+  update purchase_order set status = 'approved' where id = current_setting('t.po3')::uuid;
+  assert (select status from purchase_order where id = current_setting('t.po3')::uuid) = 'approved', 'other approver approved';
+  begin update purchase_order set created_by = auth.uid() where id = current_setting('t.po3')::uuid; assert false, 'creator rewritten';
+  exception when raise_exception then null; end;
+end $$;
 rollback;
 \echo phase3_test OK
