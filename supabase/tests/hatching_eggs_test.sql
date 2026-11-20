@@ -50,6 +50,15 @@ update egg_transfer set status = 'approved' where ref = 'TRF-A';
 do $$ begin
   begin update hatching_egg_collection set nest = 3100 where collection_no = 1; assert false, 'edited approved collection';
   exception when raise_exception then null; end;
+  -- 0041: eggs already committed (3,100) — rejecting collection 2 would leave 2,940 collected
+  begin update hatching_egg_collection set status = 'rejected', reject_reason = 'miscount' where collection_no = 2; assert false, 'store went negative';
+  exception when raise_exception then null; end;
+  update egg_transfer set status = 'rejected', reject_reason = 'too old' where ref = 'TRF-OLD';
+  begin update egg_transfer set status = 'submitted', qty = 100 where ref = 'TRF-OLD';
+    update hatching_egg_collection set nest = 800 where collection_no = 2;  -- 3,740 collected vs 3,100 committed: fine
+    update egg_transfer set qty = 700 where ref = 'TRF-OLD';               -- 3,700 committed vs 3,740: fine
+    update hatching_egg_collection set nest = 700 where collection_no = 2; assert false, 'edit made store negative';
+  exception when raise_exception then null; end;
 end $$;
 set local request.jwt.claims = '{"sub":"3d86a04e-a887-52ea-bb3c-67ab5c414ce7","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["hatchery_technician"]}}';
 do $$ begin
