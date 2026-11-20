@@ -54,6 +54,8 @@ begin
   exception when raise_exception then null; end;
   begin update sales_order set price = 30 where order_no = 'SO-A'; assert false, 'sales priced under list';
   exception when raise_exception then null; end;
+  begin update sales_order set payment_status = 'waived', deposit_waived_by = '436f615f-c815-5957-8623-ca639dcdb5e4' where order_no = 'SO-A';
+    assert false, 'forged owner waiver'; exception when raise_exception then null; end;
   begin update sales_order set payment_status = 'verified', deposit_paid = 12000 where order_no = 'SO-A'; assert false, 'sales verified payment';
   exception when raise_exception then null; end;
   update sales_order set status = 'confirmed' where order_no = 'SO-C';                 -- credit customer: no deposit needed
@@ -146,6 +148,9 @@ begin
   assert (select count(*) from delivery_trace where dispatch_id = d and setting_code = 'KS-S-1' and customer = 'Platinum Traders' and vaccines like '%MD-1%') = 1, 'delivery trace';
   update dispatch set status = 'completed' where id = d;
   assert (select status from sales_order where order_no = 'SO-A') = 'completed', 'order completed';
+  -- 0048 dashboards
+  assert (select chicks_dispatched from hatchery_day where day = current_setting('t.today')::date) >= 600, 'daily dispatch';
+  assert (select chicks_produced from hatchery_month where month = date_trunc('month', current_setting('t.today')::date)::date) >= 1000, 'monthly produced';
 end $$;
 
 -- reservation expiry (cron function, service role)
