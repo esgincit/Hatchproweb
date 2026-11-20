@@ -9,6 +9,7 @@ import { Back, Chips, Header, Live, sevStripe } from '@/components/ui/bits';
 import { ActBtn } from '@/components/ui/ActBtn';
 import { PushToggle } from '@/components/shell/PushToggle';
 import { ContactButton } from '@/components/marketplace/Market';
+import { TransferList } from '@/components/trace/Transfers';
 import type { View } from '@/lib/view/types';
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
@@ -24,6 +25,9 @@ export default async function Section({ params, searchParams }: { params: Promis
   switch (section) {
     case 'notifications': return <Notifications c={c} B={B} />;
     case 'people': return <People c={c} tab={tab ?? 'today'} />;
+    case 'transfers': return (
+      <>{B}<Header title={t('trace.title')} action={<ActBtn act="addTransfer" className="btn small">{t('trace.add')}</ActBtn>} /><TransferList /></>
+    );
     case 'vendors': return <Vendors c={c} B={B} />;
     case 'customers': return <Customers c={c} B={B} />;
     case 'stock': return <Stock c={c} B={B} />;

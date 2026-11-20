@@ -54,7 +54,13 @@
     "auditor": "Auditor",
     "vendor": "Vendor",
     "customer": "Customer",
-    "contract_farmer": "Contract farmer"
+    "contract_farmer": "Contract farmer",
+    "hatchery_manager": "Hatchery manager",
+    "hatchery_ops_manager": "Hatchery ops manager",
+    "hatchery_technician": "Hatchery technician",
+    "sales_officer": "Sales officer",
+    "dispatch_officer": "Dispatch officer",
+    "procurement_officer": "Procurement officer"
   },
   "state": {
     "planned": "Planned",
@@ -345,7 +351,9 @@
     "plan": "Plan",
     "waSummary": "Daily WhatsApp summary",
     "marketplace": "🛒 Marketplace",
-    "marketplaceSub": "feed · medicine · equipment offers"
+    "marketplaceSub": "feed · medicine · equipment offers",
+    "transfers": "Egg transfers",
+    "transfersSub": "Farm to hatchery · approvals"
   },
   "sections": {
     "notifications": "Notifications",
@@ -882,7 +890,17 @@
       "nothing": "Nothing to invoice for these numbers",
       "broilerOnly": "Only broiler batches can be linked to a contract."
     },
-    "duplicate": "This code or name is already used — pick another."
+    "duplicate": "This code or name is already used — pick another.",
+    "xfer": {
+      "added": "Transfer {ref} saved",
+      "submitted": "Submitted for approval",
+      "approved": "Transfer approved",
+      "rejected": "Transfer rejected",
+      "cancelled": "Transfer cancelled",
+      "received": "{n} settable eggs received",
+      "loaded": "{n} eggs loaded into the setting",
+      "ruleSaved": "Rule saved"
+    }
   },
   "billCat": {
     "chick": "Chicks",
@@ -1291,6 +1309,99 @@
       "pending": "In review",
       "approved": "Live",
       "rejected": "Rejected"
+    }
+  },
+  "trace": {
+    "title": "Egg transfers",
+    "none": "No egg transfers yet.",
+    "add": "+ New transfer",
+    "open": "Egg transfers ›",
+    "status": {
+      "draft": "Draft",
+      "submitted": "Awaiting approval",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "received": "Received",
+      "cancelled": "Cancelled"
+    },
+    "bought": "Bought-in eggs",
+    "line1": "{src} → {to}",
+    "line2": "{qty} eggs · laid {from} to {until} · sent {sent}",
+    "receivedLine": "Received {n} · {r} rejected · {date}",
+    "reason": "Reason: {r}",
+    "approve": "Approve",
+    "reject": "Reject",
+    "receive": "Receive",
+    "cancel": "Cancel transfer",
+    "submit": "Submit",
+    "form": {
+      "title": "New egg transfer",
+      "source": "Source",
+      "flock": "Flock · {name}",
+      "supplier": "Supplier · {name}",
+      "to": "To hatchery",
+      "laidFrom": "Laid from",
+      "laidTo": "Laid to",
+      "sentOn": "Sent on",
+      "trays": "Trays",
+      "qty": "Eggs sent",
+      "status": "Save as",
+      "asDraft": "Draft",
+      "asSubmit": "Submit for approval",
+      "needSource": "Add a breeder flock or an egg supplier first.",
+      "needHatchery": "Add a hatchery farm first.",
+      "rejectTitle": "Reject transfer",
+      "reason": "Reason",
+      "receiveTitle": "Receive eggs",
+      "receivedQty": "Eggs counted",
+      "rejects": "Rejected on arrival",
+      "receiveDate": "Received on",
+      "loadTitle": "Load eggs into this setting",
+      "transfer": "Received transfer",
+      "transferOpt": "{ref} · {src} · {left} left",
+      "loadQty": "Eggs to load",
+      "override": "Over-age reason (if eggs are older than the limit)",
+      "noneReceived": "No received transfer has eggs left to set.",
+      "vehicle": "Vehicle no.",
+      "driver": "Driver",
+      "receiptNote": "Note (needed when the count differs from what was sent)"
+    },
+    "sources": {
+      "title": "Egg sources",
+      "load": "+ Load eggs",
+      "none": "No sources loaded yet.",
+      "total": "{used} of {set} eggs sourced",
+      "locked": "Candled: sources are locked.",
+      "overAge": "Over-age: {r}"
+    },
+    "trace": {
+      "title": "Hatch trace",
+      "estimated": "Estimated",
+      "note": "Mixed setting: per-source numbers are proportional estimates.",
+      "source": "Source",
+      "set": "Set",
+      "share": "Share",
+      "infertile": "Infertile",
+      "deadGerm": "Dead germ",
+      "chicks": "Chicks",
+      "culls": "Culls"
+    },
+    "flock": {
+      "sent": "Egg transfers from this flock",
+      "feedback": "Hatch feedback",
+      "noFeedback": "No hatch results from this flock yet."
+    },
+    "rules": {
+      "title": "Rules",
+      "selfApproval": "Approve own submissions",
+      "maxDays": "Max egg storage",
+      "allowed": "Allowed",
+      "blocked": "Not allowed",
+      "days": "{n} days",
+      "change": "Change",
+      "formTitle": "Change rule",
+      "value": "Value",
+      "daysVal": "Days (1–30)"
     }
   }
 }

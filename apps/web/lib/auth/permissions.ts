@@ -11,6 +11,12 @@ const BY_ROLE: Record<string, Tab[]> = {
   veterinarian: ['home', 'farm', 'log', 'more'],
   store_keeper: ['home', 'more'],
   auditor: ['home', 'farm', 'money', 'more'],
+  hatchery_manager: ['home', 'farm', 'log', 'more'], // ERP Phase 1 roles (0035)
+  hatchery_ops_manager: ['home', 'farm', 'log', 'more'],
+  hatchery_technician: ['home', 'farm', 'log', 'more'],
+  sales_officer: ['home', 'money', 'more'],
+  dispatch_officer: ['home', 'more'],
+  procurement_officer: ['home', 'more'],
 };
 
 export function tabsFor(roles: string[]): Tab[] {
@@ -51,6 +57,11 @@ export const ACT_ROLES: Record<string, string[]> = {
   setBank: MONEY, // worker_bank policy (0022) mirrors this
   addContract: MONEY, settleContract: MONEY, linkContract: OWN, // contract / settlement policies (0029); link = batch update (owner/manager)
   hatchCandle: [...OWN, 'shed_supervisor'], hatchResult: [...OWN, 'shed_supervisor'], // hatch_record policy (0025)
+  // egg transfers / setting sources / rules mirror the egg_transfer, setting_lot and tenant_rule policies + guard_locked (0036)
+  addTransfer: [...OWN, 'shed_supervisor'], submitTransfer: [...OWN, 'shed_supervisor'], decideTransfer: OWN, cancelTransfer: OWN,
+  receiveTransfer: [...OWN, 'shed_supervisor', 'hatchery_technician', 'hatchery_ops_manager'],
+  loadSetting: [...OWN, 'shed_supervisor', 'hatchery_technician', 'hatchery_ops_manager'],
+  setRule: ['tenant_owner'],
   decidePay: ['tenant_owner'], // payments > ₹50,000 by others wait for the owner (0012)
   inviteUser: ['tenant_owner'], // matches invite-user edge function + user_role_assignment policy
   // downloads (app/api/export) — the route enforces the same lists

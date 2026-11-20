@@ -12,6 +12,7 @@ import {
 } from '@/lib/schemas';
 import { LOCALES, LOCALE_NAMES } from '@/lib/i18n/locales';
 import { addDays, fmtINR } from '@/lib/format';
+import { settleable } from '@/lib/trace';
 import { toast } from '@/components/ui/Toast';
 import { FormSheet, type FormSpec, type Field } from './FormSheet';
 
@@ -34,12 +35,14 @@ type Lookups = {
   vaccines: { id: string; name: string; farm_type: string; age_day: number }[];
   workers: { id: string; name: string }[];
   contracts: { id: string; name: string }[];
+  /** received egg transfers with eggs still free to set */
+  lots: { id: string; ref: string; src: string; left: number }[];
 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- PostgREST embeds */
 async function loadLookups(): Promise<Lookups> {
   const sb = createClient();
-  const [farms, sheds, breeds, vendors, customers, batches, diseases, bills, invoices, assets, items, pos, vaccines, workers, contracts] = await Promise.all([
+  const [farms, sheds, breeds, vendors, customers, batches, diseases, bills, invoices, assets, items, pos, vaccines, workers, contracts, lots] = await Promise.all([
     sb.from('farm').select('id,name,farm_type').order('created_at'),
     sb.from('shed').select('id,name,farm_id,batch(state)').order('name'),
     sb.from('breed').select('id,name,farm_type').order('name'),
@@ -55,6 +58,7 @@ async function loadLookups(): Promise<Lookups> {
     sb.from('vaccine_master').select('id,name,farm_type,age_day').order('age_day'),
     sb.from('worker').select('id,name').eq('active', true).order('name'),
     sb.from('contract').select('id,name').eq('active', true).order('created_at'),
+    sb.from('egg_transfer').select('id,ref,received_qty,receipt_rejects,batch(code),vendor(name),setting_lot(qty)').eq('status', 'received').order('received_on'),
   ]);
   const d = (r: { data: unknown }) => (r.data ?? []) as any[];
   const one = (x: any) => (Array.isArray(x) ? x[0] : x);
@@ -79,6 +83,10 @@ async function loadLookups(): Promise<Lookups> {
     vaccines: d(vaccines),
     workers: d(workers),
     contracts: d(contracts),
+    lots: d(lots).map((x) => ({
+      id: x.id, ref: x.ref, src: one(x.batch)?.code ?? one(x.vendor)?.name ?? '',
+      left: settleable(x.received_qty, x.receipt_rejects, (x.setting_lot ?? []).reduce((a: number, l: any) => a + l.qty, 0)),
+    })).filter((x) => x.left > 0),
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -92,7 +100,7 @@ export function nextBatchCode(codes: string[], year: string) {
 }
 
 // Acts that reuse another form, and acts that just navigate.
-const ALIAS: Record<string, string> = { addShedPick: 'addShed', addVisitPick: 'addVisit' };
+const ALIAS: Record<string, string> = { addShedPick: 'addShed', addVisitPick: 'addVisit', rejectTransfer: 'decideTransfer' };
 const NAV: Record<string, string> = { attToday: '/more/people' };
 // file downloads (app/api/export/[kind]); `report` rows pass the kind they export, or the printable page (app/(app)/report/[kind])
 const DOWNLOAD: Record<string, (c: ActCtx) => string | null> = {
@@ -107,6 +115,9 @@ const DIRECT: Record<string, (c: ActCtx) => { act: string; input: Record<string,
   confirmCase: (c) => ({ act: 'confirmCase', input: { case_id: c.case } }),
   closeCase: (c) => ({ act: 'closeCase', input: { case_id: c.case } }),
   approvePay: (c) => ({ act: 'decidePay', input: { approval_id: c.approval, approve: 'yes' } }),
+  submitTransfer: (c) => ({ act: 'submitTransfer', input: { transfer_id: c.transfer } }),
+  approveTransfer: (c) => ({ act: 'decideTransfer', input: { transfer_id: c.transfer, decision: 'approve' } }),
+  cancelTransfer: (c) => ({ act: 'cancelTransfer', input: { transfer_id: c.transfer } }),
   rejectPay: (c) => ({ act: 'decidePay', input: { approval_id: c.approval, approve: 'no' } }),
 };
 
@@ -147,6 +158,7 @@ export function ActionHost({ today }: { today: string }) {
       const direct = DIRECT[a]?.(ctx);
       if (direct) { // one tap, no form
         const r = await runAct(direct.act, direct.input);
+        lookups.current = null;
         return r.ok ? (toast(r.msg), router.refresh()) : toast(r.error);
       }
       lookups.current ??= await loadLookups();
@@ -172,6 +184,7 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
   const activeBatches = L.batches.filter((b) => b.active);
   const batchOpts: Opt[] = activeBatches.map((b) => [b.id, `${b.code} · ${b.shed}`]);
   const vendorOpts = (cat?: string): Opt[] => L.vendors.filter((v) => !cat || v.category === cat).map((v) => [v.id, v.name]);
+  const tr = (k: string, p?: Record<string, string | number>) => t(`trace.${k}`, p);
   const enumOpts = (vals: readonly string[], ns: string): Opt[] => vals.map((v) => [v, t(`${ns}.${v}`)]);
 
   switch (act) {
@@ -518,6 +531,66 @@ function build(act: string, ctx: ActCtx, L: Lookups, t: TFn, today: string): For
           { id: 'reason', label: f('advance.reason') },
         ],
       };
+    case 'addTransfer': {
+      const flocks = L.batches.filter((b) => b.ft === 'breeder' && b.active);
+      const hatcheries = L.farms.filter((x) => x.farm_type === 'hatchery');
+      if (!flocks.length && !L.vendors.length) return { title: tr('form.title'), intro: tr('form.needSource'), fields: [], submit: f('save') };
+      if (!hatcheries.length) return { title: tr('form.title'), intro: tr('form.needHatchery'), fields: [], submit: f('save') };
+      return {
+        title: tr('form.title'), submit: f('save'),
+        fields: [
+          { id: 'src', label: tr('form.source'), type: 'select', options: [
+            ...flocks.map((b): Opt => [`flock:${b.id}`, tr('form.flock', { name: b.code })]),
+            ...L.vendors.map((x): Opt => [`vendor:${x.id}`, tr('form.supplier', { name: x.name })])] },
+          { id: 'to_farm_id', label: tr('form.to'), type: 'select', options: hatcheries.map((x): Opt => [x.id, x.name]) },
+          date('laid_from', tr('form.laidFrom')), date('laid_to', tr('form.laidTo')), date('sent_on', tr('form.sentOn')),
+          { id: 'qty', label: tr('form.qty'), type: 'number', half: true, required: true },
+          { id: 'trays', label: tr('form.trays'), type: 'number', half: true },
+          { id: 'vehicle_no', label: tr('form.vehicle'), half: true },
+          { id: 'driver_name', label: tr('form.driver'), half: true },
+          { id: 'status', label: tr('form.status'), type: 'select', value: 'submitted', options: [['submitted', tr('form.asSubmit')], ['draft', tr('form.asDraft')]] },
+        ],
+        transform: ({ src, ...rest }) => { const [kind, id] = (src ?? '').split(':'); return { ...rest, [kind === 'flock' ? 'flock_id' : 'vendor_id']: id }; },
+      };
+    }
+    case 'decideTransfer': // opened by rejectTransfer: approve is one tap
+      return {
+        title: tr('form.rejectTitle'), submit: tr('reject'), danger: true, hidden: { transfer_id: ctx.transfer, decision: 'reject' },
+        fields: [{ id: 'reason', label: tr('form.reason'), type: 'textarea', required: true }],
+      };
+    case 'receiveTransfer':
+      return {
+        title: tr('form.receiveTitle'), submit: tr('receive'), hidden: { transfer_id: ctx.transfer },
+        fields: [
+          { id: 'received_qty', label: tr('form.receivedQty'), type: 'number', half: true, required: true, value: ctx.qty },
+          { id: 'rejects', label: tr('form.rejects'), type: 'number', half: true, required: true, value: '0' },
+          date('date', tr('form.receiveDate')),
+          { id: 'note', label: tr('form.receiptNote'), type: 'textarea' },
+        ],
+      };
+    case 'loadSetting': {
+      if (!L.lots.length) return { title: tr('form.loadTitle'), intro: tr('form.noneReceived'), fields: [], submit: f('save') };
+      const first = L.lots[0];
+      return {
+        title: tr('form.loadTitle'), submit: f('save'), hidden: { batch_id: ctx.batch },
+        fields: [
+          { id: 'transfer_id', label: tr('form.transfer'), type: 'select', value: first.id,
+            follow: { target: 'qty', values: Object.fromEntries(L.lots.map((x) => [x.id, x.left])) },
+            options: L.lots.map((x): Opt => [x.id, tr('form.transferOpt', { ref: x.ref, src: x.src, left: x.left })]) },
+          { id: 'qty', label: tr('form.loadQty'), type: 'number', required: true, value: first.left },
+          { id: 'age_override_reason', label: tr('form.override') },
+        ],
+      };
+    }
+    case 'setRule': {
+      const days = ctx.key === 'egg_max_storage_days';
+      return {
+        title: tr('rules.formTitle'), submit: f('save'), hidden: { key: ctx.key },
+        fields: [days
+          ? { id: 'value', label: tr('rules.daysVal'), type: 'number', required: true, value: ctx.value }
+          : { id: 'value', label: tr('rules.selfApproval'), type: 'select', value: ctx.value, options: [['yes', tr('rules.allowed')], ['no', tr('rules.blocked')]] }],
+      };
+    }
     case 'inviteUser':
       return {
         title: f('invite.title'), intro: f('invite.intro'), submit: f('invite.submit'),

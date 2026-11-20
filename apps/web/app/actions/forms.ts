@@ -9,6 +9,7 @@ import { fmtINR } from '@/lib/format';
 import { settle, type ContractTerms } from '@/lib/settlement';
 import { claimsFromUser } from '@/lib/auth/claims';
 import { canAct } from '@/lib/auth/permissions';
+import { transferRef } from '@/lib/trace';
 
 export type ActResult = { ok: true; msg: string; href?: string } | { ok: false; error: string; fields?: string[] };
 
@@ -276,6 +277,45 @@ async function write<K extends ActKey>(act: K, v: In<K>, sb: Sb, t: T): Promise<
       const x = v as In<'addAdvance'>;
       const { error } = await sb.from('worker_advance').insert({ worker_id: x.worker_id, amount: x.amount, given_on: x.date, reason: x.reason });
       return fail(error) ?? { ok: true, msg: t('advance.ok', { amt: fmtINR(x.amount) }) };
+    }
+    case 'addTransfer': {
+      const x = v as In<'addTransfer'>;
+      const ref = transferRef(x.sent_on);
+      const { error } = await sb.from('egg_transfer').insert({
+        ref, flock_id: x.flock_id ?? null, source_vendor_id: x.vendor_id ?? null, to_farm_id: x.to_farm_id, laid_from: x.laid_from, laid_to: x.laid_to,
+        sent_on: x.sent_on, trays: x.trays ?? null, qty: x.qty, vehicle_no: x.vehicle_no ?? null, driver_name: x.driver_name ?? null, status: x.status,
+      });
+      return fail(error) ?? { ok: true, msg: t('xfer.added', { ref }), href: '/more/transfers' };
+    }
+    case 'submitTransfer': {
+      const x = v as In<'submitTransfer'>;
+      return touched(await sb.from('egg_transfer').update({ status: 'submitted' }).eq('id', x.transfer_id).eq('status', 'draft').select('id'), { ok: true, msg: t('xfer.submitted') }, t);
+    }
+    case 'decideTransfer': {
+      const x = v as In<'decideTransfer'>;
+      const ok = x.decision === 'approve';
+      const patch = ok ? { status: 'approved' } : { status: 'rejected', reject_reason: x.reason };
+      return touched(await sb.from('egg_transfer').update(patch).eq('id', x.transfer_id).in('status', ['draft', 'submitted']).select('id'), { ok: true, msg: ok ? t('xfer.approved') : t('xfer.rejected') }, t);
+    }
+    case 'cancelTransfer': {
+      const x = v as In<'cancelTransfer'>;
+      return touched(await sb.from('egg_transfer').update({ status: 'cancelled' }).eq('id', x.transfer_id).eq('status', 'approved').select('id'), { ok: true, msg: t('xfer.cancelled') }, t);
+    }
+    case 'receiveTransfer': {
+      const x = v as In<'receiveTransfer'>;
+      return touched(await sb.from('egg_transfer').update({ status: 'received', received_qty: x.received_qty, receipt_rejects: x.rejects, received_on: x.date, receipt_note: x.note ?? null })
+        .eq('id', x.transfer_id).eq('status', 'approved').select('id'), { ok: true, msg: t('xfer.received', { n: x.received_qty - x.rejects }) }, t);
+    }
+    case 'loadSetting': {
+      const x = v as In<'loadSetting'>;
+      const { error } = await sb.from('setting_lot').insert({ batch_id: x.batch_id, transfer_id: x.transfer_id, qty: x.qty, age_override_reason: x.age_override_reason ?? null });
+      return fail(error) ?? { ok: true, msg: t('xfer.loaded', { n: x.qty }) };
+    }
+    case 'setRule': {
+      const x = v as In<'setRule'>;
+      const value = x.key === 'allow_self_approval' ? x.value === 'yes' : Number(x.value);
+      const { error } = await sb.from('tenant_rule').upsert({ key: x.key, value, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id,key' });
+      return fail(error) ?? { ok: true, msg: t('xfer.ruleSaved') };
     }
     case 'remind': {
       const x = v as In<'remind'>;

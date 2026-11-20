@@ -27,7 +27,8 @@ export const PRIORITIES = ['low', 'medium', 'high'] as const;
 export const ASSET_CATS = ['feeder', 'drinker', 'fan', 'generator', 'incubator', 'grader', 'vehicle', 'other'] as const;
 export const ITEM_CATS = ['feed', 'feed_ingredient', 'medicine', 'vaccine', 'disinfectant', 'equipment', 'spare', 'packaging', 'fuel', 'other'] as const;
 export const RATE_PRODUCTS = ['egg', 'broiler_farmgate', 'maize', 'soya'] as const;
-export const STAFF_ROLES = ['farm_manager', 'finance', 'shed_supervisor', 'labour', 'veterinarian', 'store_keeper', 'auditor'] as const;
+export const STAFF_ROLES = ['farm_manager', 'finance', 'shed_supervisor', 'labour', 'veterinarian', 'store_keeper', 'auditor', 'hatchery_manager', 'hatchery_ops_manager', 'hatchery_technician', 'sales_officer', 'dispatch_officer', 'procurement_officer'] as const;
+export const RULE_KEYS = ['allow_self_approval', 'egg_max_storage_days'] as const; // tenant_rule keys the app edits (0036)
 export const LANGS = ['en', 'te', 'hi', 'ta', 'kn'] as const;
 /** Indian mobile: any formatting, last 10 digits starting 6-9 */
 const mobile = z.string().transform((s) => s.replace(/\D/g, '').slice(-10)).pipe(z.string().regex(/^[6-9]\d{9}$/));
@@ -95,6 +96,22 @@ export const SCHEMAS = {
   // WhatsApp payment reminder (click-to-chat): log who reminded which customer about which invoices, in which language
   remind: z.object({ customer_id: id, invoice_ids: z.array(id).min(1).max(50), amount: money, lang: z.enum(LANGS) }),
   decidePay: z.object({ approval_id: id, approve: z.enum(['yes', 'no']) }),
+  // egg transfer farm -> hatchery, setting sources, tenant rules (0036). Exactly one source: breeder flock or bought-in supplier.
+  addTransfer: z.object({
+    flock_id: opt(id), vendor_id: opt(id), to_farm_id: id, laid_from: date, laid_to: date, sent_on: notFuture,
+    trays: opt(int(0)), qty: int(1), vehicle_no: opt(z.string().trim().max(20)), driver_name: opt(z.string().trim().max(80)), status: z.enum(['draft', 'submitted']),
+  }).refine((x) => !!x.flock_id !== !!x.vendor_id, { path: ['flock_id'] })
+    .refine((x) => x.laid_to >= x.laid_from, { path: ['laid_to'] })
+    .refine((x) => x.sent_on >= x.laid_to, { path: ['sent_on'] }),
+  submitTransfer: z.object({ transfer_id: id }),
+  decideTransfer: z.object({ transfer_id: id, decision: z.enum(['approve', 'reject']), reason: opt(z.string().trim().max(300)) })
+    .refine((x) => x.decision === 'approve' || !!x.reason, { path: ['reason'] }),
+  cancelTransfer: z.object({ transfer_id: id }), // approved, not yet received (0037)
+  receiveTransfer: z.object({ transfer_id: id, received_qty: int(0), rejects: int(0), date: notFuture, note: opt(z.string().trim().max(500)) })
+    .refine((x) => x.rejects <= x.received_qty, { path: ['rejects'] }),
+  loadSetting: z.object({ batch_id: id, transfer_id: id, qty: int(1), age_override_reason: opt(z.string().trim().max(300)) }),
+  setRule: z.object({ key: z.enum(RULE_KEYS), value: z.string().trim().min(1).max(10) })
+    .refine((x) => (x.key === 'allow_self_approval' ? ['yes', 'no'].includes(x.value) : /^\d{1,2}$/.test(x.value) && +x.value >= 1 && +x.value <= 30), { path: ['value'] }),
   inviteUser: z.object({ name: text, phone: mobile, role: z.enum(STAFF_ROLES), language: z.enum(LANGS), farm_id: opt(id) }),
 } as const;
 

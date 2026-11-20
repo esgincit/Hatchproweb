@@ -9,6 +9,7 @@ import type { Batch, Invoice, Tenant } from '@/lib/view/types';
 import { dateFmt, daysBetween, fmtINR, fmtL, fmtN } from '@/lib/format';
 import { Back, RagPill } from '@/components/ui/bits';
 import { ActBtn } from '@/components/ui/ActBtn';
+import { SettingSources, FlockTransfers } from '@/components/trace/Transfers';
 import { LineChart } from '@/components/charts/LineChart';
 import { BarChart } from '@/components/charts/BarChart';
 
@@ -94,6 +95,8 @@ export default async function BatchPage({ params }: { params: Promise<{ code: st
       </div>
 
       {hatch && <HatchCard b={b} invoices={tn.invoices} t={t} dmy={dmy} />}
+      {hatch && <SettingSources batchId={b.id} eggsSet={b.doc} locked={!!b.hatch} />}
+      {b.ft === 'breeder' && <FlockTransfers flockId={b.id} />}
       {b.ft === 'broiler' && <ContractCard b={b} tn={tn} k={k} t={t} dmy={dmy} />}
 
       {chart && (

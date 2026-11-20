@@ -4,10 +4,15 @@ import { getTranslations } from 'next-intl/server';
 import { loadView } from '@/lib/view/load';
 import { daysBetween } from '@/lib/format';
 import { Header } from '@/components/ui/bits';
+import { createClient } from '@/lib/supabase/server';
+import { claimsFromUser } from '@/lib/auth/claims';
+import { RulesCard } from '@/components/trace/Transfers';
 import { LanguagePicker } from '@/components/i18n/LanguagePicker';
 
 export default async function More() {
   const [{ t: tn, today }, t] = await Promise.all([loadView(), getTranslations('more')]);
+  const { data: { user } } = await (await createClient()).auth.getUser();
+  const owner = !!user && claimsFromUser(user).roles.includes('tenant_owner');
   const openT = tn.tickets.filter((k) => k.status === 'open').length;
   const low = tn.stock.filter((s) => s.reorder > 0 && s.qty <= s.reorder).length;
   const overdueV = tn.batches.flatMap((b) => b.vacc).filter((x) => !x.done && daysBetween(x.due, today) > 0).length;
@@ -15,6 +20,7 @@ export default async function More() {
     ['people', t('people'), t('peopleSub', { n: tn.workers.length })],
     ['equipment', t('equipment'), openT ? t('openTickets', { n: openT }) : t('assetsOk', { n: tn.assets.length })],
     ['stock', t('stock'), low ? t('belowReorder', { n: low }) : t('stockOk')],
+    ['transfers', t('transfers'), t('transfersSub')],
     ['vendors', t('vendors'), t('nVendors', { n: tn.vendors.length })],
     ['customers', t('customers'), t('nTraders', { n: tn.customers.length })],
     ['health', t('health'), overdueV ? t('vaccOverdue', { n: overdueV }) : t('onTrack')],
@@ -35,6 +41,7 @@ export default async function More() {
           </Link>
         ))}
       </div>
+      {owner && <RulesCard />}
       <div className="card">
         <div className="eyebrow" style={{ marginBottom: 6 }}>{t('settings')}</div>
         <LanguagePicker />
