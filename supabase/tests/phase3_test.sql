@@ -10,6 +10,7 @@ begin
   insert into store (tenant_id, farm_id, name) values (ks, hat, 'P3 Store A') returning id into s1;
   insert into store (tenant_id, farm_id, name) values (ks, hat, 'P3 Store B') returning id into s2;
   insert into tenant_rule (tenant_id, key, value) values (ks, 'po_approval_above', '1000') on conflict (tenant_id, key) do update set value = excluded.value;
+  insert into user_role_assignment (tenant_id, user_id, role) values (ks, 'fffcd169-07c0-5f0d-aa8b-3c382ca8f861', 'procurement_officer');  -- delegator must hold the role (0052)
   perform set_config('t.v', v::text, true), set_config('t.i', i::text, true), set_config('t.s1', s1::text, true), set_config('t.s2', s2::text, true);
 end $$;
 set local role authenticated;

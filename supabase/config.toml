@@ -68,6 +68,11 @@ verify_jwt = true
 verify_jwt = false
 [functions.daily-alerts]
 verify_jwt = false
+# ERP (0051/0052): machines call erp-api with x-api-key; the scheduler calls erp-cron with x-cron-secret
+[functions.erp-api]
+verify_jwt = false
+[functions.erp-cron]
+verify_jwt = false
 [functions.razorpay-webhook]
 verify_jwt = false
 

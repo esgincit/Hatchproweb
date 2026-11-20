@@ -8,7 +8,7 @@ begin
   insert into vendor (tenant_id, name, category) values (ks, 'Test Feeds', 'feed') returning id into v;
   insert into item (tenant_id, name, category, unit) values (ks, 'Test feed A', 'feed', 'kg') returning id into i1;
   insert into item (tenant_id, name, category, unit) values (ks, 'Test feed B', 'feed', 'kg') returning id into i2;
-  insert into purchase_order (tenant_id, farm_id, vendor_id, po_no, po_date, status) values (ks, f, v, 'PO-T1', '2026-11-01', 'approved') returning id into po;
+  insert into purchase_order (tenant_id, farm_id, vendor_id, po_no, po_date, status, total) values (ks, f, v, 'PO-T1', '2026-11-01', 'approved', 5000) returning id into po;
   insert into po_line (po_id, item_id, qty, rate) values (po, i1, 100, 30), (po, i2, 50, 40);
   insert into customer (tenant_id, name, credit_limit) values (ks, 'Limit Test Traders', 1000) returning id into c;
   perform set_config('t.po', po::text, true), set_config('t.i1', i1::text, true), set_config('t.i2', i2::text, true), set_config('t.c', c::text, true);
