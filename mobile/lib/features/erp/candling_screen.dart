@@ -1,9 +1,11 @@
-// Candling D10 / D18 (0041). Online-only (candling is not in sync-apply). Stage = what already exists for the setting.
+// Candling D10 / D18 (0041). Queued through the outbox (offline-capable). Stage = what already exists on the server;
+// when that cannot be read (offline) the user picks the stage and the DB validates it on sync.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/i18n.dart';
+import '../../data/sync/sync_service.dart';
 import 'erp_logic.dart';
 import 'erp_widgets.dart';
 
@@ -50,15 +52,18 @@ class _CandlingScreenState extends ConsumerState<CandlingScreen> {
     if (errs.isNotEmpty) { showMsg(context, errs.map((k) => tr(context, k)).join('\n')); return; }
     setState(() => _saving = true);
     try {
-      await Supabase.instance.client.from('candling').insert({
+      final r = await SyncService.instance.submit('candling', {
         'batch_id': id, 'stage': stage, 'candled_on': dateStr(_date), 'eggs_candled': v['eggs_candled'],
         // the DB check wants stage-1 columns null for stage 2 and vice versa
         if (stage == 1) ...{'infertile': v['infertile'], 'early_dead': v['early_dead'], 'dirty': v['dirty']}
         else ...{'mid_dead': v['mid_dead'], 'late_dead': v['late_dead']},
       });
       if (!mounted) return;
-      showMsg(context, tr(context, 'saved'));
+      if (r.error != null) { showMsg(context, r.error!); return; }
+      showMsg(context, tr(context, r.queued ? 'saved_offline' : 'saved'));
       for (final c in _c.values) { c.clear(); }
+      // stage 1 just queued: next entry is stage 2 even if the server cannot confirm yet
+      if (r.queued) { setState(() => _stage = stage == 1 ? 2 : 0); return; }
       await _pick(id);
     } catch (e) {
       if (mounted) showMsg(context, errText(e));
@@ -81,13 +86,12 @@ class _CandlingScreenState extends ConsumerState<CandlingScreen> {
           if (_batchId == null) WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted && _batchId == null) _pick(b.id); });
           final stage = _stage;
           return Form(key: _form, child: ListView(padding: const EdgeInsets.all(16), children: [
-            const NeedsInternetBanner(),
-            const SizedBox(height: 12),
             Text(tr(context, 'setting'), style: Theme.of(context).textTheme.labelLarge),
             BatchChips(batches: list, selectedId: b.id, onSelect: (x) => _pick(x.id)),
             const SizedBox(height: 12),
-            if (_loadError != null) ...[
+            if (stage == null && _loadError != null) ...[
               Text(_loadError!), TextButton(onPressed: () => _pick(b.id), child: Text(tr(context, 'retry'))),
+              Wrap(spacing: 8, children: [for (final s in [1, 2]) ChoiceChip(label: Text(tr(context, 'stage$s')), selected: false, onSelected: (_) => setState(() => _stage = s))]),
             ] else if (stage == null) const LinearProgressIndicator()
             else if (stage == 0) Text(tr(context, 'both_done'))
             else ...[

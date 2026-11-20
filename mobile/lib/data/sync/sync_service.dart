@@ -27,6 +27,26 @@ class SyncService {
     if (await _online()) unawaited(pushOutbox());
   }
 
+  /// Queue an insert and try to send it now so the user sees a DB rejection straight away.
+  /// Returns (queued, error): error != null = the server rejected it (op dropped; the receipt is already
+  /// stored server-side so a retry would be swallowed as duplicate); queued = no connection, it will sync later.
+  Future<({bool queued, String? error})> submit(String table, Map<String, dynamic> payload) async {
+    final opId = const Uuid().v4();
+    await _db.into(_db.outbox).insert(OutboxCompanion.insert(
+      opId: opId, targetTable: table, action: 'insert', payloadJson: jsonEncode(payload)));
+    if (!await _online()) return (queued: true, error: null);
+    try {
+      await pushOutbox();
+    } catch (_) {
+      return (queued: true, error: null);
+    }
+    final row = await (_db.select(_db.outbox)..where((o) => o.opId.equals(opId))).getSingleOrNull();
+    if (row == null) return (queued: false, error: null);
+    if (row.lastError == null) return (queued: true, error: null); // beyond this push's 50-op window
+    await (_db.delete(_db.outbox)..where((o) => o.opId.equals(opId))).go();
+    return (queued: false, error: row.lastError);
+  }
+
   Future<bool> _online() async =>
       !(await Connectivity().checkConnectivity()).contains(ConnectivityResult.none);
 

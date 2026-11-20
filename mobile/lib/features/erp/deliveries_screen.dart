@@ -8,14 +8,23 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/i18n.dart';
+import '../../core/roles.dart';
 import 'erp_logic.dart';
 import 'erp_widgets.dart';
 
-final tripsProvider = FutureProvider.autoDispose((ref) async => await Supabase.instance.client
-    .from('dispatch')
-    .select('id, dispatch_no, route, planned_on, dispatch_line(id, qty_loaded, order_allocation(sales_order(order_no, customer(name))))')
-    .eq('status', 'approved')
-    .order('planned_on'));
+/// Owner / hatchery ops manager see every approved trip; a driver only the trips assigned to their worker record (0054).
+final tripsProvider = FutureProvider.autoDispose((ref) async {
+  final sb = Supabase.instance.client;
+  var q = sb.from('dispatch')
+      .select('id, dispatch_no, route, planned_on, driver_worker_id, dispatch_line(id, qty_loaded, order_allocation(sales_order(order_no, customer(name))))')
+      .eq('status', 'approved');
+  if (!hasAnyRole(const ['tenant_owner', 'hatchery_ops_manager'])) {
+    final mine = (await sb.rpc('my_worker_ids') as List).map((r) => r is Map ? r.values.first : r).toList();
+    if (mine.isEmpty) return <Map<String, dynamic>>[];
+    q = q.inFilter('driver_worker_id', mine);
+  }
+  return (await q.order('planned_on')).cast<Map<String, dynamic>>();
+});
 
 class DeliveriesScreen extends ConsumerWidget {
   const DeliveriesScreen({super.key});

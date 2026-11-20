@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _en = <String, String>{
+  'saved_offline': 'Saved on this phone; it will sync when online',
   'eggs': 'Hatching eggs', 'candling': 'Candling', 'hatch': 'Hatch result', 'deliveries': 'Deliveries',
   'flock': 'Breeder flock', 'setting': 'Setting', 'collection_no': 'Collection no.', 'nest': 'Nest eggs', 'floor': 'Floor eggs',
   'broken': 'Broken', 'cracked': 'Cracked', 'dirty': 'Dirty', 'dirty_treated': 'Dirty, treated', 'misshapen': 'Misshapen',
@@ -22,6 +23,7 @@ const _en = <String, String>{
   'receiver': 'Received by', 'photo': 'Proof photo', 'mark_delivered': 'Mark delivered', 'retry': 'Retry', 'delivered_ok': 'Trip marked delivered',
 };
 const _te = <String, String>{
+  'saved_offline': 'ఫోన్‌లో సేవ్ అయింది; ఇంటర్నెట్ రాగానే సింక్ అవుతుంది',
   'eggs': 'హ్యాచింగ్ గుడ్లు', 'candling': 'క్యాండ్లింగ్', 'hatch': 'పొదిగిన ఫలితం', 'deliveries': 'డెలివరీలు',
   'flock': 'బ్రీడర్ మంద', 'setting': 'సెట్టింగ్', 'collection_no': 'సేకరణ సంఖ్య', 'nest': 'గూటి గుడ్లు', 'floor': 'నేల గుడ్లు',
   'broken': 'పగిలినవి', 'cracked': 'పగుళ్లు', 'dirty': 'మురికి', 'dirty_treated': 'మురికి, శుద్ధి చేసినవి', 'misshapen': 'వికృత ఆకారం',
@@ -40,6 +42,7 @@ const _te = <String, String>{
   'receiver': 'స్వీకర్త పేరు', 'photo': 'రుజువు ఫోటో', 'mark_delivered': 'డెలివరీ అయినట్లు గుర్తించండి', 'retry': 'మళ్లీ ప్రయత్నించండి', 'delivered_ok': 'ట్రిప్ డెలివరీ అయింది',
 };
 const _hi = <String, String>{
+  'saved_offline': 'फोन में सेव हुआ; इंटरनेट आने पर सिंक होगा',
   'eggs': 'हैचिंग अंडे', 'candling': 'कैंडलिंग', 'hatch': 'हैच परिणाम', 'deliveries': 'डिलीवरी',
   'flock': 'ब्रीडर झुंड', 'setting': 'सेटिंग', 'collection_no': 'संग्रह संख्या', 'nest': 'नेस्ट अंडे', 'floor': 'फर्श के अंडे',
   'broken': 'टूटे', 'cracked': 'दरार वाले', 'dirty': 'गंदे', 'dirty_treated': 'गंदे, साफ किए', 'misshapen': 'बेडौल',
@@ -58,6 +61,7 @@ const _hi = <String, String>{
   'receiver': 'प्राप्तकर्ता', 'photo': 'प्रमाण फोटो', 'mark_delivered': 'डिलीवर दर्ज करें', 'retry': 'फिर कोशिश करें', 'delivered_ok': 'ट्रिप डिलीवर दर्ज हुई',
 };
 const _ta = <String, String>{
+  'saved_offline': 'தொலைபேசியில் சேமிக்கப்பட்டது; இணையம் வந்ததும் ஒத்திசைக்கப்படும்',
   'eggs': 'பொரிப்பு முட்டைகள்', 'candling': 'கேண்ட்லிங்', 'hatch': 'பொரிப்பு முடிவு', 'deliveries': 'டெலிவரிகள்',
   'flock': 'இனப்பெருக்க மந்தை', 'setting': 'செட்டிங்', 'collection_no': 'சேகரிப்பு எண்', 'nest': 'கூடு முட்டைகள்', 'floor': 'தரை முட்டைகள்',
   'broken': 'உடைந்தவை', 'cracked': 'விரிசல்', 'dirty': 'அழுக்கு', 'dirty_treated': 'அழுக்கு, சுத்தம் செய்தவை', 'misshapen': 'வடிவம் கெட்டவை',
@@ -76,6 +80,7 @@ const _ta = <String, String>{
   'receiver': 'பெற்றவர் பெயர்', 'photo': 'சான்று புகைப்படம்', 'mark_delivered': 'டெலிவரி ஆனதாக குறி', 'retry': 'மீண்டும் முயற்சி', 'delivered_ok': 'பயணம் டெலிவரி ஆனது',
 };
 const _kn = <String, String>{
+  'saved_offline': 'ಫೋನ್‌ನಲ್ಲಿ ಉಳಿಸಲಾಗಿದೆ; ಇಂಟರ್ನೆಟ್ ಬಂದಾಗ ಸಿಂಕ್ ಆಗುತ್ತದೆ',
   'eggs': 'ಹ್ಯಾಚಿಂಗ್ ಮೊಟ್ಟೆಗಳು', 'candling': 'ಕ್ಯಾಂಡ್ಲಿಂಗ್', 'hatch': 'ಮರಿ ಹೊರಬರುವ ಫಲಿತಾಂಶ', 'deliveries': 'ಡೆಲಿವರಿಗಳು',
   'flock': 'ಬ್ರೀಡರ್ ಹಿಂಡು', 'setting': 'ಸೆಟ್ಟಿಂಗ್', 'collection_no': 'ಸಂಗ್ರಹ ಸಂಖ್ಯೆ', 'nest': 'ಗೂಡಿನ ಮೊಟ್ಟೆಗಳು', 'floor': 'ನೆಲದ ಮೊಟ್ಟೆಗಳು',
   'broken': 'ಒಡೆದವು', 'cracked': 'ಬಿರುಕು', 'dirty': 'ಕೊಳಕು', 'dirty_treated': 'ಕೊಳಕು, ಶುದ್ಧೀಕರಿಸಿದ್ದು', 'misshapen': 'ವಿಕಾರ ಆಕಾರ',

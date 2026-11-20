@@ -1,9 +1,8 @@
-// Hatching-egg collection (0039). Online-only: sync-apply has no hatching_egg_collection table, so no outbox.
+// Hatching-egg collection (0039). Offline-capable: queued through the outbox (sync-apply accepts it append-only).
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../../core/i18n.dart';
+import '../../data/sync/sync_service.dart';
 import 'erp_logic.dart';
 import 'erp_widgets.dart';
 
@@ -40,12 +39,13 @@ class _EggCollectionScreenState extends ConsumerState<EggCollectionScreen> {
     if (errs.isNotEmpty) { showMsg(context, errs.map((k) => tr(context, k)).join('\n')); return; }
     setState(() => _saving = true);
     try {
-      await Supabase.instance.client.from('hatching_egg_collection').insert({
+      final r = await SyncService.instance.submit('hatching_egg_collection', {
         'batch_id': batchId, 'collected_on': dateStr(_date), 'collection_no': _no,
         for (final k in _keys) k: intOf(_c[k]!.text),
       });
       if (!mounted) return;
-      showMsg(context, tr(context, 'saved'));
+      if (r.error != null) { showMsg(context, r.error!); return; }
+      showMsg(context, tr(context, r.queued ? 'saved_offline' : 'saved'));
       for (final c in _c.values) { c.clear(); }
       setState(() => _no = (_no % 6) + 1);
     } catch (e) {
@@ -68,7 +68,6 @@ class _EggCollectionScreenState extends ConsumerState<EggCollectionScreen> {
           final id = _batchId ?? list.first.id;
           final c = _counts;
           return Form(key: _form, child: ListView(padding: const EdgeInsets.all(16), children: [
-            const NeedsInternetBanner(),
             const SizedBox(height: 12),
             Text(tr(context, 'flock'), style: Theme.of(context).textTheme.labelLarge),
             BatchChips(batches: list, selectedId: id, onSelect: (b) => setState(() => _batchId = b.id)),
