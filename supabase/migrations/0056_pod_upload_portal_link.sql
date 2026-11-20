@@ -15,10 +15,10 @@ begin
   if not auth_has_role('tenant_owner') then raise exception 'only the owner can give portal access'; end if;
   if not exists (select 1 from customer where id = p_customer and tenant_id = auth_tenant_id()) then raise exception 'customer not found'; end if;
   select id into v_user from auth.users where lower(email) = lower(trim(p_email));
-  if v_user is null then raise exception 'no login with that email yet: ask the customer to sign up first'; end if;
-  if exists (select 1 from app_user where id = v_user) then raise exception 'that login belongs to farm staff'; end if;
-  if exists (select 1 from customer_portal_user where user_id = v_user and tenant_id <> auth_tenant_id()) then
-    raise exception 'that login is linked to another farm';
+  -- one message for every refusal: distinct ones would let an owner probe which emails exist / are staff elsewhere
+  if v_user is null or exists (select 1 from app_user where id = v_user)
+     or exists (select 1 from customer_portal_user where user_id = v_user and tenant_id <> auth_tenant_id()) then
+    raise exception 'cannot link that email: the customer must sign up first with this email';
   end if;
   insert into customer_portal_user (user_id, tenant_id, customer_id) values (v_user, auth_tenant_id(), p_customer)
   on conflict (user_id) do update set customer_id = excluded.customer_id;
