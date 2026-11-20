@@ -106,5 +106,46 @@ do $$ begin
   assert (select days_left from feed_days_left where farm_id = (select farm_id from batch where id = current_setting('t.fl')::uuid)) = 1.3, 'days left';
   assert (select count(*) from notification where title = 'Feed running low') = 1, 'one feed alert a day';
 end $$;
+-- 6. members cannot insert an alert that already looks worked
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"3d86a04e-a887-52ea-bb3c-67ab5c414ce7","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["shed_supervisor"]}}';
+insert into notification (tenant_id, kind, severity, title, resolved_at, resolved_by, acknowledged_at, action_note)
+  values ('b146bf5d-6213-556e-8e71-8d4c156ad36d', 'alert', 'warning', 'Forged resolved', now(), '436f615f-c815-5957-8623-ca639dcdb5e4', now(), 'nothing');
+reset role;
+do $$ begin
+  assert (select resolved_at is null and resolved_by is null and acknowledged_at is null and action_note is null from notification where title = 'Forged resolved'), 'lifecycle pre-filled';
+end $$;
+
+-- 7. portal proof folders: own order only, portal module on, uploads only while payment is open
+do $$ declare pu uuid := '00000000-0000-0000-0000-0000000006a1'; so uuid := current_setting('t.so')::uuid; begin
+  insert into auth.users (id, email, aud, role) values (pu, 'gap-portal@example.invalid', 'authenticated', 'authenticated');
+  insert into customer_portal_user (user_id, tenant_id, customer_id) select pu, tenant_id, customer_id from sales_order where id = so;
+  delete from subscription where tenant_id = 'b146bf5d-6213-556e-8e71-8d4c156ad36d';
+  update sales_order set payment_status = 'pending', payment_proof_path = null where id = so;
+  perform set_config('t.path', 'b146bf5d-6213-556e-8e71-8d4c156ad36d/payment/' || so || '/p.jpg', true);
+end $$;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000006a1","app_metadata":{}}', true);
+do $$ begin
+  assert not portal_owns_order_folder(current_setting('t.path'), true), 'portal module off (pro plan) but upload allowed';
+end $$;
+reset role;
+insert into subscription (tenant_id, plan, status, features) values ('b146bf5d-6213-556e-8e71-8d4c156ad36d', 'pro', 'active',
+  '{"modules":["core","breeder","hatchery","sales","dispatch","dashboards","portal"]}');
+set local role authenticated;
+do $$ begin
+  assert portal_owns_order_folder(current_setting('t.path'), true), 'own open order: upload';
+  assert not portal_owns_order_folder('b146bf5d-6213-556e-8e71-8d4c156ad36d/payment/' || gen_random_uuid() || '/p.jpg', true), 'someone else''s order';
+end $$;
+reset role;
+select set_config('request.jwt.claims', '{"sub":"436f615f-c815-5957-8623-ca639dcdb5e4","app_metadata":{"tenant_id":"b146bf5d-6213-556e-8e71-8d4c156ad36d","roles":["tenant_owner"]}}', true);
+update sales_order set payment_status = 'verified', deposit_paid = deposit_due where id = current_setting('t.so')::uuid;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000006a1","app_metadata":{}}', true);
+set local role authenticated;
+do $$ begin
+  assert not portal_owns_order_folder(current_setting('t.path'), true), 'upload after verification';
+  assert portal_owns_order_folder(current_setting('t.path'), false), 'can still read own proof';
+end $$;
+reset role;
 rollback;
 \echo requirement_gaps_test OK

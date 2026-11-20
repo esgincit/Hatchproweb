@@ -64,6 +64,22 @@ begin
 end $$;
 revoke all on function alert_escalate() from public, anon, authenticated;
 
+-- members may insert notifications but must not pre-fill the lifecycle (a "resolved by X" alert nobody worked):
+-- the existing guard now also blanks those columns for non-system inserts (definer code runs as postgres).
+create or replace function notification_dedupe_guard() returns trigger language plpgsql as $$
+begin
+  if current_user not in ('postgres', 'service_role') then
+    if tg_op = 'INSERT' then
+      new.dedupe_key := null;
+      new.acknowledged_at := null; new.acknowledged_by := null; new.actioned_at := null; new.actioned_by := null;
+      new.action_note := null; new.resolved_at := null; new.resolved_by := null; new.escalated_at := null;
+    else
+      new.dedupe_key := old.dedupe_key;
+    end if;
+  end if;
+  return new;
+end $$;
+
 -- ---------------------------------------------------------------- 2. waiting list: space freed
 -- when an order stops holding chicks (cancelled / expired / smaller / moved), every waitlisted order of that product
 -- whose week now has room raises one alert, so sales can offer the slot (Move in).
@@ -100,20 +116,23 @@ create policy evidence_payment_staff_add on storage.objects for insert to authen
     and (select auth_roles()) && '{tenant_owner,farm_manager,finance,sales_officer}'
     and exists (select 1 from sales_order o where o.id::text = (storage.foldername(name))[3] and o.tenant_id = auth_tenant_id()));
 
--- portal customers (no tenant claim): only into their own orders' folders, and read back only those
-create function portal_owns_order_folder(p_name text) returns boolean language sql stable security definer set search_path = public as $$
+-- portal customers (no tenant claim): only into their own orders' folders while the portal module is on; uploads only
+-- while that order's payment is still open (pending / rejected / partial); reading back their own proofs any time.
+create function portal_owns_order_folder(p_name text, p_upload boolean) returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from customer_portal_user u join sales_order o on o.customer_id = u.customer_id and o.tenant_id = u.tenant_id
                  where u.user_id = auth.uid()
+                   and 'portal' = any (tenant_modules(u.tenant_id))
                    and u.tenant_id::text = (storage.foldername(p_name))[1]
                    and (storage.foldername(p_name))[2] = 'payment'
-                   and o.id::text = (storage.foldername(p_name))[3])
+                   and o.id::text = (storage.foldername(p_name))[3]
+                   and (not p_upload or o.payment_status in ('pending', 'rejected', 'partial')))
 $$;
-revoke all on function portal_owns_order_folder(text) from public, anon;
-grant execute on function portal_owns_order_folder(text) to authenticated;
+revoke all on function portal_owns_order_folder(text, boolean) from public, anon;
+grant execute on function portal_owns_order_folder(text, boolean) to authenticated;
 create policy evidence_payment_portal_add on storage.objects for insert to authenticated
-  with check (bucket_id = 'evidence' and portal_owns_order_folder(name));
+  with check (bucket_id = 'evidence' and portal_owns_order_folder(name, true));
 create policy evidence_payment_portal_read on storage.objects for select to authenticated
-  using (bucket_id = 'evidence' and portal_owns_order_folder(name));
+  using (bucket_id = 'evidence' and portal_owns_order_folder(name, false));
 
 -- a proof path must point into that order's own folder (no pointing at other files)
 create function sales_order_proof_path() returns trigger language plpgsql as $$
